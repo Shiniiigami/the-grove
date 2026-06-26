@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>The Grove — Order of the Lake</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Silkscreen:wght@400;700&family=Spectral:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#070B09; --forest:#0C140F; --fog:#16221B; --moss:#26352C;
+    --sage:#8FA89B; --parch:#ECE3CC; --candle:#F2C45A; --flame:#E08A3C; --ember:#C75A33;
+    --t-init:#5E6F6B; --t-acol:#6FB39A; --t-disc:#46C2C9; --t-ward:#F2C45A; --t-eld:#F0853E; --t-inner:#FFE8A3;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:var(--ink); color:var(--parch);
+    font-family:'Spectral',Georgia,serif;
+    overflow-x:hidden; position:relative; min-height:100%;
+  }
+  /* ---------- atmosphere ---------- */
+  #sky{position:fixed;inset:0;z-index:0;
+    background:
+      radial-gradient(120% 80% at 50% -10%, #1b2a22 0%, #101a14 38%, #0a120d 66%, #070b09 100%);
+  }
+  #moon{position:fixed;top:7%;left:50%;transform:translateX(-50%);width:78px;height:78px;border-radius:50%;
+    z-index:0;background:radial-gradient(circle at 38% 38%, #fdf6e0 0%, #efe1b8 55%, #c9b88a 100%);
+    box-shadow:0 0 60px 18px rgba(244,230,189,.18), 0 0 140px 50px rgba(120,160,140,.10);
+    opacity:.92;}
+  .fog{position:fixed;left:-25%;width:150%;height:240px;z-index:1;pointer-events:none;
+    background:radial-gradient(60% 100% at 50% 100%, rgba(143,168,155,.10), transparent 70%);
+    filter:blur(6px);}
+  #fog1{bottom:6%;animation:drift 38s linear infinite;}
+  #fog2{bottom:22%;opacity:.6;animation:drift 56s linear infinite reverse;}
+  @keyframes drift{from{transform:translateX(-6%);}to{transform:translateX(6%);}}
+  #trees{position:fixed;left:0;right:0;bottom:0;height:160px;z-index:2;pointer-events:none;}
+  #embers{position:fixed;inset:0;z-index:3;pointer-events:none;}
+  @media (prefers-reduced-motion:reduce){
+    #fog1,#fog2{animation:none;}
+  }
+  /* ---------- shell ---------- */
+  #app{position:relative;z-index:5;max-width:720px;margin:0 auto;padding:18px 16px 120px;}
+  header{text-align:center;padding:14px 0 6px;}
+  .eyebrow{font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.32em;color:var(--sage);
+    text-transform:uppercase;}
+  h1{font-family:'Cinzel',serif;font-weight:700;font-size:clamp(26px,7vw,40px);margin:.18em 0 .1em;
+    letter-spacing:.06em;color:var(--parch);
+    text-shadow:0 0 22px rgba(242,196,90,.22);}
+  .creed{font-style:italic;color:var(--sage);font-size:14px;max-width:30ch;margin:.2em auto 0;line-height:1.5;}
+  /* ---------- tabs ---------- */
+  nav{display:flex;gap:6px;justify-content:center;margin:20px auto 8px;max-width:360px;}
+  .tab{flex:1;font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.12em;
+    padding:10px 6px;border:1px solid var(--moss);background:rgba(20,32,25,.6);color:var(--sage);
+    border-radius:9px;cursor:pointer;text-transform:uppercase;transition:.18s;}
+  .tab.on{background:linear-gradient(180deg,rgba(242,196,90,.16),rgba(242,196,90,.04));
+    color:var(--candle);border-color:rgba(242,196,90,.5);box-shadow:0 0 18px rgba(242,196,90,.12) inset;}
+  /* ---------- grove ---------- */
+  #grove{position:relative;min-height:60vh;margin-top:6px;}
+  .hint{text-align:center;font-style:italic;color:var(--sage);font-size:12.5px;margin:4px 0 10px;opacity:.8;}
+  .spirit{position:absolute;display:flex;flex-direction:column;align-items:center;cursor:pointer;
+    width:84px;transition:transform .2s;}
+  .spirit:active{transform:scale(.94);}
+  .spirit canvas{image-rendering:pixelated;display:block;}
+  .spirit .nm{font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.04em;margin-top:2px;
+    color:var(--parch);opacity:.86;white-space:nowrap;text-shadow:0 1px 3px #000;}
+  .spirit .pts{font-family:'Silkscreen',monospace;font-size:8px;color:var(--candle);opacity:.75;}
+  /* ---------- ledger ---------- */
+  #ledger{display:none;margin-top:8px;}
+  .season{font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.16em;color:var(--sage);
+    text-align:center;text-transform:uppercase;margin-bottom:12px;}
+  .row{display:flex;align-items:center;gap:12px;padding:9px 12px;margin-bottom:7px;border-radius:11px;
+    background:linear-gradient(180deg,rgba(22,34,27,.7),rgba(12,20,15,.7));border:1px solid rgba(38,53,44,.8);
+    cursor:pointer;transition:.15s;}
+  .row:active{transform:scale(.99);}
+  .rank-no{font-family:'Silkscreen',monospace;font-size:13px;color:var(--sage);width:26px;text-align:center;}
+  .row canvas{image-rendering:pixelated;height:54px;width:auto;flex:none;}
+  .row .info{flex:1;min-width:0;}
+  .row .rn{font-family:'Cinzel',serif;font-size:15px;letter-spacing:.03em;}
+  .row .tt{font-family:'Silkscreen',monospace;font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;}
+  .row .pp{font-family:'Silkscreen',monospace;font-size:15px;text-align:right;}
+  .row .pl{font-family:'Silkscreen',monospace;font-size:8px;color:var(--sage);text-align:right;}
+  /* ---------- sheet (profile) ---------- */
+  .scrim{position:fixed;inset:0;z-index:40;background:rgba(4,7,5,.72);backdrop-filter:blur(3px);
+    display:none;align-items:flex-end;justify-content:center;}
+  .scrim.show{display:flex;}
+  .sheet{width:100%;max-width:480px;background:linear-gradient(180deg,#101a14,#0a120d);
+    border:1px solid rgba(242,196,90,.22);border-bottom:none;border-radius:20px 20px 0 0;
+    padding:20px 20px 30px;animation:rise .26s cubic-bezier(.2,.8,.2,1);max-height:88vh;overflow-y:auto;}
+  @keyframes rise{from{transform:translateY(40px);opacity:.4;}to{transform:translateY(0);opacity:1;}}
+  .sheet .grip{width:42px;height:4px;border-radius:3px;background:var(--moss);margin:0 auto 16px;}
+  .soul{display:flex;gap:16px;align-items:center;}
+  .soul canvas{image-rendering:pixelated;height:168px;width:auto;flex:none;
+    filter:drop-shadow(0 0 16px rgba(242,196,90,.18));}
+  .swrow{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:2px;}
+  .sw{width:26px;height:26px;border-radius:6px;border:2px solid #2a3a30;cursor:pointer;padding:0;}
+  .sw.on{border-color:var(--candle);box-shadow:0 0 8px rgba(242,196,90,.5);}
+  .sw.none{background:transparent;color:var(--sage);font-size:13px;line-height:22px;}
+  .seg{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:2px;}
+  .seg button{font-family:'Silkscreen',monospace;font-size:9px;padding:7px 9px;border-radius:7px;
+    background:rgba(38,53,44,.4);border:1px solid var(--moss);color:var(--parch);cursor:pointer;}
+  .seg button.on{background:linear-gradient(180deg,rgba(242,196,90,.18),rgba(242,196,90,.04));
+    color:var(--candle);border-color:rgba(242,196,90,.5);}
+  .crlabel{font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.08em;color:var(--sage);
+    text-transform:uppercase;margin:11px 0 4px;}
+  .crprev{display:flex;justify-content:center;align-items:flex-end;margin:4px 0 8px;
+    min-height:150px;background:radial-gradient(60% 70% at 50% 60%,rgba(242,196,90,.06),transparent);}
+  .crprev canvas{image-rendering:pixelated;}
+  .lsort{font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.1em;padding:7px 13px;border-radius:8px;
+    background:rgba(38,53,44,.5);border:1px solid var(--moss);color:var(--sage);cursor:pointer;text-transform:uppercase;}
+  .lsort.on{background:linear-gradient(180deg,rgba(242,196,90,.18),rgba(242,196,90,.04));color:var(--candle);border-color:rgba(242,196,90,.5);}
+  #rites{max-width:520px;margin:8px auto 0;padding:0 4px;}
+  .ritecard{background:linear-gradient(180deg,rgba(22,34,27,.7),rgba(12,20,15,.6));border:1px solid rgba(38,53,44,.8);border-radius:12px;padding:12px 14px;margin-bottom:9px;display:flex;align-items:center;gap:12px;}
+  .ritecard .rbody{flex:1;min-width:0;}
+  .ritecard .rdesc{font-size:14px;line-height:1.3;margin-bottom:3px;}
+  .ritecard .rmeta{font-family:'Silkscreen',monospace;font-size:8.5px;color:var(--candle);letter-spacing:.05em;}
+  .ritecard .rmeta .rby{color:var(--sage);}
+  .rapprove{flex-shrink:0;font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.06em;padding:9px 13px;border-radius:8px;
+    background:linear-gradient(180deg,var(--candle),#d9a93f);color:#1a1206;border:none;cursor:pointer;text-transform:uppercase;}
+  .rapprove.voted{background:rgba(38,53,44,.55);color:var(--sage);border:1px solid var(--moss);cursor:default;}
+  .ritehdr{font-family:'Cinzel',serif;font-size:13px;color:var(--sage);text-align:center;letter-spacing:.08em;margin:18px 0 8px;text-transform:uppercase;}
+  .soul .who .nm{font-family:'Cinzel',serif;font-size:24px;font-weight:700;}
+  .badgewrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+  .badge{font-family:'Silkscreen',monospace;font-size:8px;letter-spacing:.04em;padding:4px 7px;border-radius:20px;
+    background:rgba(242,196,90,.1);border:1px solid rgba(242,196,90,.3);color:var(--candle);text-transform:uppercase;}
+  .tier-tag{display:inline-block;font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.1em;
+    padding:4px 10px;border-radius:20px;text-transform:uppercase;margin-top:4px;}
+  .meter{height:9px;border-radius:6px;background:rgba(38,53,44,.7);overflow:hidden;margin:16px 0 5px;}
+  .meter > i{display:block;height:100%;border-radius:6px;
+    background:linear-gradient(90deg,var(--flame),var(--candle));transition:width .8s cubic-bezier(.2,.8,.2,1);}
+  .meterlbl{display:flex;justify-content:space-between;font-family:'Silkscreen',monospace;font-size:8.5px;color:var(--sage);}
+  .hist{margin-top:18px;border-top:1px solid rgba(38,53,44,.7);padding-top:12px;}
+  .hist h4{font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.14em;color:var(--sage);
+    text-transform:uppercase;margin:0 0 8px;}
+  .hist .h{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px dotted rgba(38,53,44,.6);}
+  .hist .h em{font-style:italic;color:var(--parch);}
+  .hist .h b{font-family:'Silkscreen',monospace;font-size:11px;color:var(--candle);}
+  .hist .h b.neg{color:var(--ember);}
+  .closebtn{display:block;width:100%;margin-top:18px;padding:12px;border-radius:11px;cursor:pointer;
+    font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    background:rgba(38,53,44,.5);border:1px solid var(--moss);color:var(--sage);}
+  /* ---------- keeper ---------- */
+  #keeperBtn{position:fixed;right:14px;bottom:16px;z-index:30;width:50px;height:50px;border-radius:50%;
+    background:linear-gradient(180deg,#1a2a20,#0e1812);border:1px solid rgba(242,196,90,.35);color:var(--candle);
+    font-size:20px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;}
+  .kpanel{padding-top:6px;}
+  .kpanel h3{font-family:'Cinzel',serif;font-size:20px;margin:.2em 0 .1em;text-align:center;}
+  .kpanel p.sub{text-align:center;color:var(--sage);font-style:italic;font-size:13px;margin:0 0 16px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.1em;
+    color:var(--sage);text-transform:uppercase;margin-bottom:5px;}
+  .field input,.field select{width:100%;padding:11px 12px;border-radius:10px;background:rgba(8,14,11,.85);
+    border:1px solid var(--moss);color:var(--parch);font-family:'Spectral',serif;font-size:15px;}
+  .field input:focus,.field select:focus{outline:none;border-color:rgba(242,196,90,.55);}
+  .gold{width:100%;padding:13px;border:none;border-radius:11px;cursor:pointer;margin-top:4px;
+    font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#1a1206;
+    background:linear-gradient(180deg,var(--candle),#d9a93f);box-shadow:0 4px 16px rgba(242,196,90,.22);}
+  .ghostbtn{width:100%;padding:11px;border-radius:11px;cursor:pointer;margin-top:9px;
+    font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    background:transparent;border:1px solid var(--moss);color:var(--sage);}
+  .quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;}
+  .quick button{flex:1;min-width:62px;font-family:'Silkscreen',monospace;font-size:9px;padding:8px 4px;
+    border-radius:8px;background:rgba(38,53,44,.4);border:1px solid var(--moss);color:var(--parch);cursor:pointer;}
+  .toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%) translateY(20px);z-index:60;
+    background:rgba(16,26,20,.96);border:1px solid rgba(242,196,90,.4);color:var(--candle);
+    font-family:'Silkscreen',monospace;font-size:11px;padding:11px 18px;border-radius:10px;opacity:0;
+    transition:.3s;pointer-events:none;text-align:center;max-width:90vw;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .err{color:var(--ember);font-size:12px;font-style:italic;text-align:center;margin-top:8px;min-height:16px;}
+  .offline-note{text-align:center;font-family:'Silkscreen',monospace;font-size:8px;color:var(--moss);
+    margin-top:26px;letter-spacing:.05em;}
+  /* rank-up overlay */
+  #rankup{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
+    background:radial-gradient(circle,rgba(242,196,90,.16),rgba(4,7,5,.86));text-align:center;animation:fade .4s;}
+  @keyframes fade{from{opacity:0;}to{opacity:1;}}
+  #rankup .ru{font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.2em;color:var(--sage);}
+  #rankup .rt{font-family:'Cinzel',serif;font-size:34px;font-weight:700;color:var(--candle);margin:.2em 0;
+    text-shadow:0 0 30px rgba(242,196,90,.5);}
+</style>
+</head>
+<body>
+<div id="sky"></div>
+<div id="moon"></div>
+<canvas id="trees"></canvas>
+<div class="fog" id="fog1"></div>
+<div class="fog" id="fog2"></div>
+<canvas id="embers"></canvas>
+
+<div id="app">
+  <header>
+    <div class="eyebrow">Order of the Lake · Est. 2026</div>
+    <h1>The Grove</h1>
+    <p class="creed">"What the fire remembers, the lake keeps. Return, and rise."</p>
+  </header>
+
+  <nav>
+    <button class="tab on" data-view="grove">Grove</button>
+    <button class="tab" data-view="ledger">Ledger</button>
+    <button class="tab" data-view="rites">Rites</button>
+  </nav>
+
+  <div id="grove"></div>
+  <p class="hint" id="groveHint">Tap a spirit to commune.</p>
+
+  <div id="ledger">
+    <div class="season" id="seasonLine"></div>
+    <div id="rows"></div>
+  </div>
+
+  <div id="rites" style="display:none"></div>
+
+  <div class="offline-note" id="offNote"></div>
+</div>
+
+<button id="keeperBtn" title="Keeper">🔥</button>
+
+<!-- profile / keeper sheet -->
+<div class="scrim" id="scrim">
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div id="rankup">
+  <div>
+    <div class="ru">THE GROVE RECOGNIZES</div>
+    <div class="rt" id="ruName"></div>
+    <div class="ru" id="ruTier"></div>
+  </div>
+</div>
+
+<script>
+/* ====================== CONFIG ====================== */
+const KEEPER_PASS_DEFAULT = "candlelight";   // used only in local/preview mode
+const SEASON_LABEL = "Trip I · Algonquin · July 2026";
+
+// ↓ Paste these after creating your Supabase project (Settings → API). Blank = local mode.
+const SUPABASE = {
+  url: "https://drthfetglhqfgqxcrngr.supabase.co",
+  anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRydGhmZXRnbGhxZmdxeGNybmdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NDEyMzIsImV4cCI6MjA5ODAxNzIzMn0.KdyyIWp6Dr9JvbC6hy6scYMG5NmqY3PPSvxpTaVDIIA"   // the public "anon" key (safe to expose)
+};
+
+const DEFAULT_TIERS = [
+  {min:0,    name:"Initiate",     hex:"#5E6F6B"},
+  {min:100,  name:"Acolyte",      hex:"#6FB39A"},
+  {min:300,  name:"Disciple",     hex:"#46C2C9"},
+  {min:600,  name:"Warden",       hex:"#F2C45A"},
+  {min:1000, name:"Sage",         hex:"#F0853E"},
+  {min:1500, name:"Inner Circle", hex:"#FFE8A3"},
+  {min:2500, name:"The Ascended", hex:"#CDB4FF"},
+];
+const DEFAULT_DEEDS = [
+  ["Attendance",100],
+  ["Year streak bonus",25],
+  ["One-match fire",20],
+  ["Chopped/gathered all the firewood",30],
+  ["Survived a storm without complaint",25],
+  ["Navigated without GPS",30],
+  ["Completed the portage",50],
+  ["Caught a fish",50],
+  ["Cliff/dock jump",25],
+  ["Night swim",30],
+  ["Swam to the island",40],
+  ["Full bike trail",40],
+  ["Completed a hike",30],
+  ["Cooked a group meal",40],
+  ["Brought the secret ingredient",15],
+  ["Mixed the cocktails",20],
+  ["Cleaned up without being asked",30],
+  ["Did the dishes",30],
+  ["Shared their last beer",10],
+  ["Brought the sacrifice",20],
+  ["Performed the induction",30],
+  ["Led a chant/ritual",25],
+  ["Kept the lore alive",20],
+  ["DJ of the weekend",20],
+  ["Made everyone laugh till they cried",20],
+  ["Peacemaker (defused drama)",25],
+  ["Camp parent (kept everyone fed/safe)",40],
+  ["Full phone detox all trip",75],
+  ["Saw the sunrise",20],
+  ["Iron liver",20],
+  ["Last one standing",25],
+  ["Forgot something critical",-15],
+  ["Tent collapsed on their watch",-10],
+  ["Got lost",-15],
+  ["Bailed early / no-show",-50],
+  ["Started unnecessary drama",-20],
+  ["Let the fire die",-10],
+  ["\"I'll bring it\" and didn't",-20],
+];
+function tiers(){ return (MEM && MEM.tiers && MEM.tiers.length)?MEM.tiers:DEFAULT_TIERS; }
+function deeds(){ return (MEM && MEM.deeds && MEM.deeds.length)?MEM.deeds:DEFAULT_DEEDS; }
+function ensureDefaults(){ if(!MEM)return; if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); if(!MEM.rites)MEM.rites=[]; (MEM.members||[]).forEach(m=>{ if(m.season===undefined) m.season=0; }); }
+function tierOf(p){const T=tiers();let t=T[0];for(const x of T)if(p>=x.min)t=x;return t;}
+function tierIndex(p){const T=tiers();let i=0;T.forEach((x,k)=>{if(p>=x.min)i=k;});return i;}
+function nextTier(p){const T=tiers();const i=tierIndex(p);return i<T.length-1?T[i+1]:null;}
+
+/* seed roster — edit freely, or manage live via Keeper */
+const SEED = {
+  pass: KEEPER_PASS_DEFAULT,
+  season: SEASON_LABEL,
+  tiers: structuredClone(DEFAULT_TIERS),
+  deeds: structuredClone(DEFAULT_DEEDS),
+  members: [
+    // epithet = personal title (editable live in Keeper). sprite = optional override {archetype:0-3, hex:"#..", img:"url"}.
+    {name:"Rasa",    epithet:"Keeper of the Flame",   sprite:{chibi:{skin:"#D9A06A",hair:"#1A1612",hair_style:"short",beard:"#1A1612",glasses:false,ears:"stud",top:"#6B2E2E",sleeves:true,jacket:"#3A3A40",pants:"#23364A",boots:"#1C1C1E",accent:"necklace",accentCol:"#E8C45A"}}, points:1520, since:2026, badges:["Founder","Pathfinder","Iron Liver"], history:[{l:"Founding member",d:200},{l:"Attendance",d:100},{l:"Led the portage",d:50}]},
+    {name:"Ferozan", epithet:"The Eternal Ember",     sprite:{chibi:{skin:"#E2AC80",hair:"#2A1E16",hair_style:"curly",beard:null,glasses:false,ears:"stud",top:"#5C6646",sleeves:true,jacket:null,pants:"#2A2620",boots:"#3A2A22",accent:"none"}}, points:1180, since:2026, badges:["Founder","Phoenix"], history:[{l:"Founding member",d:200},{l:"Attendance",d:100},{l:"One-match fire",d:20}]},
+    {name:"Andre",   epithet:"The Lake-Born",         sprite:{chibi:{skin:"#C98A5A",hair:"#1A1612",hair_style:"fade",beard:"#241E1A",glasses:false,ears:"none",top:"#3A5A6B",sleeves:true,jacket:null,pants:"#23364A",boots:"#2A2A2A",accent:"none"}}, points:980,  since:2026, badges:["Polar Bear"], history:[{l:"Attendance",d:100},{l:"Night swim",d:30}]},
+    {name:"Hermela", epithet:"Warden of the Hearth",  sprite:{chibi:{skin:"#8A5A3A",hair:"#1A1612",hair_style:"curly",beard:null,glasses:false,ears:"dangle",earCol:"#E8C45A",top:"#7A3B5A",sleeves:false,jacket:null,pants:"#33384A",boots:"#3A2A22",accent:"necklace",accentCol:"#E8C45A"}}, points:870,  since:2026, badges:["Camp Mom"], history:[{l:"Attendance",d:100},{l:"Cooked for the tribe",d:40}]},
+    {name:"Ali",     epithet:"The Trailbreaker",      sprite:{chibi:{skin:"#D9A06A",hair:"#33251C",hair_style:"short",beard:"#33251C",glasses:false,ears:"none",top:"#46707A",sleeves:true,jacket:null,pants:"#2A2620",boots:"#7B4A2A",accent:"none"}}, points:760,  since:2026, badges:["Pathfinder"], history:[{l:"Attendance",d:100},{l:"Completed portage",d:50}]},
+    {name:"Sena",    epithet:"The Returning Tide",     sprite:{chibi:{skin:"#E6B088",hair:"#5A4030",hair_style:"long",beard:null,glasses:false,ears:"stud",top:"#8A5A6A",sleeves:false,jacket:null,pants:"#3A3A44",boots:"#5A3A2A",accent:"none"}}, points:720,  since:2025, badges:["Returned"], history:[{l:"Prior years",d:200},{l:"Attendance",d:100},{l:"Night swim",d:30}]},
+    {name:"Kia",     epithet:"The Old Flame",          sprite:{chibi:{skin:"#C98A5A",hair:"#1A1612",hair_style:"bun",beard:null,glasses:false,ears:"none",top:"#2E4A3A",sleeves:true,jacket:null,pants:"#23364A",boots:"#1C1C1E",accent:"none"}}, points:560,  since:2025, badges:["Returned"], history:[{l:"Prior years",d:200},{l:"Attendance",d:100}]},
+    {name:"Moeez",   epithet:"The Far-Driver",        sprite:{chibi:{skin:"#B5764A",hair:"#1A1612",hair_style:"buzz",beard:"#1A1612",glasses:false,ears:"none",top:"#3A5A6B",sleeves:true,jacket:null,pants:"#23364A",boots:"#2A2A2A",accent:"none"}}, points:640,  since:2026, badges:[], history:[{l:"Attendance",d:100},{l:"Drove a carload",d:50}]},
+    {name:"Kay",     epithet:"The Unplugged",         sprite:{chibi:{skin:"#E2AC80",hair:"#7A4A2A",hair_style:"short",beard:null,glasses:true,glassCol:"#C9CDD2",ears:"none",top:"#B5854F",sleeves:true,jacket:null,pants:"#2A2620",boots:"#3A2A22",accent:"none"}}, points:540,  since:2026, badges:["Ghost"], history:[{l:"Attendance",d:100},{l:"Full phone detox",d:75}]},
+    {name:"Chad",    epithet:"The Sacrificed",        sprite:{chibi:{skin:"#F0C9A0",hair:"#D9A86A",hair_style:"fade",beard:null,glasses:false,ears:"none",top:"#1C1C20",sleeves:true,jacket:"#6B4A2E",pants:"#2A2620",boots:"#7B4A2A",accent:"none"}}, points:470,  since:2026, badges:[], history:[{l:"Attendance",d:100},{l:"Brought the sacrifice",d:20}]},
+    {name:"Meg",     epithet:"Keeper of the Camp",    sprite:{chibi:{skin:"#E6B088",hair:"#B5651D",hair_style:"curly",beard:null,glasses:false,ears:"dangle",earCol:"#E8C45A",top:"#5C6646",sleeves:false,jacket:null,pants:"#4A3B2A",boots:"#1C1C1E",accent:"none"}}, points:420,  since:2026, badges:["Camp Mom"], history:[{l:"Attendance",d:100},{l:"Cleanup MVP",d:30}]},
+    {name:"Naween",  epithet:"The Steadfast",         sprite:{chibi:{skin:"#8A5A3A",hair:"#1A1612",hair_style:"short",beard:null,glasses:false,ears:"none",top:"#46707A",sleeves:true,jacket:null,pants:"#23364A",boots:"#2A2A2A",accent:"none"}}, points:360,  since:2026, badges:[], history:[{l:"Attendance",d:100}]},
+    {name:"Aby",     epithet:"The Wandering",         sprite:{chibi:{skin:"#D9A06A",hair:"#33251C",hair_style:"long",beard:null,glasses:false,ears:"none",top:"#7A3B5A",sleeves:true,jacket:null,pants:"#3A3A44",boots:"#5A3A2A",accent:"none"}}, points:280,  since:2026, badges:[], history:[{l:"Attendance",d:100}]},
+    {name:"Don",     epithet:"The Cold-Swimmer",      sprite:{chibi:{skin:"#C98A5A",hair:"#1A1612",hair_style:"fade",beard:"#1A1612",glasses:false,ears:"none",top:"#3A5A6B",sleeves:true,jacket:null,pants:"#23364A",boots:"#1C1C1E",accent:"none"}}, points:240,  since:2026, badges:["Polar Bear"], history:[{l:"Attendance",d:100},{l:"Night swim",d:30}]},
+    {name:"Nicole",  epithet:"The New Flame",         sprite:{chibi:{skin:"#E6B088",hair:"#33251C",hair_style:"curly",beard:null,glasses:true,glassCol:"#C9A24B",ears:"dangle",earCol:"#E8C45A",top:"#5C6646",sleeves:false,jacket:null,pants:"#4A3B2A",boots:"#1C1C1E",accent:"necklace",accentCol:"#E8C45A"}}, points:190,  since:2026, badges:[], history:[{l:"Attendance",d:100}]},
+    {name:"Galen",   epithet:"The Quiet Pine",        sprite:{chibi:{skin:"#E2AC80",hair:"#5A4030",hair_style:"fade",beard:"#6E4426",glasses:false,ears:"stud",top:"#1C1C20",sleeves:true,jacket:"#6B4A2E",pants:"#2A2620",boots:"#7B4A2A",accent:"choker",accentCol:"#C9CDD2"}}, points:150,  since:2026, badges:[], history:[{l:"Attendance",d:100}]},
+    {name:"Aria",    epithet:"The Spark",             sprite:{chibi:{skin:"#F0C9A0",hair:"#B5651D",hair_style:"bun",beard:null,glasses:false,ears:"stud",top:"#8A5A6A",sleeves:false,jacket:null,pants:"#33384A",boots:"#3A2A22",accent:"none"}}, points:90,   since:2026, badges:[], history:[{l:"Brought the sacrifice",d:20}]},
+    {name:"Gety",    epithet:"The Offering",          sprite:{chibi:{skin:"#E2AC80",hair:"#2A1E16",hair_style:"curly",beard:null,glasses:false,ears:"none",top:"#46707A",sleeves:true,jacket:null,pants:"#2A2620",boots:"#3A2A22",accent:"none"}}, points:80,   since:2026, badges:[], history:[{l:"Brought the sacrifice",d:20}]},
+  ]
+};
+
+/* ====================== STORAGE ADAPTER ====================== */
+/* Remote (Supabase) when configured → live across phones, Keeper-only writes.
+   Otherwise Claude shared storage (preview) or in-memory (opened file). */
+const KEY = "grove-ledger-v9";
+const SB_ON = !!(SUPABASE.url && SUPABASE.anonKey);
+let MEM = null;
+let MODE = "local";          // "remote" | "local"
+let SESSION_PASS = null;     // held in memory only, after Keeper unlock (remote)
+let liveStorage = (typeof window!=="undefined" && window.storage && window.storage.get);
+
+function stripPass(o){ const c=structuredClone(o); delete c.pass; return c; }
+function sbHeaders(){ return {apikey:SUPABASE.anonKey, Authorization:"Bearer "+SUPABASE.anonKey, "Content-Type":"application/json"}; }
+async function sbRead(){
+  const r=await fetch(`${SUPABASE.url}/rest/v1/grove_state?id=eq.1&select=data`,{headers:sbHeaders()});
+  if(!r.ok) throw new Error("read "+r.status);
+  const j=await r.json(); return (Array.isArray(j)&&j[0])?j[0].data:null;
+}
+async function sbRpc(fn,args){
+  const r=await fetch(`${SUPABASE.url}/rest/v1/rpc/${fn}`,{method:"POST",headers:sbHeaders(),body:JSON.stringify(args)});
+  if(!r.ok) throw new Error(await r.text());
+  const t=await r.text(); return t?JSON.parse(t):null;
+}
+async function loadData(){
+  if(SB_ON){
+    try{
+      let d=await sbRead();
+      if(!d){ await sbRpc("grove_seed",{p_data:stripPass(SEED)}); d=await sbRead(); }
+      if(d){ MEM=d; MODE="remote"; return; }
+    }catch(e){ console.warn("Supabase unavailable, using local fallback:",e.message); }
+  }
+  if(liveStorage){
+    try{ const r=await window.storage.get(KEY,true); if(r&&r.value){ MEM=JSON.parse(r.value); MODE="local"; return; } }catch(e){}
+    MEM=structuredClone(SEED);
+    try{ await window.storage.set(KEY,JSON.stringify(MEM),true); }catch(e){}
+  }else{
+    MEM=structuredClone(SEED);
+  }
+  MODE="local";
+}
+async function saveData(){
+  if(MODE==="remote"){
+    try{ await sbRpc("grove_save",{p_pass:SESSION_PASS||"",p_data:MEM}); }
+    catch(e){ console.warn("save failed",e.message); toast("Save failed — check passphrase / connection."); }
+    return;
+  }
+  if(liveStorage){ try{ await window.storage.set(KEY,JSON.stringify(MEM),true); }catch(e){} }
+}
+async function pollRemote(){
+  if(MODE!=="remote") return;
+  if(scrim.classList.contains("show")) return;   // don't yank the UI mid-edit
+  try{ const d=await sbRead(); if(d && JSON.stringify(d)!==JSON.stringify(MEM)){ MEM=d; ensureDefaults(); layoutGrove(); renderLedger(); renderRites(); } }catch(e){}
+}
+
+/* ====================== PIXEL SPIRIT ENGINE ====================== */
+function hashStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function rng(seed){let s=seed>>>0;return()=>{s^=s<<13;s^=s>>>17;s^=s<<5;s>>>=0;return s/4294967296;};}
+
+// build a deterministic pixel "soul" matrix for a member
+function buildSoul(name, points, sprite){
+  sprite = sprite || {};
+  const seed = hashStr(name);
+  const rnd = rng(seed);
+  const ti = tierIndex(points);
+  const tier = tiers()[ti];
+  const base = sprite.hex || tier.hex;          // personal colour override, else rank colour
+  const imgUrl = sprite.img || null;
+  if(sprite.features){
+    return {avatar:sprite.features, grid:null, W:14, H:16, tier, ti, seed, base, imgUrl:null};
+  }
+  if(sprite.chibi){
+    return {chibi:sprite.chibi, grid:null, W:30, H:46, tier, ti, seed, base, imgUrl:null};
+  }            // custom pixel-art image override
+  const W=12, H=14;
+  const grid = Array.from({length:H},()=>Array(W).fill(0)); // 0 empty,1 body,2 shade,3 eye,4 flame,5 crown,6 antler
+  // silhouette envelope (wisp: tapered top, rounded mid, wispy bottom)
+  for(let y=0;y<H;y++){
+    const t=y/(H-1);
+    let half = 1 + Math.round(4 * Math.sin(Math.PI*Math.min(1,t*1.05)) ); // width by row
+    if(t>0.82) half = Math.max(0, half-1 - Math.floor(rnd()*2)); // wispy tail
+    for(let x=0;x<=half;x++){
+      const px=5-x, px2=6+x;
+      const fill = (x<half-0.5) || rnd()>0.32;
+      if(fill){ grid[y][px]=1; grid[y][px2]=1; }
+    }
+  }
+  for(let y=2;y<H-1;y++){ if(grid[y][6]) grid[y][6]=2; if(grid[y][4]&&rnd()>.5) grid[y][4]=2; }
+  const ey = 4 + Math.floor(rnd()*2);
+  if(grid[ey][3]!==undefined){grid[ey][3]=3; grid[ey][8]=3;}
+  const arche = (sprite.archetype!=null) ? sprite.archetype : (seed % 4);  // override archetype
+  if(arche===0){ grid[H-2][5]=4; grid[H-2][6]=4; grid[H-3][5]=4; }          // lantern flame
+  else if(arche===1){ if(grid[1]){grid[1][4]=2; grid[1][7]=2;} }            // moth antennae
+  // tier-unlocked adornments (always rank-driven, regardless of colour override)
+  if(ti>=4){ grid[1][2]=6; grid[0][2]=6; grid[1][9]=6; grid[0][9]=6; grid[0][1]=6; grid[0][10]=6; } // antlers
+  if(ti>=5){ grid[1][4]=5; grid[1][5]=5; grid[1][6]=5; grid[1][7]=5; grid[0][5]=5; grid[0][7]=5; }   // crown
+  return {grid,W,H,tier,ti,seed,arche,base,imgUrl,isImg:!!imgUrl};
+}
+
+/* custom-image cache for sprite overrides supplied later */
+const IMGCACHE={};
+function getImg(url){
+  if(!IMGCACHE[url]){const i=new Image();i.onload=()=>{try{window.__onSpriteLoad&&window.__onSpriteLoad();}catch(e){}};i.onerror=()=>{i.__failed=true;try{window.__onSpriteLoad&&window.__onSpriteLoad();}catch(e){}};i.src=url;IMGCACHE[url]=i;}
+  return IMGCACHE[url];
+}
+
+function shade(hex,amt){ // amt -1..1
+  const n=parseInt(hex.slice(1),16);let r=n>>16,g=(n>>8)&255,b=n&255;
+  const f=amt<0?(v=>v*(1+amt)):(v=>v+(255-v)*amt);
+  r=Math.round(f(r));g=Math.round(f(g));b=Math.round(f(b));
+  return `rgb(${r},${g},${b})`;
+}
+
+function drawSoul(canvas, soul, scale, t){
+  const {grid,W,H,tier}=soul;
+  const base=soul.base||tier.hex;
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  if(soul.chibi){ drawChibiSprite(canvas,soul,scale,t,base,dpr); return; }
+  if(soul.isImg && !getImg(soul.imgUrl).__failed){ drawImgSprite(canvas,soul,scale,t,base,dpr); return; }
+  const cw=W*scale, ch=H*scale + scale*2;
+  canvas.width=cw*dpr; canvas.height=ch*dpr;
+  canvas.style.width=cw+"px"; canvas.style.height=ch+"px";
+  const ctx=canvas.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.imageSmoothingEnabled=false;
+  ctx.clearRect(0,0,cw,ch);
+  const flick = 0.5 + 0.5*Math.abs(Math.sin(t*0.004 + soul.seed));
+  // aura glow (stronger by tier) — keeps rank legible even with custom colour/art
+  const glowR = (4 + soul.ti*2.4);
+  const g=ctx.createRadialGradient(cw/2,ch/2,2,cw/2,ch/2,cw/1.4);
+  g.addColorStop(0, hexA(base, 0.16 + soul.ti*0.045));
+  g.addColorStop(1, "transparent");
+  ctx.fillStyle=g; ctx.fillRect(0,0,cw,ch);
+  // parametric pixel-portrait override
+  if(soul.avatar){ drawAvatar(ctx, soul.avatar, scale, base, flick, glowR); return; }
+  if(soul.imgUrl){
+    const im=getImg(soul.imgUrl);
+    if(im.complete && im.naturalWidth){
+      ctx.save();
+      ctx.shadowColor=base; ctx.shadowBlur=glowR*flick;
+      ctx.drawImage(im, 0, scale, cw, H*scale);
+      // tier adornments still drawn over custom art so rank reads
+      drawAdornments(ctx,soul,scale);
+      ctx.restore();
+      return;
+    }
+    // image not ready yet → fall through to procedural this frame
+  }
+  ctx.save();
+  ctx.shadowColor=base; ctx.shadowBlur=glowR*flick;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const v=grid[y][x]; if(!v)continue;
+    let col;
+    if(v===1) col=base;
+    else if(v===2) col=shade(base,-0.32);
+    else if(v===3) col= soul.ti>=3 ? "#0a120d" : shade(base,0.55);
+    else if(v===4) col="#F2C45A";
+    else if(v===5) col="#FFE8A3";
+    else if(v===6) col=shade(base,-0.15);
+    ctx.fillStyle=col;
+    ctx.fillRect(x*scale, y*scale, scale, scale);
+  }
+  ctx.restore();
+}
+// draw only the rank adornments (antlers/crown) — used over custom art
+function drawAdornments(ctx,soul,scale){
+  const {grid,W,H}=soul;
+  for(let y=0;y<2;y++)for(let x=0;x<W;x++){
+    const v=grid[y][x];
+    if(v===5){ctx.fillStyle="#FFE8A3";ctx.fillRect(x*scale,y*scale,scale,scale);}
+    else if(v===6){ctx.fillStyle=shade(soul.base,-0.15);ctx.fillRect(x*scale,y*scale,scale,scale);}
+  }
+}
+function drawAvatar(ctx, f, s, base, flick, glowR){
+  const W=14,H=16;
+  ctx.save();
+  ctx.shadowColor=base; ctx.shadowBlur=glowR*flick*0.7;
+  const P=(x,y,c)=>{ctx.fillStyle=c;ctx.fillRect(x*s,y*s,s,s);};
+  const row=(x0,x1,y,c)=>{for(let x=x0;x<=x1;x++)P(x,y,c);};
+  const skin=f.skin, sks=shade(f.skin,-0.20);
+  const hair=f.hair, hairs=shade(f.hair,-0.24);
+
+  // neck
+  P(6,9,sks);P(7,9,sks);P(6,10,sks);P(7,10,sks);
+  // face
+  row(5,8,3,skin); row(4,9,4,skin); row(4,9,5,skin);
+  row(4,9,6,skin); row(4,9,7,skin); row(5,8,8,skin); P(6,9,skin);P(7,9,skin);
+  // ears
+  P(3,6,skin);P(10,6,skin);P(3,7,sks);P(10,7,sks);
+
+  // hair
+  if(f.style==='curly'){
+    [4,6,8].forEach(x=>P(x,0,hair));
+    row(3,10,1,hair); row(3,10,2,hair);
+    row(3,5,3,hair); row(8,10,3,hair);
+    P(3,4,hair);P(10,4,hair);P(3,5,hairs);P(10,5,hairs);
+    P(5,1,hairs);P(8,2,hairs);P(4,2,hairs);
+  } else if(f.style==='fade'){
+    row(5,8,1,hair); row(4,9,2,hair); row(4,9,3,hairs);
+    P(4,4,hairs);P(9,4,hairs);
+  } else if(f.style==='long'){
+    row(4,9,1,hair); row(3,10,2,hair); row(3,10,3,hair);
+    for(let y=4;y<=9;y++){P(3,y,hair);P(10,y,hair);}
+  } else { // short
+    row(5,8,1,hair); row(4,9,2,hair); row(4,9,3,hair);
+  }
+
+  // eyes / glasses
+  const eye='#2A1C14';
+  if(f.glasses){
+    const fr='#AEB6BB';
+    P(5,6,eye);P(8,6,eye);
+    P(4,6,fr);P(9,6,fr);   // outer rims
+    P(6,6,fr);P(7,6,fr);   // bridge
+    P(5,5,fr);P(8,5,fr);   // top rims
+  } else { P(5,6,eye);P(8,6,eye); }
+
+  // facial hair / mouth
+  if(f.beard){
+    const bd=f.beard;
+    row(4,9,8,bd); P(5,9,bd);P(6,9,bd);P(7,9,bd);P(8,9,bd); row(6,7,10,bd);
+    P(4,7,bd);P(9,7,bd);
+    P(6,9,shade(bd,-0.4));P(7,9,shade(bd,-0.4));
+  } else {
+    P(6,8,shade(skin,-0.42));P(7,8,shade(skin,-0.42));
+  }
+
+  // earrings
+  if(f.ears==='studs'){P(3,8,'#C9CDD2');P(10,8,'#C9CDD2');}
+  else if(f.ears==='dangle'){
+    const m='#C9CDD2',ml='#EEF0F3';
+    P(3,8,m);P(3,9,ml);P(3,10,m);P(10,8,m);P(10,9,ml);P(10,10,m);
+  }
+
+  // shoulders / top
+  const top=f.top;
+  row(2,11,12,top); row(1,12,13,top); row(1,12,14,top); row(1,12,15,top);
+  if(f.vest){
+    const v=f.vest, vs=shade(f.vest,-0.22);
+    for(let y=12;y<=15;y++){P(1,y,v);P(2,y,v);P(11,y,v);P(12,y,v);}
+    P(3,12,v);P(10,12,v);
+    [1,3,5,7,9,11].forEach(x=>P(x,15,vs)); // fringe
+  }
+  // accents
+  if(f.accent==='choker'){
+    const k=f.accentCol||'#C9CDD2', kd=shade(f.accentCol||'#C9CDD2',-0.45);
+    for(let x=5;x<=8;x++) P(x,11,(x%2?kd:k));
+  } else if(f.accent==='necklace'){
+    const g2=f.accentCol||'#E8C45A';
+    P(6,12,g2);P(7,12,g2);P(6,13,g2);P(7,14,shade(g2,0.25));
+  }
+  ctx.restore();
+}
+function drawImgSprite(canvas,soul,scale,t,base,dpr){
+  const im=getImg(soul.imgUrl);
+  const flick=0.5+0.5*Math.abs(Math.sin(t*0.004+soul.seed));
+  const glowR=(4+soul.ti*2.4);
+  const dispH=Math.round(scale*15);
+  const aspect=(im.complete&&im.naturalWidth)?(im.naturalWidth/im.naturalHeight):0.5;
+  const dispW=Math.round(dispH*aspect);
+  const padX=scale*3, padY=scale*2;
+  const cw=dispW+padX*2, ch=dispH+padY*2;
+  canvas.width=cw*dpr;canvas.height=ch*dpr;canvas.style.width=cw+"px";canvas.style.height=ch+"px";
+  const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,cw,ch);
+  // candlelight aura behind the figure
+  const g=ctx.createRadialGradient(cw/2,ch*0.52,2,cw/2,ch*0.52,ch/1.25);
+  g.addColorStop(0,hexA(base,0.13+soul.ti*0.045));g.addColorStop(1,"transparent");
+  ctx.fillStyle=g;ctx.fillRect(0,0,cw,ch);
+  if(im.complete&&im.naturalWidth){
+    ctx.save();ctx.shadowColor=base;ctx.shadowBlur=glowR*flick*0.7;
+    ctx.drawImage(im,padX,padY,dispW,dispH);
+    ctx.restore();
+  }
+}
+function drawChibi(ctx,f,px,ox,oy,ti,nT){
+  const P=(x,y,c)=>{ctx.fillStyle=c;ctx.fillRect(ox+x*px,oy+y*px,px,px);};
+  const row=(a,b,y,c)=>{for(let x=a;x<=b;x++)P(x,y,c);};
+  const skin=f.skin, sks=shade(f.skin,-0.18), skd=shade(f.skin,-0.34);
+  const hair=f.hair, hairs=shade(f.hair,-0.26), hairl=shade(f.hair,0.18);
+  const top=f.top, tops=shade(f.top,-0.2);
+  const pants=f.pants, pantd=shade(f.pants,-0.25);
+  const boot=f.boots, bootd=shade(f.boots,-0.3);
+  let ts=f.top_style; if(!ts) ts=(f.sleeves===false?'tank':'tee');
+  const dress = ts==='dress';
+  if(dress){ for(let y=36;y<40;y++){row(11,14,y,pantd);row(16,19,y,pantd);} }
+  else { for(let y=29;y<40;y++){row(11,14,y,pants);row(16,19,y,pants);} for(let y=29;y<40;y++){P(14,y,pantd);P(16,y,pantd);} }
+  for(let y=40;y<43;y++){row(11,14,y,boot);row(16,19,y,boot);}
+  row(11,15,43,bootd);row(15,19,43,bootd);
+  for(let y=19;y<29;y++) row(10,20,y,top);
+  if(dress){ const wid=[[10,20],[10,20],[9,21],[9,21],[8,22],[8,22],[8,22]]; wid.forEach((w,i)=>row(w[0],w[1],28+i,top)); row(8,22,34,tops); }
+  else { row(11,19,28,tops); row(10,20,28,"#3A2A1C"); P(15,28,"#C9A24B"); }
+  const longsleeve = ts==='longsleeve';
+  const sleeve = ts!=='tank';
+  const armc = sleeve?top:skin;
+  for(let y=19;y<27;y++){P(8,y,armc);P(9,y,armc);P(21,y,armc);P(22,y,armc);}
+  if(longsleeve){ P(8,27,top);P(9,27,top);P(21,27,top);P(22,27,top); P(8,28,skin);P(9,28,skin);P(21,28,skin);P(22,28,skin); }
+  else { P(8,27,skin);P(9,27,skin);P(21,27,skin);P(22,27,skin); }
+  if(!sleeve){ for(let y=19;y<21;y++){P(9,y,skin);P(10,y,skin);P(20,y,skin);P(21,y,skin);} P(11,19,top);P(19,19,top); }
+  if(ts==='shirt'){ P(13,19,"#F5F5F5");P(17,19,"#F5F5F5");P(14,20,tops);P(16,20,tops); for(let y=20;y<27;y++)P(15,y,tops); }
+  if(ts==='hoodie'){ row(11,19,18,tops);P(10,18,top);P(20,18,top); row(13,17,27,tops); P(13,19,"#E6E6E6");P(17,19,"#E6E6E6"); }
+  if(f.watch){ P(8,26,"#28282A");P(9,26,"#C9CDD2"); }
+  if(f.jacket){
+    const jc=f.jacket, jcs=shade(f.jacket,-0.22);
+    for(let y=19;y<28;y++){P(10,y,jc);P(11,y,jc);P(19,y,jc);P(20,y,jc);}
+    row(10,20,19,jcs);P(12,19,jc);P(18,19,jc);
+    if(sleeve){for(let y=19;y<27;y++){P(8,y,jc);P(9,y,jc);P(21,y,jc);P(22,y,jc);}}
+    P(15,20,top);P(14,21,top);P(15,21,top);P(16,21,top);
+  }
+  if(f.accent==="necklace"){ const g2=f.accentCol||"#E8C45A"; P(14,19,g2);P(16,19,g2);P(15,21,g2); }
+  else if(f.accent==="choker"){ const k=f.accentCol||"#C9CDD2", kd=shade(f.accentCol||"#C9CDD2",-0.4); for(let x=13;x<18;x++)P(x,18,(x%2?kd:k)); }
+  row(14,16,17,sks);row(14,16,18,skin);
+  row(12,17,3,skin);row(11,18,4,skin);
+  for(let y=5;y<15;y++) row(10,19,y,skin);
+  row(11,18,15,skin);row(12,17,16,skin);
+  P(9,10,skin);P(9,11,sks);P(20,10,skin);P(20,11,sks);
+  const st=f.hair_style;
+  const toptex=()=>{ for(let x=11;x<19;x+=2)P(x,1,hairl); };
+  if(st==="short"||st==="fade"){
+    row(11,18,1,hair);row(10,19,2,hair);row(10,19,3,hair);P(10,4,hair);P(19,4,hair);
+    if(st==="fade"){P(10,5,hairs);P(19,5,hairs);} else {P(10,5,hair);P(19,5,hair);}
+    toptex();
+  } else if(st==="curly"){
+    for(let x=9;x<21;x+=2)P(x,0,hair);
+    row(9,20,1,hair);row(9,20,2,hair);row(9,20,3,hair);row(9,10,4,hair);row(19,20,4,hair);
+    P(9,5,hairs);P(20,5,hairs);P(9,6,hairs);P(20,6,hairs);
+    [[11,1],[14,0],[17,1],[10,3],[19,3],[13,2],[16,2]].forEach(p=>P(p[0],p[1],hairl));
+  } else if(st==="long"){
+    row(11,18,1,hair);row(10,19,2,hair);row(10,19,3,hair);
+    for(let y=4;y<16;y++){P(9,y,hair);P(10,y,hair);P(19,y,hair);P(20,y,hair);}
+    for(let x=11;x<19;x+=3)P(x,1,hairl);
+  } else if(st==="curlylong"){
+    for(let x=8;x<22;x+=2)P(x,0,hair);
+    row(8,21,1,hair);row(8,21,2,hair);row(8,21,3,hair);
+    for(let y=4;y<17;y++){P(8,y,hair);P(9,y,hair);P(20,y,hair);P(21,y,hair);}
+    [[10,1],[13,0],[16,1],[19,0],[9,5],[20,5],[8,9],[21,9],[9,13],[20,13]].forEach(p=>P(p[0],p[1],hairl));
+  } else if(st==="wavy"){
+    row(10,19,1,hair);row(9,20,2,hair);row(9,20,3,hair);
+    for(let y=4;y<11;y++){P(9,y,hair);P(10,y,hair);P(19,y,hair);P(20,y,hair);}
+    [[11,1],[15,1],[18,2],[9,7],[20,7]].forEach(p=>P(p[0],p[1],hairl));
+  } else if(st==="ponytail"){
+    row(11,18,1,hair);row(10,19,2,hair);row(11,18,3,hairs);
+    for(let y=4;y<13;y++){P(21,y,hair);P(22,y,hairs);}
+    P(20,4,hair);P(20,5,hair); toptex();
+  } else if(st==="afro"){
+    for(let x=8;x<22;x++)P(x,-1,hair);
+    for(let y=0;y<5;y++)row(7,22,y,hair);
+    row(8,21,5,hair);P(7,6,hair);P(22,6,hair);
+    [[10,0],[14,-1],[18,0],[9,3],[20,3],[13,1],[16,2]].forEach(p=>P(p[0],p[1],hairl));
+  } else if(st==="pixie"){
+    row(11,18,2,hair);row(10,19,3,hair);P(10,4,hairs);P(19,4,hairs);P(11,4,hair);
+    P(12,3,hairl);P(15,2,hairl);
+  } else if(st==="bun"){
+    P(14,0,hair);P(15,0,hair);P(13,0,hairs);P(16,0,hairs);
+    row(11,18,2,hair);row(10,19,3,hair);P(10,4,hair);P(19,4,hair);P(10,5,hairs);P(19,5,hairs);
+  } else if(st==="buzz"){
+    row(11,18,2,hairs);row(10,19,3,hairs);P(10,4,hairs);P(19,4,hairs);
+  }
+  P(12,8,hairs);P(13,8,hairs);P(16,8,hairs);P(17,8,hairs);
+  const white="#F5F5F5", pup="#2A2018";
+  row(12,13,10,white);row(16,17,10,white);
+  P(12,11,white);P(13,11,pup);P(16,11,pup);P(17,11,white);
+  P(15,12,skd);
+  P(13,14,skd);P(14,14,skd);P(15,14,skd);P(16,14,skd);
+  P(11,13,shade(f.skin,-0.08));P(18,13,shade(f.skin,-0.08));
+  if(f.glasses){
+    const fr=f.glassCol||"#C9A24B";
+    P(11,9,fr);P(14,9,fr);P(11,10,fr);P(14,10,fr);P(11,11,fr);P(12,12,fr);P(13,12,fr);P(14,11,fr);
+    P(15,9,fr);P(18,9,fr);P(15,10,fr);P(18,10,fr);P(15,11,fr);P(16,12,fr);P(17,12,fr);P(18,11,fr);
+    P(14,10,fr);P(15,10,fr);
+  }
+  let fac=f.facial; if(!fac) fac=f.beard?'full':'none';
+  if(fac!=='none' && f.beard){
+    const bd=f.beard, bds=shade(f.beard,-0.15);
+    if(fac==='full'){
+      row(11,18,14,bd);row(11,18,15,bd);row(12,17,16,bd);
+      P(10,11,bd);P(10,12,bd);P(10,13,bd);P(19,11,bd);P(19,12,bd);P(19,13,bd);
+      const mb=shade(f.beard,-0.45);P(13,14,mb);P(14,14,mb);P(15,14,mb);
+    } else if(fac==='mustache'){
+      P(13,13,bd);P(14,13,bd);P(15,13,bd);P(16,13,bd);
+    } else if(fac==='goatee'){
+      P(13,13,bd);P(14,13,bd);P(15,13,bd);P(16,13,bd);P(14,15,bd);P(15,15,bd);P(14,16,bd);P(15,16,bd);
+    } else if(fac==='stubble'){
+      [[11,15],[13,16],[15,15],[17,16],[12,14],[16,14],[18,15],[10,14]].forEach(p=>P(p[0],p[1],bds));
+    }
+  }
+  if(f.ears==="stud"){P(9,12,"#C9CDD2");P(20,12,"#C9CDD2");}
+  else if(f.ears==="dangle"){const ec=f.earCol||"#E8C45A";P(9,12,ec);P(9,13,ec);P(20,12,ec);P(20,13,ec);}
+  if(ti!=null && nT>1){
+    if(ti===nT-1){ const hc="#FFF1C8"; row(12,17,-2,hc); P(11,-1,hc); P(18,-1,hc); P(9,-2,hc); P(20,-2,hc); }
+    else if(ti===nT-2){ const cg="#F2C45A", cgl="#FFF3C0"; row(12,17,0,cg); P(12,-1,cgl); P(15,-1,cgl); P(17,-1,cgl); }
+  }
+}
+function drawChibiSprite(canvas,soul,scale,t,base,dpr){
+  const f=soul.chibi;
+  const px = scale<=4?1:(scale<=6?2:4);
+  const GW=30,GH=46;
+  const flick=0.5+0.5*Math.abs(Math.sin(t*0.004+soul.seed));
+  const glowR=(4+soul.ti*2.4);
+  const padX=px*4, padTop=px*3, padBot=px*2;
+  const cw=GW*px+padX*2, ch=GH*px+padTop+padBot;
+  canvas.width=cw*dpr;canvas.height=ch*dpr;canvas.style.width=cw+"px";canvas.style.height=ch+"px";
+  const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,cw,ch);
+  const g=ctx.createRadialGradient(cw/2,ch*0.5,2,cw/2,ch*0.5,ch/1.2);
+  g.addColorStop(0,hexA(base,0.12+soul.ti*0.04));g.addColorStop(1,"transparent");
+  ctx.fillStyle=g;ctx.fillRect(0,0,cw,ch);
+  ctx.save();ctx.shadowColor=base;ctx.shadowBlur=glowR*flick*0.55;
+  drawChibi(ctx,f,px,padX,padTop,soul.ti,tiers().length);
+  ctx.restore();
+}
+function hexA(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${n>>16},${(n>>8)&255},${n&255},${a})`;}
+
+/* ====================== RENDER ====================== */
+const groveEl=document.getElementById("grove");
+const rowsEl=document.getElementById("rows");
+let spirits=[]; // {member, soul, canvas, x,y, phase}
+
+function sortedMembers(){return [...MEM.members].sort((a,b)=>b.points-a.points);}
+
+function layoutGrove(){
+  groveEl.innerHTML=""; spirits=[];
+  const members=sortedMembers();
+  const w=groveEl.clientWidth||340;
+  const cols = w<360?3:(w<520?4:5);
+  const cellW = w/cols;
+  const rowH = 144;
+  members.forEach((m,i)=>{
+    const soul=buildSoul(m.name,m.points,m.sprite);
+    const wrap=document.createElement("div");
+    wrap.className="spirit";
+    const col=i%cols, row=Math.floor(i/cols);
+    // seeded jitter so it feels like a grove, not a grid
+    const jx=(rng(soul.seed)()-0.5)*cellW*0.4;
+    const jy=(rng(soul.seed^99)()-0.5)*26;
+    wrap.style.left=(col*cellW + cellW/2 - 42 + jx)+"px";
+    wrap.style.top=(row*rowH + 8 + jy)+"px";
+    const cv=document.createElement("canvas");
+    const nm=document.createElement("div");nm.className="nm";nm.textContent=m.name;
+    const pts=document.createElement("div");pts.className="pts";pts.textContent=m.points+" pts";
+    wrap.append(cv,nm,pts);
+    wrap.onclick=()=>openSoul(m.name);
+    groveEl.appendChild(wrap);
+    spirits.push({member:m,soul,canvas:cv,phase:rng(soul.seed)()*Math.PI*2});
+  });
+  const rows=Math.ceil(members.length/cols);
+  groveEl.style.height=(rows*rowH+30)+"px";
+}
+
+let LEDGER_SORT="season";
+window.setLedgerSort=function(s){ LEDGER_SORT=s; renderLedger(); };
+function renderLedger(){
+  document.getElementById("seasonLine").textContent="◈ "+MEM.season+" ◈";
+  const bySeason = LEDGER_SORT==="season";
+  const list=[...MEM.members].sort((a,b)=> (bySeason?((b.season||0)-(a.season||0)):0) || (b.points-a.points));
+  rowsEl.innerHTML="";
+  const tog=document.createElement("div");
+  tog.style.cssText="display:flex;gap:6px;justify-content:center;margin-bottom:12px";
+  tog.innerHTML=`<button onclick="setLedgerSort('season')" class="lsort ${bySeason?'on':''}">This Season</button>`+
+                `<button onclick="setLedgerSort('lifetime')" class="lsort ${!bySeason?'on':''}">Lifetime</button>`;
+  rowsEl.appendChild(tog);
+  list.forEach((m,i)=>{
+    const soul=buildSoul(m.name,m.points,m.sprite);
+    const tier=tierOf(m.points);
+    const row=document.createElement("div");row.className="row";
+    row.onclick=()=>openSoul(m.name);
+    const no=document.createElement("div");no.className="rank-no";no.textContent=i+1;
+    const cv=document.createElement("canvas");
+    const info=document.createElement("div");info.className="info";
+    const epi = m.epithet ? `<span style="color:var(--sage);font-style:italic;font-size:11px"> · ${m.epithet}</span>` : "";
+    info.innerHTML=`<div class="rn">${m.name}${epi}</div><div class="tt" style="color:${tier.hex}">${tier.name}</div>`;
+    const big = bySeason ? (m.season||0) : m.points;
+    const small = bySeason ? `${m.points} lifetime` : `${m.season||0} this season`;
+    const pp=document.createElement("div");
+    pp.innerHTML=`<div class="pp" style="color:${tier.hex}">${big}</div><div class="pl">${small}</div>`;
+    row.append(no,cv,info,pp);
+    rowsEl.appendChild(row);
+    drawSoul(cv,soul,4,0);
+  });
+}
+
+/* animation loop for grove */
+let RAF=null;
+function animate(t){
+  spirits.forEach(s=>{
+    drawSoul(s.canvas, s.soul, 6, t);
+    const bob=Math.sin(t*0.0016 + s.phase)*5;
+    s.canvas.style.transform=`translateY(${bob}px)`;
+  });
+  RAF=requestAnimationFrame(animate);
+}
+
+/* ====================== PROFILE SHEET ====================== */
+const scrim=document.getElementById("scrim");
+const sheet=document.getElementById("sheet");
+function closeSheet(){scrim.classList.remove("show");}
+scrim.onclick=e=>{if(e.target===scrim)closeSheet();};
+
+function openSoul(name){
+  const m=MEM.members.find(x=>x.name===name);if(!m)return;
+  const soul=buildSoul(m.name,m.points,m.sprite);
+  const tier=tierOf(m.points);
+  const nt=nextTier(m.points);
+  const i=tierIndex(m.points);
+  let pctW=100, lo=tier.min, txt="Highest order attained";
+  if(nt){const span=nt.min-tier.min;pctW=Math.round((m.points-tier.min)/span*100);txt=`${nt.min-m.points} pts to ${nt.name}`;}
+  const badges=(m.badges||[]).map(b=>`<span class="badge">✦ ${b}</span>`).join("");
+  const epiLine = m.epithet ? `<div style="font-style:italic;color:var(--sage);font-size:14px;margin:1px 0 4px">"${m.epithet}"</div>` : "";
+  const hist=(m.history||[]).slice().reverse().map(h=>`<div class="h"><em>${h.l}</em><b class="${h.d<0?'neg':''}">${h.d>0?'+':''}${h.d}</b></div>`).join("")||`<div class="h"><em>The lake has yet to record their deeds.</em></div>`;
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="soul">
+      <canvas id="soulCv"></canvas>
+      <div class="who">
+        <div class="nm">${m.name}</div>
+        ${epiLine}
+        <span class="tier-tag" style="background:${hexA(tier.hex,.14)};border:1px solid ${hexA(tier.hex,.5)};color:${tier.hex}">${tier.name}</span>
+        <div class="badgewrap">${badges}</div>
+      </div>
+    </div>
+    <div class="meter"><i style="width:${pctW}%"></i></div>
+    <div class="meterlbl"><span>member since ${m.since||2026}</span><span>${txt}</span></div>
+    <div style="display:flex;justify-content:space-between;margin-top:8px;gap:8px">
+      <div style="flex:1;text-align:center;background:rgba(242,196,90,.08);border:1px solid rgba(242,196,90,.25);border-radius:9px;padding:7px">
+        <div style="font-family:'Silkscreen',monospace;font-size:16px;color:var(--candle)">${m.season||0}</div>
+        <div style="font-family:'Silkscreen',monospace;font-size:8px;color:var(--sage);letter-spacing:.1em">THIS SEASON</div>
+      </div>
+      <div style="flex:1;text-align:center;background:rgba(143,168,155,.08);border:1px solid rgba(143,168,155,.25);border-radius:9px;padding:7px">
+        <div style="font-family:'Silkscreen',monospace;font-size:16px;color:var(--parch)">${m.points}</div>
+        <div style="font-family:'Silkscreen',monospace;font-size:8px;color:var(--sage);letter-spacing:.1em">LIFETIME</div>
+      </div>
+    </div>
+    <div class="hist"><h4>Ledger of Deeds</h4>${hist}</div>
+    <button class="closebtn" onclick="closeSheet()">Return to the grove</button>`;
+  scrim.classList.add("show");
+  drawSoul(document.getElementById("soulCv"),soul,8,0);
+}
+
+/* ====================== KEEPER ====================== */
+let keeperUnlocked=false;
+document.getElementById("keeperBtn").onclick=openKeeper;
+
+function openKeeper(){
+  if(!keeperUnlocked){ keeperGate(); }
+  else { keeperPanel(); }
+  scrim.classList.add("show");
+}
+function keeperGate(){
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="kpanel">
+      <h3>The Keeper's Seal</h3>
+      <p class="sub">Only the Keeper of the Ledger may alter what the lake remembers.</p>
+      <div class="field"><label>Passphrase</label><input id="kpass" type="password" placeholder="•••••••" autocomplete="off"></div>
+      <button class="gold" onclick="tryUnlock()">Break the seal</button>
+      <div class="err" id="kerr"></div>
+    </div>`;
+  setTimeout(()=>document.getElementById("kpass")?.focus(),200);
+}
+window.tryUnlock=async function(){
+  const v=document.getElementById("kpass").value;
+  const err=document.getElementById("kerr");
+  if(MODE==="remote"){
+    try{
+      const ok=await sbRpc("grove_check",{p_pass:v});
+      if(ok){ SESSION_PASS=v; keeperUnlocked=true; keeperPanel(); }
+      else err.textContent="The seal holds. Wrong passphrase.";
+    }catch(e){ err.textContent="Could not reach the lake. Check connection."; }
+  }else{
+    if(v===MEM.pass){ keeperUnlocked=true; keeperPanel(); }
+    else err.textContent="The seal holds. Wrong passphrase.";
+  }
+};
+
+function keeperPanel(){
+  const opts=sortedMembers().map(m=>`<option value="${m.name}">${m.name} — ${m.points} pts</option>`).join("");
+  const quick=deeds().map(q=>{
+    const neg=q[1]<0, lbl=String(q[0]).replace(/['"]/g,"");
+    return `<button onclick="setQuick('${lbl}',${q[1]})" ${neg?'style="border-color:rgba(199,90,51,.45);color:#E8A88F"':''}>${q[0]} ${q[1]>=0?'+':''}${q[1]}</button>`;
+  }).join("");
+  KMULT=1;
+  const multBtns=[1,2,3,4,5].map(n=>`<button onclick="setMult(${n})" id="mult${n}" class="${n===1?'on':''}">×${roman(n)}</button>`).join("");
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="kpanel">
+      <h3>Keeper's Ledger</h3>
+      <p class="sub">Award deeds at the closing ceremony. All spirits update at once.</p>
+      <div class="field"><label>Member</label><select id="kmem">${opts}</select></div>
+      <div class="field"><label>Reason</label><input id="kreason" placeholder="e.g. Completed the portage"></div>
+      <div class="field"><label>Points (use − to subtract)</label><input id="kpts" type="number" inputmode="numeric" placeholder="50"></div>
+      <div class="field"><label>Multiplier (×base points)</label><div class="seg" id="multseg">${multBtns}</div></div>
+      <div class="quick">${quick}</div>
+      <button class="gold" style="margin-top:14px" onclick="awardPoints()">Inscribe in the ledger</button>
+      <button class="ghostbtn" onclick="editEpithetForm()">✎ Set a personal title</button>
+      <button class="ghostbtn" onclick="creatorForm()">✦ Create / edit a chibi</button>
+      <button class="ghostbtn" onclick="deedsForm()">✎ Manage deeds & points</button>
+      <button class="ghostbtn" onclick="ranksForm()">✎ Manage ranks</button>
+      <button class="ghostbtn" onclick="addMemberForm()">+ Initiate a new member</button>
+      <button class="ghostbtn" onclick="changePass()">Change passphrase</button>
+      <button class="ghostbtn" onclick="seasonForm()">◈ Manage season</button>
+      <button class="ghostbtn" onclick="closeSheet()">Close</button>
+      <div class="err" id="kerr"></div>
+    </div>`;
+}
+function roman(n){ return ['','I','II','III','IV','V'][n]||('×'+n); }
+let KMULT=1;
+window.setMult=function(n){ KMULT=n; for(let i=1;i<=5;i++){ const b=document.getElementById('mult'+i); if(b) b.classList.toggle('on', i===n); } };
+window.seasonForm=function(){
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="kpanel">
+      <h3>The Season</h3>
+      <p class="sub">The label shown atop the ledger, and the seasonal race.</p>
+      <div class="field"><label>Season label</label><input id="seasLabel" value="${String(MEM.season||'').replace(/"/g,'&quot;')}" placeholder="e.g. Trip II · Algonquin · July 2027"></div>
+      <button class="gold" onclick="saveSeasonLabel()">Save label</button>
+      <div style="border-top:1px solid rgba(38,53,44,.7);margin:18px 0 12px"></div>
+      <p class="sub" style="margin-bottom:10px">Starting a new season resets everyone's <b>season</b> score to 0. Lifetime points, ranks, titles and chibis are all kept.</p>
+      <button class="ghostbtn" onclick="newSeason()" style="border-color:rgba(242,196,90,.5);color:var(--candle)">◈ Start a new season</button>
+      <div style="border-top:1px solid rgba(38,53,44,.7);margin:18px 0 12px"></div>
+      <p class="sub" style="margin-bottom:10px">Fresh slate wipes <b>all points, season scores, titles, badges and deed history</b> for everyone — keeping their names and chibis. Use once to begin the cult anew.</p>
+      <button class="ghostbtn" onclick="freshSlate()" style="border-color:rgba(199,90,51,.5);color:var(--ember)">⚠ Fresh slate (clear all points &amp; titles)</button>
+      <button class="ghostbtn" onclick="keeperPanel()">Back</button>
+      <div class="err" id="kerr"></div>
+    </div>`;
+};
+window.freshSlate=async function(){
+  if(!confirm("FRESH SLATE — wipe all points, season scores, titles, badges and deed history for EVERYONE? Names and chibis are kept. This cannot be undone."))return;
+  MEM.members.forEach(m=>{ m.points=0; m.season=0; m.epithet=""; m.badges=[]; m.history=[]; });
+  await saveData(); layoutGrove(); renderLedger(); closeSheet(); toast("A fresh slate. The cult begins anew.");
+};
+window.saveSeasonLabel=async function(){
+  const v=document.getElementById("seasLabel").value.trim();
+  if(!v){document.getElementById("kerr").textContent="Give the season a name.";return;}
+  MEM.season=v; await saveData(); renderLedger(); closeSheet(); toast("Season named.");
+};
+window.newSeason=async function(){
+  const label=document.getElementById("seasLabel").value.trim();
+  if(!confirm("Start a new season? Everyone's season score resets to 0. Lifetime points, ranks and chibis are kept."))return;
+  MEM.members.forEach(m=>m.season=0);
+  if(label) MEM.season=label;
+  await saveData(); layoutGrove(); renderLedger(); closeSheet(); toast("A new season dawns.");
+};
+window.editEpithetForm=function(){
+  const opts=sortedMembers().map(m=>`<option value="${m.name}">${m.name}${m.epithet?" — "+m.epithet:""}</option>`).join("");
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="kpanel">
+      <h3>Bestow a Title</h3>
+      <p class="sub">A personal epithet, shown beside their earned rank.</p>
+      <div class="field"><label>Member</label><select id="epMem" onchange="syncEpithet()">${opts}</select></div>
+      <div class="field"><label>Personal title</label><input id="epVal" placeholder="e.g. Keeper of the Flame"></div>
+      <button class="gold" onclick="commitEpithet()">Bestow</button>
+      <button class="ghostbtn" onclick="keeperPanel()">Back</button>
+      <div class="err" id="kerr"></div>
+    </div>`;
+  syncEpithet();
+};
+window.syncEpithet=function(){
+  const m=MEM.members.find(x=>x.name===document.getElementById("epMem").value);
+  document.getElementById("epVal").value=m&&m.epithet?m.epithet:"";
+};
+window.commitEpithet=async function(){
+  const m=MEM.members.find(x=>x.name===document.getElementById("epMem").value);
+  m.epithet=document.getElementById("epVal").value.trim();
+  await saveData();layoutGrove();renderLedger();closeSheet();
+  toast(`${m.name}: "${m.epithet||'—'}"`);
+};
+window.customizeForm=function(){
+  const opts=sortedMembers().map(m=>`<option value="${m.name}">${m.name}</option>`).join("");
+  const arch=['(default)','Lantern flame','Moth antennae','Plain wisp','Antlered'].map((a,k)=>`<option value="${k-1}">${a}</option>`).join("");
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="kpanel">
+      <h3>Shape the Spirit</h3>
+      <p class="sub">Override form & colour. Rank still drives glow, antlers & crown. Custom artwork can be dropped in later.</p>
+      <div class="field"><label>Member</label><select id="csMem" onchange="syncCustom()">${opts}</select></div>
+      <div class="field"><label>Form</label><select id="csArch">${arch}</select></div>
+      <div class="field"><label>Spirit colour (hex, blank = rank colour)</label><input id="csHex" placeholder="#46C2C9"></div>
+      <button class="gold" onclick="commitCustom()">Shape it</button>
+      <button class="ghostbtn" onclick="clearCustom()">Reset to default</button>
+      <button class="ghostbtn" onclick="keeperPanel()">Back</button>
+      <div class="err" id="kerr"></div>
+    </div>`;
+  syncCustom();
+};
+window.syncCustom=function(){
+  const m=MEM.members.find(x=>x.name===document.getElementById("csMem").value);
+  const s=m.sprite||{};
+  document.getElementById("csArch").value = (s.archetype!=null)?s.archetype:-1;
+  document.getElementById("csHex").value = s.hex||"";
+};
+window.commitCustom=async function(){
+  const m=MEM.members.find(x=>x.name===document.getElementById("csMem").value);
+  const a=parseInt(document.getElementById("csArch").value,10);
+  let hex=document.getElementById("csHex").value.trim();
+  if(hex && !/^#?[0-9a-fA-F]{6}$/.test(hex)){document.getElementById("kerr").textContent="Use a 6-digit hex like #46C2C9.";return;}
+  if(hex && hex[0]!=="#")hex="#"+hex;
+  const sprite=m.sprite||{};
+  sprite.archetype = a>=0?a:null;
+  sprite.hex = hex||null;
+  m.sprite=(sprite.archetype==null && !sprite.hex && !sprite.img)?null:sprite;
+  await saveData();layoutGrove();renderLedger();closeSheet();toast(`${m.name}'s spirit reshaped.`);
+};
+window.clearCustom=async function(){
+  const m=MEM.members.find(x=>x.name===document.getElementById("csMem").value);
+  m.sprite=null;await saveData();layoutGrove();renderLedger();closeSheet();toast(`${m.name}'s spirit restored.`);
+};
+window.setQuick=function(reason,pts){
+  document.getElementById("kreason").value=reason;
+  document.getElementById("kpts").value=pts;
+};
+window.awardPoints=async function(){
+  const name=document.getElementById("kmem").value;
+  let reason=document.getElementById("kreason").value.trim()||"Deed recorded";
+  const base=parseInt(document.getElementById("kpts").value,10);
+  if(isNaN(base)||base===0){document.getElementById("kerr").textContent="Enter a point value.";return;}
+  const mult=KMULT||1;
+  const pts=base*mult;
+  if(mult>1) reason+=" ×"+roman(mult);
+  const m=MEM.members.find(x=>x.name===name);
+  const before=tierIndex(m.points);
+  m.points=Math.max(0,m.points+pts);
+  m.season=Math.max(0,(m.season||0)+pts);
+  m.history=m.history||[];m.history.push({l:reason,d:pts});
+  const after=tierIndex(m.points);
+  await saveData();
+  layoutGrove(); renderLedger();
+  closeSheet();
+  if(after>before){ celebrateRankUp(m.name, tiers()[after].name); }
+  else { toast(`${m.name} ${pts>0?'gains':'loses'} ${Math.abs(pts)} — ${reason}`); }
+};
+window.addMemberForm=function(){
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="kpanel">
+      <h3>New Initiate</h3>
+      <p class="sub">A new spirit enters the grove.</p>
+      <div class="field"><label>Name</label><input id="nmName" placeholder="Name"></div>
+      <div class="field"><label>Starting points</label><input id="nmPts" type="number" value="100"></div>
+      <button class="gold" onclick="commitMember()">Welcome them</button>
+      <button class="ghostbtn" onclick="keeperPanel()">Back</button>
+      <div class="err" id="kerr"></div>
+    </div>`;
+};
+window.commitMember=async function(){
+  const name=document.getElementById("nmName").value.trim();
+  if(!name){document.getElementById("kerr").textContent="A spirit needs a name.";return;}
+  if(MEM.members.some(x=>x.name.toLowerCase()===name.toLowerCase())){document.getElementById("kerr").textContent="That spirit already walks the grove.";return;}
+  const pts=parseInt(document.getElementById("nmPts").value,10)||0;
+  MEM.members.push({name,epithet:"",sprite:null,points:pts,since:2026,badges:[],history:[{l:"Initiated",d:pts}]});
+  await saveData();layoutGrove();renderLedger();closeSheet();toast(`${name} joins the Order.`);
+};
+window.changePass=function(){
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="kpanel">
+      <h3>Reforge the Seal</h3>
+      <p class="sub">Set a new Keeper passphrase.</p>
+      <div class="field"><label>New passphrase</label><input id="np" type="text" placeholder="new passphrase"></div>
+      <button class="gold" onclick="commitPass()">Set passphrase</button>
+      <button class="ghostbtn" onclick="keeperPanel()">Back</button>
+      <div class="err" id="kerr"></div>
+    </div>`;
+};
+window.commitPass=async function(){
+  const v=document.getElementById("np").value.trim();
+  if(v.length<3){document.getElementById("kerr").textContent="Choose something longer.";return;}
+  if(MODE==="remote"){
+    try{ await sbRpc("grove_setpass",{p_old:SESSION_PASS||"",p_new:v}); SESSION_PASS=v; }
+    catch(e){ document.getElementById("kerr").textContent="Could not change passphrase."; return; }
+  }else{
+    MEM.pass=v; await saveData();
+  }
+  closeSheet();toast("The seal is reforged.");
+};
+
+/* ====================== CHIBI CHARACTER CREATOR ====================== */
+const PAL={
+  skin:["#F0C9A0","#E6B088","#E2AC80","#D9A06A","#C98A5A","#B5764A","#8A5A3A","#6B4A30"],
+  hair:["#1A1612","#33251C","#5A4030","#7A4A2A","#B5651D","#D9A86A","#9A9A9A","#2A2E33","#7A3B5A"],
+  top:["#1C1C20","#5C6646","#3A5A6B","#7A3B5A","#8A5A6A","#B5854F","#6B2E2E","#46707A","#2E4A3A","#EDE4CF"],
+  jacket:["#6B4A2E","#3A3A40","#2E4A3A","#5A2E2E","#444444","#7A5A8A"],
+  pants:["#2A2620","#23364A","#3A3A44","#4A3B2A","#33384A","#1C1C1E","#5A3A2A"],
+  boots:["#7B4A2A","#1C1C1E","#3A2A22","#5A3A2A","#2A2A2A"],
+  metal:["#E8C45A","#C9CDD2","#C9A24B","#B5651D"]
+};
+let CHIBI_EDIT=null, CHIBI_MEMBER=null;
+function defChibi(){return {skin:"#E2AC80",hair:"#5A4030",hair_style:"short",facial:"none",beard:"#3A2A1C",glasses:false,glassCol:"#C9A24B",ears:"none",earCol:"#E8C45A",top:"#3A5A6B",top_style:"tee",watch:false,jacket:null,pants:"#2A2620",boots:"#3A2A22",belt:"#3A2A1C",accent:"none",accentCol:"#E8C45A"};}
+function cloneChibi(m){
+  const c=(m && m.sprite && m.sprite.chibi)?structuredClone(m.sprite.chibi):defChibi();
+  if(c.facial===undefined) c.facial = c.beard?'full':'none';
+  if(!c.beard) c.beard = "#3A2A1C";
+  if(c.top_style===undefined) c.top_style = (c.sleeves===false?'tank':'tee');
+  if(c.watch===undefined) c.watch = false;
+  return c;
+}
+window.creatorForm=function(){ const first=sortedMembers()[0].name; CHIBI_MEMBER=first; CHIBI_EDIT=cloneChibi(MEM.members.find(m=>m.name===first)); renderCreator(); };
+window.chibiPick=function(name){ CHIBI_MEMBER=name; CHIBI_EDIT=cloneChibi(MEM.members.find(m=>m.name===name)); renderCreator(); };
+window.cset=function(k,v){ CHIBI_EDIT[k]=v; renderCreator(); };
+window.csetb=function(k,v){ CHIBI_EDIT[k]=v; renderCreator(); };
+function swHTML(key,arr,allowNone){
+  let h='<div class="swrow">';
+  if(allowNone) h+=`<button class="sw none ${!CHIBI_EDIT[key]?'on':''}" onclick="cset('${key}',null)">∅</button>`;
+  arr.forEach(c=>{ h+=`<button class="sw ${CHIBI_EDIT[key]===c?'on':''}" style="background:${c}" onclick="cset('${key}','${c}')"></button>`; });
+  return h+'</div>';
+}
+function segHTML(key,opts){
+  return '<div class="seg">'+opts.map(o=>{
+    const val = typeof o[1]==='boolean' ? (o[1]?'true':'false') : `'${o[1]}'`;
+    const on = CHIBI_EDIT[key]===o[1] ? 'on':'';
+    const fn = typeof o[1]==='boolean' ? 'csetb' : 'cset';
+    return `<button class="${on}" onclick="${fn}('${key}',${val})">${o[0]}</button>`;
+  }).join('')+'</div>';
+}
+function renderCreator(){
+  const opts=sortedMembers().map(m=>`<option value="${m.name}" ${m.name===CHIBI_MEMBER?'selected':''}>${m.name}</option>`).join('');
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="kpanel">
+      <h3>Character Creator</h3>
+      <div class="field"><label>Weaving the form of</label><select onchange="chibiPick(this.value)">${opts}</select></div>
+      <div class="crprev"><canvas id="chibiPrev"></canvas></div>
+      <div class="crlabel">Skin</div>${swHTML('skin',PAL.skin)}
+      <div class="crlabel">Hair style</div>${segHTML('hair_style',[['Short','short'],['Fade','fade'],['Curly','curly'],['Long','long'],['Curly-long','curlylong'],['Wavy','wavy'],['Ponytail','ponytail'],['Afro','afro'],['Pixie','pixie'],['Bun','bun'],['Buzz','buzz']])}
+      <div class="crlabel">Hair colour</div>${swHTML('hair',PAL.hair)}
+      <div class="crlabel">Facial hair</div>${segHTML('facial',[['None','none'],['Stubble','stubble'],['Mustache','mustache'],['Goatee','goatee'],['Full','full']])}${CHIBI_EDIT.facial!=='none'?swHTML('beard',PAL.hair):''}
+      <div class="crlabel">Glasses</div>${segHTML('glasses',[['None',false],['On',true]])}${CHIBI_EDIT.glasses?swHTML('glassCol',PAL.metal):''}
+      <div class="crlabel">Earrings</div>${segHTML('ears',[['None','none'],['Stud','stud'],['Dangle','dangle']])}${CHIBI_EDIT.ears==='dangle'?swHTML('earCol',PAL.metal):''}
+      <div class="crlabel">Top</div>${segHTML('top_style',[['Tank','tank'],['Tee','tee'],['Shirt','shirt'],['Hoodie','hoodie'],['Long-sleeve','longsleeve'],['Dress','dress']])}
+      <div class="crlabel">Top colour</div>${swHTML('top',PAL.top)}
+      <div class="crlabel">Jacket / vest</div>${swHTML('jacket',PAL.jacket,true)}
+      <div class="crlabel">Wristwatch</div>${segHTML('watch',[['None',false],['Watch',true]])}
+      <div class="crlabel">${CHIBI_EDIT.top_style==='dress'?'Tights':'Pants'}</div>${swHTML('pants',PAL.pants)}
+      <div class="crlabel">Boots</div>${swHTML('boots',PAL.boots)}
+      <div class="crlabel">Accent</div>${segHTML('accent',[['None','none'],['Necklace','necklace'],['Choker','choker']])}${CHIBI_EDIT.accent!=='none'?swHTML('accentCol',PAL.metal):''}
+      <button class="gold" style="margin-top:14px" onclick="commitChibi()">Weave into being</button>
+      <button class="ghostbtn" onclick="keeperPanel()">Back</button>
+    </div>`;
+  const pv=document.getElementById('chibiPrev');
+  if(pv){ const px=4,GW=30,GH=46,dpr=Math.min(2,window.devicePixelRatio||1);
+    pv.width=(GW*px+16)*dpr; pv.height=(GH*px+8)*dpr; pv.style.width=(GW*px+16)+'px'; pv.style.height=(GH*px+8)+'px';
+    const c=pv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.imageSmoothingEnabled=false; c.clearRect(0,0,pv.width,pv.height);
+    drawChibi(c,CHIBI_EDIT,px,8,4);
+  }
+}
+window.commitChibi=async function(){
+  const m=MEM.members.find(x=>x.name===CHIBI_MEMBER);
+  m.sprite={chibi:structuredClone(CHIBI_EDIT)};
+  await saveData(); layoutGrove(); renderLedger(); closeSheet(); toast(CHIBI_MEMBER+"'s form is woven.");
+};
+
+/* ====================== DEEDS & RANKS EDITORS ====================== */
+const RANKCOLORS=["#5E6F6B","#6FB39A","#46C2C9","#F2C45A","#F0853E","#FFE8A3","#C75A33","#9A6BB0","#E0607A","#8FA89B"];
+const inp="padding:9px;border-radius:8px;background:rgba(8,14,11,.85);border:1px solid var(--moss);color:var(--parch);";
+
+/* --- deeds --- */
+let DEEDS_EDIT=null;
+window.deedsForm=function(){ DEEDS_EDIT=structuredClone(deeds()); renderDeeds(); };
+function syncDeeds(){ if(!DEEDS_EDIT)return; DEEDS_EDIT.forEach((d,i)=>{ const l=document.getElementById('dl'+i),p=document.getElementById('dp'+i); if(l)d[0]=l.value; if(p)d[1]=parseInt(p.value,10)||0; }); }
+window.deedAdd=function(){ syncDeeds(); DEEDS_EDIT.push(["New deed",10]); renderDeeds(); };
+window.deedDel=function(i){ syncDeeds(); DEEDS_EDIT.splice(i,1); renderDeeds(); };
+window.deedsSave=async function(){ syncDeeds(); MEM.deeds=DEEDS_EDIT.filter(d=>String(d[0]).trim()).map(d=>[d[0],Math.max(-50,Math.min(100,d[1]||0))]); await saveData(); closeSheet(); toast("The deeds are inscribed."); };
+function renderDeeds(){
+  const rows=DEEDS_EDIT.map((d,i)=>`
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:7px">
+      <input id="dl${i}" value="${String(d[0]).replace(/"/g,'&quot;')}" placeholder="Deed" style="flex:1;${inp}font-family:'Spectral',serif">
+      <input id="dp${i}" type="number" value="${d[1]}" style="width:72px;${inp}font-family:'Silkscreen',monospace;font-size:12px">
+      <button onclick="deedDel(${i})" style="background:none;border:none;color:var(--ember);font-size:18px;cursor:pointer">✕</button>
+    </div>`).join('');
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="kpanel">
+      <h3>Deeds &amp; Points</h3>
+      <p class="sub">These become the quick-award buttons. Add the feats your tribe rewards. Values are capped at +100 / −50.</p>
+      ${rows}
+      <button class="ghostbtn" onclick="deedAdd()">+ Add a deed</button>
+      <button class="gold" style="margin-top:10px" onclick="deedsSave()">Inscribe the deeds</button>
+      <button class="ghostbtn" onclick="keeperPanel()">Back</button>
+    </div>`;
+}
+
+/* --- ranks --- */
+let RANKS_EDIT=null;
+window.ranksForm=function(){ RANKS_EDIT=structuredClone(tiers()); renderRanks(); };
+function syncRanks(){ if(!RANKS_EDIT)return; RANKS_EDIT.forEach((t,i)=>{ const n=document.getElementById('rn'+i),m=document.getElementById('rm'+i); if(n)t.name=n.value; if(m&&!m.disabled)t.min=parseInt(m.value,10)||0; }); }
+window.rankColor=function(i,c){ syncRanks(); RANKS_EDIT[i].hex=c; renderRanks(); };
+window.rankAdd=function(){ syncRanks(); const mx=RANKS_EDIT.length?Math.max(...RANKS_EDIT.map(t=>t.min)):0; RANKS_EDIT.push({name:"New Order",min:mx+200,hex:"#6FB39A"}); renderRanks(); };
+window.rankDel=function(i){ syncRanks(); if(RANKS_EDIT.length<=1)return; RANKS_EDIT.splice(i,1); renderRanks(); };
+window.ranksSave=async function(){ syncRanks(); RANKS_EDIT.sort((a,b)=>a.min-b.min); RANKS_EDIT[0].min=0; MEM.tiers=RANKS_EDIT; await saveData(); layoutGrove(); renderLedger(); closeSheet(); toast("The orders are redrawn."); };
+function renderRanks(){
+  const rows=RANKS_EDIT.map((t,i)=>`
+    <div style="border:1px solid var(--moss);border-radius:10px;padding:9px;margin-bottom:8px;background:rgba(20,32,25,.5)">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+        <input id="rn${i}" value="${String(t.name||'').replace(/"/g,'&quot;')}" placeholder="Rank name" style="flex:1;${inp}font-family:'Cinzel',serif">
+        <input id="rm${i}" type="number" value="${t.min}" ${i===0?'disabled title="starts at 0"':''} style="width:80px;${inp}font-family:'Silkscreen',monospace;font-size:12px;${i===0?'opacity:.5':''}">
+        <button onclick="rankDel(${i})" style="background:none;border:none;color:var(--ember);font-size:18px;cursor:pointer">✕</button>
+      </div>
+      <div class="swrow">${RANKCOLORS.map(c=>`<button class="sw ${t.hex===c?'on':''}" style="background:${c}" onclick="rankColor(${i},'${c}')"></button>`).join('')}</div>
+    </div>`).join('');
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="kpanel">
+      <h3>The Orders</h3>
+      <p class="sub">Name each rank, set the points to reach it, choose its aura. The first order always starts at 0.</p>
+      ${rows}
+      <button class="ghostbtn" onclick="rankAdd()">+ Add a rank</button>
+      <button class="gold" style="margin-top:10px" onclick="ranksSave()">Redraw the orders</button>
+      <button class="ghostbtn" onclick="keeperPanel()">Back</button>
+    </div>`;
+}
+
+/* rank-up moment */
+function celebrateRankUp(name,tierName){
+  const ov=document.getElementById("rankup");
+  document.getElementById("ruName").textContent=name;
+  document.getElementById("ruTier").textContent="ASCENDS TO "+tierName.toUpperCase();
+  ov.style.display="flex";
+  setTimeout(()=>{ov.style.display="none";},2600);
+}
+
+/* toast */
+let toastT=null;
+function toast(msg){
+  const el=document.getElementById("toast");el.textContent=msg;el.classList.add("show");
+  clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),2600);
+}
+
+/* ====================== TABS ====================== */
+/* ====================== RITES (community voting) ====================== */
+let VOTER = "";
+window.setVoter=function(v){ VOTER=v; renderRites(); };
+
+function renderRites(){
+  const el=document.getElementById("rites"); if(!el) return;
+  const remote = MODE==="remote";
+  const voterOpts = `<option value="">— pick your name —</option>`+
+    (MEM.members||[]).map(m=>`<option value="${m.name}" ${VOTER===m.name?"selected":""}>${m.name}</option>`).join("");
+  const open = (MEM.rites||[]).filter(r=>!r.applied);
+  const cards = open.length ? open.map(riteCard).join("")
+    : `<p class="hint" style="margin:16px 0">No open rites. Raise one below.</p>`;
+  el.innerHTML=`
+    <p class="hint" style="margin:6px 0 12px">The grove decides together. Pick your name, then nominate or approve.</p>
+    <div class="field" style="max-width:300px;margin:0 auto 6px"><label style="text-align:center;display:block">You are</label>
+      <select onchange="setVoter(this.value)">${voterOpts}</select></div>
+    <div class="ritehdr">Open Rites</div>
+    <div id="riteList">${cards}</div>
+    <div class="ritehdr">Raise a Rite</div>
+    <div style="display:flex;flex-direction:column;gap:8px;max-width:360px;margin:0 auto">
+      <button class="gold" onclick="nominateDeedForm()">✦ Nominate points · 5 to pass</button>
+      <button class="ghostbtn" onclick="proposeDeedForm()">✎ Propose a new deed · 8 to pass</button>
+      <button class="ghostbtn" onclick="nominateTitleForm()">✦ Nominate a title · 8 to pass</button>
+    </div>
+    <p class="hint" style="margin:16px 0 2px;font-size:11px;opacity:.7">
+      ${remote?"Honour system — approvals are trusted, not locked.":"Local preview — votes sync once hosted."}</p>`;
+}
+function riteCard(r){
+  const n=(r.approvers||[]).length, thr=r.threshold||5;
+  let desc="";
+  if(r.kind==="deed") desc=`<b>${r.target}</b> &nbsp;<span style="color:${r.points<0?'#E8A88F':'var(--candle)'}">${r.points>=0?'+':''}${r.points}</span> — ${r.label}`;
+  else if(r.kind==="newdeed") desc=`New deed · <b>${r.label}</b> <span style="color:${r.points<0?'#E8A88F':'var(--candle)'}">${r.points>=0?'+':''}${r.points}</span>`;
+  else if(r.kind==="title") desc=`<b>${r.target}</b> → <span style="font-style:italic;color:var(--sage)">"${r.label}"</span>`;
+  const voted = VOTER && (r.approvers||[]).includes(VOTER);
+  return `<div class="ritecard">
+    <div class="rbody"><div class="rdesc">${desc}</div>
+      <div class="rmeta">${n} / ${thr} ✦ &nbsp; <span class="rby">raised by ${r.nominator}</span></div></div>
+    <button class="rapprove ${voted?"voted":""}" ${voted?"disabled":""} onclick="approveRite('${r.id}')">${voted?"✓ Approved":"Approve"}</button>
+  </div>`;
+}
+window.approveRite=function(id){
+  if(!VOTER){ toast("Pick your name first."); return; }
+  voteRite(id, VOTER);
+};
+async function refreshRemote(){ try{ const d=await sbRead(); if(d){ MEM=d; ensureDefaults(); } }catch(e){} }
+
+window.proposeRite=async function(item){
+  if(MODE==="remote"){
+    try{ await sbRpc("grove_propose",{p_item:item}); await refreshRemote(); }
+    catch(e){ toast("Could not raise the rite."); return; }
+  } else {
+    MEM.rites=MEM.rites||[];
+    item.id="r"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);
+    item.approvers=[item.nominator]; item.applied=false; item.created=Date.now()/1000;
+    MEM.rites.push(item);
+    if(item.approvers.length>=item.threshold){ applyRiteEffect(item); item.applied=true; }
+    await saveData();
+  }
+  closeSheet(); renderRites(); layoutGrove(); renderLedger();
+  toast("The rite is raised.");
+};
+window.voteRite=async function(id, voter){
+  if(MODE==="remote"){
+    try{ await sbRpc("grove_vote",{p_id:id,p_voter:voter}); await refreshRemote(); }
+    catch(e){ toast("Vote failed."); return; }
+  } else {
+    applyVoteLocal(id, voter); await saveData();
+  }
+  renderRites(); layoutGrove(); renderLedger();
+  const r=(MEM.rites||[]).find(x=>x.id===id);
+  if(r && r.applied) toast("The grove has spoken — it is done.");
+};
+function applyVoteLocal(id, voter){
+  const r=(MEM.rites||[]).find(x=>x.id===id); if(!r||r.applied) return;
+  r.approvers=r.approvers||[]; if(r.approvers.includes(voter)) return;
+  r.approvers.push(voter);
+  if(r.approvers.length>=(r.threshold||5)){ applyRiteEffect(r); r.applied=true; }
+}
+function applyRiteEffect(r){
+  if(r.kind==="newdeed"){
+    const p=Math.max(-50,Math.min(100,r.points||0));
+    MEM.deeds=MEM.deeds||[]; MEM.deeds.push([r.label,p]); return;
+  }
+  const m=MEM.members.find(x=>x.name===r.target); if(!m) return;
+  if(r.kind==="title"){ m.epithet=r.label; }
+  else if(r.kind==="deed"){
+    m.points=Math.max(0,(m.points||0)+r.points);
+    m.season=Math.max(0,(m.season||0)+r.points);
+    m.history=m.history||[]; m.history.push({l:r.label,d:r.points});
+  }
+}
+window.nominateDeedForm=function(){
+  if(!VOTER){ toast("Pick your name first."); return; }
+  const opts=sortedMembers().map(m=>`<option>${m.name}</option>`).join("");
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="kpanel">
+      <h3>Nominate Points</h3>
+      <p class="sub">Award or deduct for any member — yourself included. Needs 5 approvals to take effect.</p>
+      <div class="field"><label>Member</label><select id="noTarget">${opts}</select></div>
+      <div class="field"><label>Reason</label><input id="noReason" placeholder="e.g. Saved the campfire"></div>
+      <div class="field"><label>Points (use − to deduct)</label><input id="noPts" type="number" inputmode="numeric" placeholder="30"></div>
+      <button class="gold" onclick="submitNomDeed()">Raise nomination</button>
+      <button class="ghostbtn" onclick="closeSheet()">Cancel</button>
+      <div class="err" id="kerr"></div>
+    </div>`;
+  scrim.classList.add("show");
+};
+window.submitNomDeed=function(){
+  const target=document.getElementById("noTarget").value;
+  const label=document.getElementById("noReason").value.trim()||"Deed";
+  const pts=parseInt(document.getElementById("noPts").value,10);
+  if(isNaN(pts)||pts===0){ document.getElementById("kerr").textContent="Enter a point value."; return; }
+  proposeRite({kind:"deed",target,label,points:pts,threshold:5,nominator:VOTER});
+};
+window.proposeDeedForm=function(){
+  if(!VOTER){ toast("Pick your name first."); return; }
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="kpanel">
+      <h3>Propose a Deed</h3>
+      <p class="sub">A new deed or deduction added to the ledger's quick-list. Capped +100 / −50. Needs 8 approvals.</p>
+      <div class="field"><label>Deed name</label><input id="pdName" placeholder="e.g. Spotted a moose"></div>
+      <div class="field"><label>Points (−50 to 100)</label><input id="pdPts" type="number" inputmode="numeric" placeholder="30"></div>
+      <button class="gold" onclick="submitPropDeed()">Raise proposal</button>
+      <button class="ghostbtn" onclick="closeSheet()">Cancel</button>
+      <div class="err" id="kerr"></div>
+    </div>`;
+  scrim.classList.add("show");
+};
+window.submitPropDeed=function(){
+  const label=document.getElementById("pdName").value.trim();
+  let pts=parseInt(document.getElementById("pdPts").value,10);
+  if(!label){ document.getElementById("kerr").textContent="Name the deed."; return; }
+  if(isNaN(pts)||pts===0){ document.getElementById("kerr").textContent="Enter a point value."; return; }
+  pts=Math.max(-50,Math.min(100,pts));
+  proposeRite({kind:"newdeed",label,points:pts,threshold:8,nominator:VOTER});
+};
+window.nominateTitleForm=function(){
+  if(!VOTER){ toast("Pick your name first."); return; }
+  const opts=sortedMembers().map(m=>`<option>${m.name}</option>`).join("");
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="kpanel">
+      <h3>Nominate a Title</h3>
+      <p class="sub">Bestow an epithet — ✦ Returned, The Pathfinder, Keeper of the Flame. Needs 8 approvals.</p>
+      <div class="field"><label>Member</label><select id="ntTarget">${opts}</select></div>
+      <div class="field"><label>Title</label><input id="ntTitle" placeholder="e.g. The Pathfinder"></div>
+      <button class="gold" onclick="submitNomTitle()">Raise nomination</button>
+      <button class="ghostbtn" onclick="closeSheet()">Cancel</button>
+      <div class="err" id="kerr"></div>
+    </div>`;
+  scrim.classList.add("show");
+};
+window.submitNomTitle=function(){
+  const target=document.getElementById("ntTarget").value;
+  const label=document.getElementById("ntTitle").value.trim();
+  if(!label){ document.getElementById("kerr").textContent="Enter a title."; return; }
+  proposeRite({kind:"title",target,label,threshold:8,nominator:VOTER});
+};
+
+document.querySelectorAll(".tab").forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));
+    t.classList.add("on");
+    const v=t.dataset.view;
+    document.getElementById("grove").style.display = v==="grove"?"block":"none";
+    document.getElementById("groveHint").style.display = v==="grove"?"block":"none";
+    document.getElementById("ledger").style.display = v==="ledger"?"block":"none";
+    document.getElementById("rites").style.display = v==="rites"?"block":"none";
+    if(v==="rites") renderRites();
+  };
+});
+
+/* ====================== BACKDROP CANVASES ====================== */
+function drawTrees(){
+  const c=document.getElementById("trees");const dpr=Math.min(2,devicePixelRatio||1);
+  c.width=innerWidth*dpr;c.height=160*dpr;c.style.width=innerWidth+"px";c.style.height="160px";
+  const x=c.getContext("2d");x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,innerWidth,160);
+  const rnd=rng(7);
+  for(let layer=0;layer<2;layer++){
+    x.fillStyle=layer===0?"#0a120d":"#060c08";
+    let px=0;
+    while(px<innerWidth+40){
+      const tw=24+rnd()*36, th=70+rnd()*70 + layer*10;
+      const bx=px;
+      x.beginPath();
+      x.moveTo(bx,160);x.lineTo(bx+tw/2,160-th);x.lineTo(bx+tw,160);x.closePath();x.fill();
+      px+=tw*0.62;
+    }
+  }
+}
+function initEmbers(){
+  const c=document.getElementById("embers");const dpr=Math.min(2,devicePixelRatio||1);
+  function size(){c.width=innerWidth*dpr;c.height=innerHeight*dpr;c.style.width=innerWidth+"px";c.style.height=innerHeight+"px";}
+  size();
+  const ctx=c.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);
+  const N=window.matchMedia("(prefers-reduced-motion:reduce)").matches?0:26;
+  const P=Array.from({length:N},()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,
+    r:Math.random()*1.6+.4,s:Math.random()*.4+.12,t:Math.random()*6}));
+  function loop(){
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+    P.forEach(p=>{
+      p.y-=p.s;p.t+=.02;p.x+=Math.sin(p.t)*.3;
+      if(p.y<-5){p.y=innerHeight+5;p.x=Math.random()*innerWidth;}
+      const a=.3+.4*Math.abs(Math.sin(p.t));
+      ctx.fillStyle=`rgba(242,196,90,${a*.5})`;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fill();
+    });
+    requestAnimationFrame(loop);
+  }
+  if(N)loop();
+  addEventListener("resize",size);
+}
+
+/* ====================== BOOT ====================== */
+(async function(){
+  await loadData();
+  ensureDefaults();
+  document.getElementById("offNote").textContent =
+    MODE==="remote" ? "◦ live ledger · synced through the lake ◦"
+    : liveStorage ? "◦ shared preview · goes live once hosted on Supabase ◦"
+    : "◦ preview mode · changes won't persist until hosted ◦";
+  drawTrees();initEmbers();
+  layoutGrove();renderLedger();renderRites();
+  window.__onSpriteLoad=()=>{renderLedger();};
+  RAF=requestAnimationFrame(animate);
+  setInterval(pollRemote, 20000);
+  addEventListener("resize",()=>{drawTrees();layoutGrove();});
+})();
+</script>
+</body>
+</html>

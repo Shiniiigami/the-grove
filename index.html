@@ -334,7 +334,7 @@ const DEFAULT_DEEDS = [
 ];
 function tiers(){ return (MEM && MEM.tiers && MEM.tiers.length)?MEM.tiers:DEFAULT_TIERS; }
 function deeds(){ return (MEM && MEM.deeds && MEM.deeds.length)?MEM.deeds:DEFAULT_DEEDS; }
-function ensureDefaults(){ if(!MEM)return; if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); if(MEM._tierMig!==1){ MEM.tiers=structuredClone(DEFAULT_TIERS); MEM._tierMig=1; } if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); if(!MEM.rites)MEM.rites=[]; if(!MEM.challenges)MEM.challenges=[]; if(!MEM.seasonHistory)MEM.seasonHistory=[]; if(!MEM.wagers)MEM.wagers=[];
+function ensureDefaults(){ if(!MEM)return; if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); if(MEM._tierMig!==1){ MEM.tiers=structuredClone(DEFAULT_TIERS); MEM._tierMig=1; } if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); if(!MEM.rites)MEM.rites=[]; if(!MEM.challenges)MEM.challenges=[]; if(!MEM.seasonHistory)MEM.seasonHistory=[]; if(!MEM.wagers)MEM.wagers=[]; if(!MEM.itemLocks)MEM.itemLocks={};
   if(MEM._hatMig!==3){ const _hm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && ['crown','laurel','halo'].includes(c.hat)){ c.hat='none'; _hm.push(m); } }); MEM._hatMig=3; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _hm.length && !localStorage.getItem('grove-crownpurge3')){ _hm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-crownpurge3','1'); } }catch(e){} } if(!MEM.fire)MEM.fire={level:0,goal:8,lastBlessed:0,stokers:[]}; if(!MEM.fire.stokers)MEM.fire.stokers=[]; if(MEM.fire.lastDecay===undefined)MEM.fire.lastDecay=Date.now()/1000; if(MEM.fire.streak===undefined)MEM.fire.streak=0; (MEM.members||[]).forEach(m=>{ if(m.season===undefined) m.season=0; if(m.chalBudget===undefined) m.chalBudget=150; if(m.oath===undefined) m.oath=true; if(m.lastStoke===undefined) m.lastStoke=0; if(m.logs===undefined) m.logs=0; if(m.fireLogs===undefined) m.fireLogs=0; if(!(m.points>0)) m.points=Math.max(0,m.points||0); if(!(m.season>0)) m.season=Math.max(0,m.season||0); }); }
 function tierOf(p){const T=tiers();let t=T[0];for(const x of T)if(p>=x.min)t=x;return t;}
 function tierIndex(p){const T=tiers();let i=0;T.forEach((x,k)=>{if(p>=x.min)i=k;});return i;}
@@ -744,6 +744,25 @@ function drawChibi(ctx,f,px,ox,oy,ti,nT){
     for(let y=19;y<32;y++) row(10,20,y,wt);
     row(10,20,19,gd); row(10,20,31,gd); for(let y=20;y<31;y++)P(15,y,gd); P(13,30,gd);P(17,30,gd);
     [[8,17],[22,17]].forEach(p=>P(p[0],p[1],shade(gd,0.3)));
+  } else if(ts==='luminary'){
+    const rb=top, rbs=shade(top,-0.24), rbl=shade(top,0.14), gold="#E8C45A", lite="#FFF6D8";
+    const g1="rgba(255,246,216,0.55)", g2="rgba(232,196,90,0.32)";
+    // robe body with shaded sides + lit center seam
+    for(let y=19;y<33;y++) row(10,20,y,rb);
+    for(let y=19;y<33;y++){P(10,y,rbs);P(20,y,rbs);}
+    for(let y=20;y<32;y++)P(15,y,rbl);
+    // luminous collar + hem
+    row(11,19,19,gold); P(14,19,lite);P(15,19,lite);P(16,19,lite);
+    row(10,20,32,gold);
+    // blazing star emblem on the chest
+    P(15,23,lite); P(14,24,gold);P(15,24,lite);P(16,24,gold);
+    P(13,25,gold);P(14,25,lite);P(15,25,"#FFFFFF");P(16,25,lite);P(17,25,gold);
+    P(14,26,gold);P(15,26,lite);P(16,26,gold); P(15,27,lite);
+    P(15,22,g1);P(15,28,g1);P(12,25,g2);P(18,25,g2);          // emblem rays glow
+    // scattered starlight
+    [[12,21],[18,21],[11,28],[19,29],[13,30],[17,31],[12,24]].forEach(p=>P(p[0],p[1],lite));
+    // soft shoulder aura
+    P(9,19,g1);P(21,19,g1);P(8,20,g2);P(22,20,g2);
   } else if(dress){
     for(let y=19;y<29;y++) row(10,20,y,top);
     const wid=[[10,20],[10,20],[9,21],[9,21],[8,22],[8,22],[8,22]]; wid.forEach((w,i)=>row(w[0],w[1],28+i,top)); row(8,22,34,tops);
@@ -753,7 +772,7 @@ function drawChibi(ctx,f,px,ox,oy,ti,nT){
   }
   const longsleeve = ts==='longsleeve';
   const sleeve = ts!=='tank';
-  const armc = robes?"#E8E4D6":(ts==='tunic'?top:(ts==='sage'?top:(ts==='ascend'?top:(sleeve?top:skin))));
+  const armc = robes?"#E8E4D6":(ts==='tunic'?top:(ts==='sage'?top:(ts==='ascend'?top:(ts==='luminary'?top:(sleeve?top:skin)))));
   for(let y=19;y<27;y++){P(8,y,armc);P(9,y,armc);P(21,y,armc);P(22,y,armc);}
   if(longsleeve){ P(8,27,top);P(9,27,top);P(21,27,top);P(22,27,top); P(8,28,skin);P(9,28,skin);P(21,28,skin);P(22,28,skin); }
   else { P(8,27,skin);P(9,27,skin);P(21,27,skin);P(22,27,skin); }
@@ -771,7 +790,7 @@ function drawChibi(ctx,f,px,ox,oy,ti,nT){
     P(11,19,furs);P(18,19,furs);
     P(15,18,gold);P(15,19,gold); }
   if(f.watch){ P(8,26,"#28282A");P(9,26,"#C9CDD2"); }
-  if(f.jacket && !['mantle','sage','robes','ascend'].includes(ts)){
+  if(f.jacket && !['mantle','sage','robes','ascend','luminary'].includes(ts)){
     const jc=f.jacket, jcs=shade(f.jacket,-0.22);
     for(let y=19;y<28;y++){P(10,y,jc);P(11,y,jc);P(19,y,jc);P(20,y,jc);}
     row(10,20,19,jcs);P(12,19,jc);P(18,19,jc);
@@ -1264,6 +1283,7 @@ function keeperPanel(){
       <button class="ghostbtn" onclick="keeperOfferForm()">▲ Offer / release a spirit</button>
       <button class="ghostbtn" onclick="deedsForm()">✎ Manage deeds & points</button>
       <button class="ghostbtn" onclick="ranksForm()">✎ Manage ranks</button>
+      <button class="ghostbtn" onclick="itemLocksForm()">🔒 Item rank-locks</button>
       <button class="ghostbtn" onclick="addMemberForm()">+ Initiate a new member</button>
       <button class="ghostbtn" onclick="sinceForm()">✎ Set member-since years</button>
       <button class="ghostbtn" onclick="oathStatusForm()">⚖ Oath status (swear / unswear)</button>
@@ -1275,7 +1295,7 @@ function keeperPanel(){
     </div>`;
 }
 function roman(n){ return ['','I','II','III','IV','V','VI','VII','VIII','IX','X'][n]||String(n); }
-function garmentForPoints(p){ if(p>=2500)return'ascend'; if(p>=1500)return'robes'; if(p>=1000)return'sage'; if(p>=600)return'mantle'; if(p>=300)return'tunic'; if(p>=100)return'sash'; return null; }
+function garmentForPoints(p){ if(p>=2500)return'ascend'; if(p>=2000)return'luminary'; if(p>=1500)return'robes'; if(p>=1000)return'sage'; if(p>=600)return'mantle'; if(p>=300)return'tunic'; if(p>=100)return'sash'; return null; }
 window.keeperOfferForm=function(){
   const now=Date.now()/1000;
   const opts=sortedMembers().map(m=>{ const on=m.offered&&m.offered>now; return `<option value="${m.name}">${m.name}${on?' · offered':''}</option>`; }).join("");
@@ -1392,6 +1412,14 @@ window.seasonForm=function(){
       <div style="border-top:1px solid rgba(38,53,44,.7);margin:18px 0 12px"></div>
       <p class="sub" style="margin-bottom:10px">Starting a new season resets everyone's <b>season</b> score to 0. Lifetime points, ranks, titles and chibis are all kept.</p>
       <button class="ghostbtn" onclick="newSeason()" style="border-color:rgba(242,196,90,.5);color:var(--candle)">◈ Start a new season</button>
+      ${(MEM.seasonHistory&&MEM.seasonHistory.length)?`
+      <div style="border-top:1px solid rgba(38,53,44,.7);margin:18px 0 12px"></div>
+      <p class="sub" style="margin-bottom:10px">Past seasons — rename or remove the sealed records.</p>
+      ${MEM.seasonHistory.map((s,i)=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <input id="ph${i}" value="${esc(s.label||'')}" placeholder="Season name" style="flex:1;${inp}">
+        <button onclick="delPastSeason(${i})" title="Delete this sealed season" style="background:none;border:none;color:var(--ember);font-size:18px;cursor:pointer">✕</button>
+      </div>`).join('')}
+      <button class="ghostbtn" onclick="savePastSeasons()">Save past-season names</button>`:''}
       <div style="border-top:1px solid rgba(38,53,44,.7);margin:18px 0 12px"></div>
       <p class="sub" style="margin-bottom:10px">Fresh slate wipes <b>all points, season scores, titles, badges and deed history</b> for everyone — keeping their names and chibis. Use once to begin the cult anew.</p>
       <button class="ghostbtn" onclick="freshSlate()" style="border-color:rgba(199,90,51,.5);color:var(--ember)">⚠ Fresh slate (clear all points &amp; titles)</button>
@@ -1433,6 +1461,17 @@ window.newSeason=async function(){
   MEM.challenges=[]; MEM.fire={level:0,goal:8,lastBlessed:0,stokers:[]};
   if(label) MEM.season=label;
   await saveData(); layoutGrove(); renderLedger(); closeSheet(); toast("A new season dawns.");
+};
+window.savePastSeasons=async function(){
+  (MEM.seasonHistory||[]).forEach((s,i)=>{ const el=document.getElementById('ph'+i); if(el){ const v=el.value.trim(); if(v) s.label=v; } });
+  await saveData(); renderLedger(); toast("Past seasons renamed.");
+};
+window.delPastSeason=async function(i){
+  const s=(MEM.seasonHistory||[])[i]; if(!s)return;
+  if(!confirm(`Delete the sealed record of "${s.label||'past season'}"? Its final standings are removed for good.`))return;
+  MEM.seasonHistory.splice(i,1);
+  LEDGER_VIEW='current';
+  await saveData(); renderLedger(); seasonForm(); toast("Sealed season removed.");
 };
 window.editEpithetForm=function(){
   const opts=sortedMembers().map(m=>`<option value="${m.name}">${m.name}${m.epithet?" — "+m.epithet:""}</option>`).join("");
@@ -1691,6 +1730,7 @@ const PAL={
   boots:["#7B4A2A","#1C1C1E","#3A2A22","#5A3A2A","#2A2A2A","#6B2E2E","#46707A","#2E4A3A","#C9CDD2","#B5854F","#33384A","#EDE4CF"],
   eye:["#2A2018","#5A3A22","#3A6A9A","#4A7A4A","#6E5A3A","#7A8A99","#8A4A2A","#2A2A2E"],
   metal:["#E8C45A","#C9CDD2","#C9A24B","#B5651D"],
+  tie:["#8A1E2E","#23364A","#2E4A3A","#5A2E6A","#1C1C20","#C9A24B","#46707A","#7A3B5A","#B5854F","#6B2E2E","#2A6E6A","#EDE4CF"],
   lens:["#1C1C20","#2A2E33","#3A2A1C","#3A5A6B","#5C6646","#6B2E2E","#C9A24B","#C9CDD2"],
   hat:["#46707A","#6B2E2E","#2E4A3A","#3A3A40","#B5854F","#C9A24B","#5A2E2E","#1C1C20"]
 };
@@ -1736,6 +1776,15 @@ function isUnlocked(name,val){
   const m=MEM.members.find(x=>x.name===name);
   return !!(m && Array.isArray(m.unlocks) && m.unlocks.includes(val));
 }
+const GATED_ITEMS={
+  top_style:[['Tank','tank',0],['Tee','tee',0],['Shirt','shirt',0],['Hoodie','hoodie',0],['Long-sleeve','longsleeve',0],['Dress','dress',0],['Acolyte sash','sash',100],['Disciple tunic','tunic',300],['Warden mantle','mantle',600],['Sage robe','sage',1000],['Offering robe','robes',1500],['Starlit robe','luminary',2000],['Radiant cloak','ascend',2500]],
+  hat:[['None','none',0],['Beanie','beanie',0],['Cap','cap',0],['Bandana','bandana',0],['Headband','headband',0],['Antlers','antlers',100],['Ram horns','horns',300],['Witch hat','witch',300],['Animal skull','skull',600],['Laurel','laurel',600],['Crown','crown',1500],['Halo','halo',2500],['Third eye','thirdeye',2500]],
+  held:[['None','none',0],['Beer','beer',0],['Coffee','mug',0],['Bottle','bottle',0],['Frisbee','frisbee',0],['Joint','joint',0],['Kebab','kebab',0],['Flashlight','flashlight',0],['Binoculars','binoculars',100],['Boombox','boombox',300],['Guitar','guitar',300],['Marshmallow','marsh',100],['Fishing rod','rod',300],['Axe','axe',300],['Cult tome','book',600],['Paddle','paddle',600],['Staff','staff',1000],['Lantern','lantern',1000]],
+  accent:[['None','none',0],['Necklace','necklace',0],['Tie','tie',0],['Scarf','scarf',0],['Bolo tie','bolo',100],['Cult badge · bronze','cultbronze',300],['Cult badge · silver','cultsilver',600],['Cult badge · gold','cultgold',1000],['Ankh','ankh',600],['Bone charm','bonecharm',1000]]
+};
+const GATED_CATS=[['top_style','Top / robe'],['hat','Headwear'],['held','Held item'],['accent','Accent']];
+function itemMin(cat,key,defMin){ const k=cat+':'+key; return (MEM.itemLocks && MEM.itemLocks[k]!=null) ? MEM.itemLocks[k] : defMin; }
+function gatedList(cat){ return GATED_ITEMS[cat].map(o=>[o[0],o[1],itemMin(cat,o[1],o[2])]); }
 function segHTMLg(key,opts,memPts){
   return '<div class="seg">'+opts.map(o=>{
     const label=o[0], val=o[1], minP=o[2]||0;
@@ -1755,7 +1804,7 @@ function renderCreator(){
     ? `<div class="crlabel">Top <span style="color:#E8A88F;font-size:10px">· locked — you are The Offered</span></div>
        <div class="seg"><button class="on" disabled>▲ Offering Robe</button></div>
        <p class="sub" style="font-size:11px;color:#E8A88F;margin-top:4px">You wear the robes until the offering fades.</p>`
-    : `<div class="crlabel">Top <span style="color:var(--sage);font-size:10px">· ${memTier}</span></div>${segHTMLg('top_style',[['Tank','tank',0],['Tee','tee',0],['Shirt','shirt',0],['Hoodie','hoodie',0],['Long-sleeve','longsleeve',0],['Dress','dress',0],['Acolyte sash','sash',100],['Disciple tunic','tunic',300],['Warden mantle','mantle',600],['Sage robe','sage',1000],['Offering robe','robes',1500],['Ascendant','ascend',2500]],memPts)}
+    : `<div class="crlabel">Top <span style="color:var(--sage);font-size:10px">· ${memTier}</span></div>${segHTMLg('top_style',gatedList('top_style'),memPts)}
        <div class="crlabel">Top colour</div>${swHTML('top',PAL.top)}`;
   sheet.innerHTML=`
     <div class="grip"></div>
@@ -1770,19 +1819,19 @@ function renderCreator(){
       <div class="crlabel">Hair colour</div>${swHTML('hair',PAL.hair)}
       <div class="crlabel">Facial hair</div>${segHTML('facial',[['None','none'],['Mustache','mustache'],['Goatee','goatee'],['Full','full'],['Overgrown','overgrown']])}${CHIBI_EDIT.facial!=='none'?swHTML('beard',PAL.hair):''}
       <div class="crlabel">Eye colour</div>${swHTML('eyeCol',PAL.eye)}
-      <div class="crlabel">Headwear <span style="color:var(--sage);font-size:10px">· some unlock by rank</span></div>${segHTMLg('hat',[['None','none',0],['Beanie','beanie',0],['Cap','cap',0],['Bandana','bandana',0],['Headband','headband',0],['Antlers','antlers',100],['Ram horns','horns',300],['Witch hat','witch',300],['Animal skull','skull',600],['Laurel','laurel',600],['Crown','crown',1500],['Halo','halo',2500],['Third eye','thirdeye',2500]],memPts)}${['beanie','cap','bandana','headband','witch','thirdeye'].includes(CHIBI_EDIT.hat)?swHTML('hatCol',PAL.hat):''}
+      <div class="crlabel">Headwear <span style="color:var(--sage);font-size:10px">· some unlock by rank</span></div>${segHTMLg('hat',gatedList('hat'),memPts)}${['beanie','cap','bandana','headband','witch','thirdeye'].includes(CHIBI_EDIT.hat)?swHTML('hatCol',PAL.hat):''}
       <div class="crlabel">Eyewear</div>${segHTML('glasses',[['None','none'],['Specs','specs'],['Shades','shades']])}${CHIBI_EDIT.glasses!=='none'?swHTML('glassCol',PAL.lens):''}
       <div class="crlabel">Earrings</div>${segHTML('ears',[['None','none'],['Stud','stud'],['Dangle','dangle']])}${CHIBI_EDIT.ears==='dangle'?swHTML('earCol',PAL.metal):''}
       ${topControl}
-      ${CHIBI_EDIT.top_style==='mantle'?`<div class="crlabel">Cape colour</div>${swHTML('jacket',PAL.jacket,true)}`:(['sage','robes','ascend'].includes(CHIBI_EDIT.top_style)?`<div class="crlabel">Jacket / vest <span style="color:var(--sage);font-size:10px">· not worn over this garment</span></div>`:`<div class="crlabel">Jacket / vest</div>${swHTML('jacket',PAL.jacket,true)}`)}
+      ${CHIBI_EDIT.top_style==='mantle'?`<div class="crlabel">Cape colour</div>${swHTML('jacket',PAL.jacket,true)}`:(['sage','robes','ascend','luminary'].includes(CHIBI_EDIT.top_style)?`<div class="crlabel">Jacket / vest <span style="color:var(--sage);font-size:10px">· not worn over this garment</span></div>`:`<div class="crlabel">Jacket / vest</div>${swHTML('jacket',PAL.jacket,true)}`)}
       <div class="crlabel">Wristwatch</div>${segHTML('watch',[['None',false],['Watch',true]])}
       ${CHIBI_EDIT.top_style==='sage'
         ? `<div class="crlabel">Legs <span style="color:var(--sage);font-size:10px">· hidden beneath the sage robe</span></div>`
         : `<div class="crlabel">${CHIBI_EDIT.top_style==='dress'?'Tights':'Legs'}</div>${segHTML('bottom',[['Pants','pants'],['Shorts','shorts']])}
       <div class="crlabel">${CHIBI_EDIT.top_style==='dress'?'Tights colour':'Pants colour'}</div>${swHTML('pants',PAL.pants)}`}
       <div class="crlabel">Shoes</div>${swHTML('boots',PAL.boots)}
-      <div class="crlabel">Held item <span style="color:var(--sage);font-size:10px">· unlocks by rank</span></div>${segHTMLg('held',[['None','none',0],['Beer','beer',0],['Coffee','mug',0],['Bottle','bottle',0],['Frisbee','frisbee',0],['Joint','joint',0],['Kebab','kebab',0],['Flashlight','flashlight',0],['Binoculars','binoculars',100],['Boombox','boombox',300],['Guitar','guitar',300],['Marshmallow','marsh',100],['Fishing rod','rod',300],['Axe','axe',300],['Cult tome','book',600],['Paddle','paddle',600],['Staff','staff',1000],['Lantern','lantern',1000]],memPts)}
-      <div class="crlabel">Accent <span style="color:var(--sage);font-size:10px">· some unlock by rank</span></div>${segHTMLg('accent',[['None','none',0],['Necklace','necklace',0],['Bow tie','bowtie',0],['Scarf','scarf',0],['Bolo tie','bolo',100],['Cult badge · bronze','cultbronze',300],['Cult badge · silver','cultsilver',600],['Cult badge · gold','cultgold',1000],['Ankh','ankh',600],['Bone charm','bonecharm',1000]],memPts)}${(CHIBI_EDIT.accent!=='none' && !['cultbronze','cultsilver','cultgold'].includes(CHIBI_EDIT.accent))?swHTML('accentCol',PAL.metal):''}
+      <div class="crlabel">Held item <span style="color:var(--sage);font-size:10px">· unlocks by rank</span></div>${segHTMLg('held',gatedList('held'),memPts)}
+      <div class="crlabel">Accent <span style="color:var(--sage);font-size:10px">· some unlock by rank</span></div>${segHTMLg('accent',gatedList('accent'),memPts)}${(CHIBI_EDIT.accent!=='none' && !['cultbronze','cultsilver','cultgold'].includes(CHIBI_EDIT.accent))?swHTML('accentCol',['tie','scarf'].includes(CHIBI_EDIT.accent)?PAL.tie:PAL.metal):''}
       <button class="gold" style="margin-top:14px" onclick="commitChibi()">${CHIBI_SELF?'Become this':'Weave into being'}</button>
       <button class="ghostbtn" onclick="${CHIBI_SELF?'closeSheet()':'keeperPanel()'}">Back</button>
     </div>`;
@@ -1840,6 +1889,35 @@ function renderDeeds(){
 /* --- ranks --- */
 let RANKS_EDIT=null;
 window.ranksForm=function(){ RANKS_EDIT=structuredClone(tiers()); renderRanks(); };
+let ITEMLOCKS_EDIT=null;
+window.itemLocksForm=function(){ ITEMLOCKS_EDIT=Object.assign({}, MEM.itemLocks||{}); renderItemLocks(); };
+function renderItemLocks(){
+  const T=tiers().slice().sort((a,b)=>a.min-b.min);
+  const rankIdx=(cur)=>{ let i=0; T.forEach((x,k)=>{ if(cur>=x.min)i=k; }); return i; };
+  const opts=(cur)=>{ const idx=rankIdx(cur); return T.map((t,k)=>`<option value="${t.min}" ${k===idx?'selected':''}>${esc(t.name)}</option>`).join(''); };
+  const cats=GATED_CATS.map(([cat,label])=>{
+    const rows=GATED_ITEMS[cat].filter(o=>o[1]!=='none').map(o=>{
+      const k=cat+':'+o[1]; const cur=(ITEMLOCKS_EDIT[k]!=null)?ITEMLOCKS_EDIT[k]:o[2];
+      return `<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;padding:5px 1px;border-bottom:1px solid rgba(60,80,68,.22)">
+        <span style="font-size:12px">${esc(o[0])}</span>
+        <select onchange="itemLockSet('${k}',this.value)" style="${inp}font-family:'Cinzel',serif;font-size:11px;width:138px">${opts(cur)}</select></div>`;
+    }).join('');
+    return `<div style="margin-bottom:14px"><div class="crlabel">${label}</div>${rows}</div>`;
+  }).join('');
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="kpanel">
+      <h3>Item Rank-Locks</h3>
+      <p class="sub">Choose the rank a spirit must reach to wear each item. <b>Initiate</b> means anyone. (The "None" option is always open.)</p>
+      ${cats}
+      <button class="gold" style="margin-top:10px" onclick="itemLocksSave()">Seal the locks</button>
+      <button class="ghostbtn" onclick="itemLocksReset()">Reset all to defaults</button>
+      <button class="ghostbtn" onclick="keeperPanel()">Back</button>
+    </div>`;
+}
+window.itemLockSet=function(k,v){ ITEMLOCKS_EDIT[k]=parseInt(v,10)||0; };
+window.itemLocksReset=function(){ ITEMLOCKS_EDIT={}; renderItemLocks(); };
+window.itemLocksSave=async function(){ MEM.itemLocks=Object.assign({}, ITEMLOCKS_EDIT); await saveData(); layoutGrove(); renderLedger(); closeSheet(); toast("The item locks are sealed."); };
 function syncRanks(){ if(!RANKS_EDIT)return; RANKS_EDIT.forEach((t,i)=>{ const n=document.getElementById('rn'+i),m=document.getElementById('rm'+i); if(n)t.name=n.value; if(m&&!m.disabled)t.min=parseInt(m.value,10)||0; }); }
 window.rankColor=function(i,c){ syncRanks(); RANKS_EDIT[i].hex=c; renderRanks(); };
 window.rankAdd=function(){ syncRanks(); const mx=RANKS_EDIT.length?Math.max(...RANKS_EDIT.map(t=>t.min)):0; RANKS_EDIT.push({name:"New Order",min:mx+200,hex:"#6FB39A"}); renderRanks(); };
@@ -2258,7 +2336,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the lake keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27g · chibi-tweaks</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27k · season-edit</p>`;
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 function memByName(n){ return (MEM.members||[]).find(x=>x.name===n); }
@@ -2376,8 +2454,7 @@ function renderTrials(){
     <div style="text-align:center;margin-top:10px">${ me? `<button class="gold" onclick="newChallengeForm()">✦ Set a challenge</button>` : `<p class="hint">Pick your name above to set or accept challenges.</p>` }</div>`;
   const wopen=(MEM.wagers||[]).filter(w=>w.status==='open').sort((a,b)=>(b.created||0)-(a.created||0));
   const wmatched=(MEM.wagers||[]).filter(w=>w.status==='matched'||w.status==='disputed').sort((a,b)=>(a.status==='disputed'?-1:0)-(b.status==='disputed'?-1:0)||(b.created||0)-(a.created||0));
-  const wsettled=(MEM.wagers||[]).filter(w=>w.status==='settled'||w.status==='forfeit').sort((a,b)=>(b.created||0)-(a.created||0)).slice(0,4);
-  const wagerCards=[...wmatched.map(wagerMatchedCard),...wopen.map(wagerOpenCard),...wsettled.map(wagerSettledCard)].join("") || `<p class="hint" style="margin:12px 0">No wagers yet. Stake some of your own points below.</p>`;
+  const wagerCards=[...wmatched.map(wagerMatchedCard),...wopen.map(wagerOpenCard)].join("") || `<p class="hint" style="margin:12px 0">No wagers yet. Stake some of your own points below.</p>`;
   const wagerHTML=`
     <div class="ritehdr" style="margin-top:22px">The Wager Ring</div>
     <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Stake your <b>own</b> points head-to-head — up to <b style="color:var(--candle)">${WAGER_CAP}</b> per wager. Settle by conceding or agreeing a tie. Can't agree? Raise a <b>dispute</b> — the grove votes (5 settles it), and if it's unresolved 3h later, both forfeit the pot.</p>
@@ -2566,8 +2643,7 @@ function groupSectionHTML(me){
   const gs=(MEM.groups||[]);
   const live=gs.filter(g=>g.status==='disputed'||g.status==='active').sort((a,b)=>(b.lockedAt||b.created||0)-(a.lockedAt||a.created||0));
   const forming=gs.filter(g=>g.status==='pending').sort((a,b)=>(b.created||0)-(a.created||0));
-  const done=gs.filter(g=>g.status==='settled').sort((a,b)=>(b.created||0)-(a.created||0)).slice(0,3);
-  const cards=[...live.map(groupCard),...forming.map(groupCard),...done.map(groupCard)].join("") || `<p class="hint" style="margin:12px 0">No group wagers yet. Rally two sides and let the pot decide.</p>`;
+  const cards=[...live.map(groupCard),...forming.map(groupCard)].join("") || `<p class="hint" style="margin:12px 0">No group wagers yet. Rally two sides and let the pot decide.</p>`;
   return `
     <div class="ritehdr" style="margin-top:22px">The Reckoning · group wagers</div>
     <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:38ch">Two sides, up to <b>6</b> each — even lopsided (6&nbsp;v&nbsp;1). Everyone stakes the same. The starter <b>locks</b> it, the winning side <b>splits the whole pot</b> (fewer winners, bigger share). All players must agree who won; if not, the grove votes.</p>

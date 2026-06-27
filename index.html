@@ -1302,6 +1302,8 @@ function openSoul(name){
   const epiLine = m.epithet ? `<div style="font-style:italic;color:var(--sage);font-size:14px;margin:1px 0 4px">"${m.epithet}"</div>` : "";
   const _now=Date.now()/1000; const _off=(m.offered&&m.offered>_now)?(m.offered-_now):0;
   const offMark = _off>0 ? `<div style="display:inline-block;margin:4px 0 2px;padding:3px 9px;border-radius:8px;background:rgba(232,168,143,.14);border:1px solid rgba(232,168,143,.55);color:#E8A88F;font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.06em">▲ THE OFFERED · ${Math.floor(_off/3600)}h ${Math.floor((_off%3600)/60)}m left</div>` : "";
+  const _OFCOOL=12*3600; const _ocd=(m.lastOffer && (m.lastOffer+_OFCOOL)>_now)?(m.lastOffer+_OFCOOL-_now):0;
+  const cdMark = _ocd>0 ? `<div style="display:inline-block;margin:4px 0 2px 6px;padding:3px 9px;border-radius:8px;background:rgba(120,150,165,.12);border:1px solid rgba(160,190,200,.45);color:#A9C3CC;font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.06em">⟳ MAY OFFER IN ${Math.floor(_ocd/3600)}h ${Math.floor((_ocd%3600)/60)}m</div>` : "";
   const myChArr=(MEM.challenges||[]).filter(c=>c.accepter===name && c.status!=='expired').sort((a,b)=>(b.created||0)-(a.created||0));
   const chRows = myChArr.map(c=>{
     const self=VOTER&&VOTER===name; const who=self?'you':name;
@@ -1330,7 +1332,7 @@ function openSoul(name){
       <canvas id="soulCv"></canvas>
       <div class="who">
         <div class="nm">${m.name}</div>
-        ${epiLine}${offMark}
+        ${epiLine}${offMark}${cdMark}
         <span class="tier-tag" style="background:${hexA(tier.hex,.14)};border:1px solid ${hexA(tier.hex,.5)};color:${tier.hex}">${tier.name}</span>
         <div class="badgewrap">${badges}</div>
       </div>
@@ -2787,9 +2789,9 @@ window.proposeRite=async function(item){
     if(item.approvers.length>=item.threshold){ applyRiteEffect(item); item.applied=true; }
     await saveData();
   }
-  closeSheet(); renderRites(); layoutGrove(); renderLedger();
-  Snd.sfx('note');
-  toast("The rite is raised.");
+  closeSheet(); renderRites(); layoutGrove(); renderLedger(); try{ syncOffering(); }catch(e){}
+  if(item.kind==='offer'){ try{ offeringCeremony(item.target); }catch(e){} }
+  else { Snd.sfx('note'); toast("The rite is raised."); }
 };
 window.voteRite=async function(id, voter){
   if(MODE==="remote"){
@@ -2799,7 +2801,7 @@ window.voteRite=async function(id, voter){
     applyVoteLocal(id, voter); await saveData();
   }
   markVotedHere(id);
-  renderRites(); layoutGrove(); renderLedger();
+  renderRites(); layoutGrove(); renderLedger(); try{ syncOffering(); }catch(e){}
   const r=(MEM.rites||[]).find(x=>x.id===id);
   if(r && r.applied) toast("The grove has spoken — it is done.");
 };
@@ -3012,13 +3014,18 @@ window.submitNomBadge=function(){
 window.nominateOfferForm=function(){
   if(!VOTER){ toast("Pick your name first."); return; }
   const opts=sortedMembers().map(m=>`<option>${m.name}</option>`).join("");
+  const _meM=memByName(VOTER), _OC=12*3600, _nw=Date.now()/1000;
+  const _cd=(_meM&&_meM.lastOffer&&(_meM.lastOffer+_OC)>_nw)?(_meM.lastOffer+_OC-_nw):0;
+  const _cdNote=_cd>0?`<div style="margin:0 0 4px;padding:9px 12px;border-radius:10px;background:rgba(120,150,165,.12);border:1px solid rgba(160,190,200,.45);color:#A9C3CC;font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.05em;text-align:center">⟳ You may raise another offering in ${Math.floor(_cd/3600)}h ${Math.floor((_cd%3600)/60)}m</div>`:"";
+  const _btn=_cd>0?`<button class="gold" style="margin-top:6px;opacity:.45;cursor:not-allowed" disabled>⟳ On cooldown</button>`:`<button class="gold" style="margin-top:6px" onclick="submitNomOffer()">Raise the offering</button>`;
   sheet.innerHTML=`
     <div class="grip"></div>
     <div class="kpanel">
       <h3>The Offering</h3>
       <p class="sub">Offer a spirit to the Eye. With 7 approvals the grove robes them in the Offering Robe — chosen by communal vote, not by rank. What the offering must do is for the fireside to decide.</p>
       <div class="field"><label>Who is offered?</label><select id="ofTarget">${opts}</select></div>
-      <button class="gold" style="margin-top:6px" onclick="submitNomOffer()">Raise the offering</button>
+      ${_cdNote}
+      ${_btn}
       <button class="ghostbtn" onclick="closeSheet()">Cancel</button>
       <div class="err" id="kerr"></div>
     </div>`;
@@ -3035,8 +3042,7 @@ window.submitNomOffer=function(){
   if(pending.some(r=>r.nominator===VOTER)){ document.getElementById("kerr").textContent="You have already named an offering — one per supplicant. Wait for it to be judged."; return; }
   const _me=memByName(VOTER), OFFER_COOL=12*3600;
   if(_me && _me.lastOffer && now-_me.lastOffer < OFFER_COOL){ const left=Math.ceil((OFFER_COOL-(now-_me.lastOffer))/3600); document.getElementById("kerr").textContent=`You raised an offering recently — wait about ${left}h before raising another.`; return; }
-  if(_me) _me.lastOffer=now;
-  try{ if(Snd.offering) Snd.offering(true); else Snd.playTrack('chant'); }catch(e){}
+  if(_me && MODE!=="remote") _me.lastOffer=now;
   proposeRite({kind:"offer",target,label:"The Offered",threshold:7,nominator:VOTER});
 };
 
@@ -3049,10 +3055,10 @@ function renderRules(){
     <p class="hint" style="margin:6px 0 14px">How the Order of the Eye works.</p>
     ${installRulesHTML()}
     <div class="ritehdr">The Path · Ranks</div>
-    <p class="rtext">Your Devotion raises your rank — and it can <b>slip back</b> if your Devotion falls, so wagers and the Wheel carry real stakes. Devotion never goes below zero.</p>
+    <p class="rtext">Your Devotion raises your rank — and it can <b>slip back</b> if your Devotion falls, so wagers and the Eye's Test carry real stakes. Devotion never goes below zero.</p>
     <div class="ladder">${ladder}</div>
     <div class="ritehdr">Devotion</div>
-    <p class="rtext"><b>Lifetime</b> Devotion drives your rank; <b>season</b> Devotion tracks the current trip. These days they move together — deeds, challenges, wagers, the fire and the Wheel all shift both at once, up or down, floored at zero. The Keeper can start a fresh season to reset the race without touching ranks.</p>
+    <p class="rtext"><b>Lifetime</b> Devotion drives your rank; <b>season</b> Devotion tracks the current trip. These days they move together — deeds, challenges, wagers, the fire and the Eye's Test all shift both at once, up or down, floored at zero. The Keeper can start a fresh season to reset the race without touching ranks.</p>
     <div class="ritehdr">Deeds</div>
     <p class="rtext">Devotion is awarded for deeds at the fire. The Keeper can multiply them (×II, ×III…) — e.g. "Night swim ×III". ${deedCount} deeds sit on the ledger; the Keeper tends the list.</p>
     <div class="ritehdr">Stoke the Fire</div>
@@ -3061,8 +3067,8 @@ function renderRules(){
     <p class="rtext">Stake a bounty from your challenge budget; one spirit may take it on. You or the Keeper approve it within 24h and the stake passes to them. Want out of an accepted challenge? Asking to withdraw lets the doer <b>agree to drop it</b>, or <b>stick it out</b> with one hour to finish before it lapses.</p>
     <div class="ritehdr">The Wager Ring</div>
     <p class="rtext">Stake your <b>own</b> Devotion head-to-head, up to <b>100</b> a wager — another spirit must match it. Settle by conceding or agreeing a tie. Can't agree? Raise a <b>dispute</b> and the grove votes (5 settles it); left unresolved an hour later, both forfeit the pot.</p>
-    <div class="ritehdr">The Wheel of Fate</div>
-    <p class="rtext"><b>50 ✦</b>, once every 2 hours. Prizes run from a <b>+250</b> jackpot down to <b>−100</b>, with free spins and <b>×2 / ×3</b> buffs that boost your next <b>deed or challenge</b> (never a wager), plus a <b>×2 curse</b> on your next penalty. Roughly 56% of spins win, and a spin can never drop you below zero.</p>
+    <div class="ritehdr">Test of Devotion</div>
+    <p class="rtext"><b>50 ✦</b> laid before the Eye Totem, once every 2 hours. The Eye's verdict runs from a <b>+250</b> radiance down to <b>−100</b> wrath, with returned offerings and <b>×2 / ×3</b> blessings that boost your next <b>deed or challenge</b> (never a wager), plus a <b>×2 curse</b> on your next penalty. Roughly 56% of verdicts favor you, and the Eye can never drop you below zero.</p>
     <div class="ritehdr">The Rites · Voting</div>
     <p class="rtext">Anyone may raise and approve rites — pick your name, then nominate or approve. Honour-based: one vote per name, and each device votes once per rite.</p>
     <div class="rulerow"><span>Award / deduct Devotion</span><span class="rmin">3–8 ✦</span></div>
@@ -3078,7 +3084,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27ak · 12h offering cooldown (server-enforced)</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27aq · no bob; sauce streaks down into a pool</p>`;
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 function memByName(n){ return (MEM.members||[]).find(x=>x.name===n); }
@@ -3228,43 +3234,162 @@ function buildWheelSVG(){
     <polygon points="100,6 91,25 109,25" fill="#E8C45A" stroke="#1a130c" stroke-width="1"/></svg>`;
 }
 function wheelSectionHTML(me){
+  ensureTotemStyle();
   const now=Date.now()/1000;
   const cd = me ? Math.max(0, 2*3600-(now-(me.lastSpin||0))) : 0;
   let ctrl;
-  if(!me){ ctrl=`<p class="hint">Pick your spirit to spin.</p>`; }
+  if(!me){ ctrl=`<p class="hint">Pick your spirit to lay devotion before the Eye.</p>`; }
   else {
-    const buff = (me.winMult>1 ? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:#E8C45A;margin:2px 0 6px">✦ ×${me.winMult} banked for your next win ✦</div>`:'') + (me.lossMult>1 ? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:#C77B9A;margin:2px 0 6px">☠ ×${me.lossMult} curse on your next penalty ☠</div>`:'');
+    const buff = (me.winMult>1 ? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:#E8C45A;margin:2px 0 6px">✦ ×${me.winMult} blessing banked for your next deed or challenge ✦</div>`:'') + (me.lossMult>1 ? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:#C77B9A;margin:2px 0 6px">☠ ×${me.lossMult} curse on your next penalty ☠</div>`:'');
     let btn;
-    if(cd>0){ const tm=Math.ceil(cd/60), hh=Math.floor(tm/60), mm=tm%60; btn=`<button class="rapprove" disabled>Next spin in ${hh>0?hh+'h ':''}${mm}m</button>`; }
-    else if((me.points||0)<50){ btn=`<button class="rapprove" disabled>Need 50 points to spin</button>`; }
-    else { btn=`<button class="gold" id="spinBtn" onclick="spinTheWheel()">Spin · 50 ✦</button>`; }
+    if(cd>0){ const tm=Math.ceil(cd/60), hh=Math.floor(tm/60), mm=tm%60; btn=`<button class="rapprove" disabled>The Eye looks away · ${hh>0?hh+'h ':''}${mm}m</button>`; }
+    else if((me.points||0)<50){ btn=`<button class="rapprove" disabled>Need 50 ✦ to be tested</button>`; }
+    else { btn=`<button class="gold" id="spinBtn" onclick="spinTheWheel()">Lay 50 ✦ before the Eye</button>`; }
     ctrl=`${buff}<div id="wheelResult" style="text-align:center;min-height:18px;font-family:'Silkscreen',monospace;font-size:13px;color:var(--candle);margin:2px 0 8px"></div><div style="text-align:center">${btn}</div>`;
   }
-  return `<div class="ritehdr" style="margin-top:22px">The Wheel of Fate</div>
-    <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Spend <b style="color:var(--candle)">50 points</b> to tempt fate — once every <b>2 hours</b>. Prizes land on top of the cost; the wheel can lift you or sink you.</p>
-    <div style="text-align:center;margin:6px 0">${buildWheelSVG()}</div>
+  return `<div class="ritehdr" style="margin-top:22px">Test of Devotion</div>
+    <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Lay <b style="color:var(--candle)">50 ✦</b> before the <b>Eye Totem</b> — once every <b>2 hours</b>. The Eye weighs your devotion and answers: it may bless you, ignore you, or turn from you. Its verdict lands on top of the cost.</p>
+    <div style="text-align:center;margin:6px 0"><div style="display:inline-block;width:min(64vw,240px)">${buildTotemSVG({anim:true})}</div></div>
     ${ctrl}`;
 }
+function ensureTotemStyle(){
+  if(document.getElementById('totemStyle')) return;
+  const st=document.createElement('style'); st.id='totemStyle';
+  st.textContent=`
+  .te-glow{transform-box:fill-box;transform-origin:center;animation:teGlow 2.8s ease-in-out infinite}
+  @keyframes teGlow{0%,100%{opacity:.45}50%{opacity:.95}}
+  .te-pupil{transform-box:fill-box;transform-origin:center;animation:tePupil 5s ease-in-out infinite}
+  @keyframes tePupil{0%,100%{transform:scaleY(1)}48%{transform:scaleY(.6) scaleX(1.16)}}
+  .dvov{position:fixed;inset:0;z-index:100000;overflow:hidden;background:radial-gradient(130% 130% at 50% 40%,rgba(22,14,9,.88),rgba(3,2,1,.98));opacity:0;animation:dvIn .5s ease forwards;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .dvov.out{animation:dvOut .65s ease forwards}
+  .dvov canvas.emb{position:absolute;inset:0;width:100%;height:100%}
+  .dvov .vig{position:absolute;inset:0;box-shadow:inset 0 0 220px 70px rgba(0,0,0,.92);pointer-events:none}
+  .dvov .dvhalo{position:absolute;top:39%;left:50%;width:min(125vw,580px);height:min(125vw,580px);transform:translate(-50%,-50%);background:repeating-conic-gradient(from 0deg, rgba(242,196,90,.12) 0deg 7deg, rgba(242,196,90,0) 7deg 25deg);border-radius:50%;-webkit-mask:radial-gradient(circle,#000 24%,transparent 66%);mask:radial-gradient(circle,#000 24%,transparent 66%);opacity:0;animation:dvHalo 30s linear infinite, dvUp 2s ease .4s forwards;pointer-events:none}
+  @keyframes dvHalo{to{transform:translate(-50%,-50%) rotate(360deg)}}
+  .dvov .dvflash{position:absolute;inset:0;background:radial-gradient(circle at 50% 39%, rgba(255,150,80,.9), rgba(150,30,12,.25) 42%, rgba(0,0,0,0) 70%);opacity:0;pointer-events:none}
+  .dvov.reveal .dvflash{animation:dvFlash .7s ease-out}
+  @keyframes dvFlash{0%{opacity:0}16%{opacity:1}100%{opacity:0}}
+  .dvov .totem{position:absolute;top:39%;left:50%;width:min(78vw,340px);transform:translate(-50%,-50%);filter:drop-shadow(0 0 32px rgba(242,196,90,.5))}
+  .dvov.reveal .totem{animation:dvShake .62s cubic-bezier(.36,.07,.19,.97)}
+  @keyframes dvShake{10%{transform:translate(-52%,-50%)}20%{transform:translate(-48%,-51%)}30%{transform:translate(-53%,-49%)}40%{transform:translate(-47%,-50%)}55%{transform:translate(-51.5%,-51%)}70%{transform:translate(-49%,-49.5%)}85%{transform:translate(-50.5%,-50%)}100%{transform:translate(-50%,-50%)}}
+  .dvov.reveal .sauce-grp{transform-box:fill-box;transform-origin:top center;animation:sauceGush .85s ease-out forwards}
+  @keyframes sauceGush{0%{transform:scaleY(1)}100%{transform:scaleY(1.2)}}
+  .sauce-pool{transform-box:fill-box;transform-origin:center;animation:saucePool 3.4s ease-in-out infinite}
+  @keyframes saucePool{0%,100%{transform:scaleX(1);opacity:.85}50%{transform:scaleX(1.06);opacity:1}}
+  .dvov .dvweigh{position:absolute;top:73%;left:50%;transform:translateX(-50%);font-family:'Silkscreen',monospace;font-size:12px;letter-spacing:.32em;color:#CBB89A;opacity:0;animation:dvUp .9s ease .6s forwards;white-space:nowrap}
+  .dvov.reveal .dvweigh{opacity:0;transition:opacity .35s}
+  .dvov .dvres{position:absolute;top:64%;left:50%;transform:translateX(-50%);text-align:center;width:92%;max-width:540px;opacity:0;pointer-events:none}
+  .dvov.reveal .dvres{animation:dvReveal .85s cubic-bezier(.2,.85,.2,1) forwards}
+  .dvov .dvline{font-family:'Spectral',Georgia,serif;font-style:italic;font-size:clamp(15px,4.4vw,20px);margin-bottom:8px;text-shadow:0 0 18px rgba(0,0,0,.7)}
+  .dvov .dvrew{font-family:'Cinzel',serif;font-weight:700;font-size:clamp(26px,8vw,46px);text-shadow:0 0 22px rgba(242,196,90,.4)}
+  .dvov .skip{position:absolute;bottom:7%;left:50%;transform:translateX(-50%);font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.22em;color:rgba(244,228,193,.42);opacity:0}
+  .dvov.reveal .skip{animation:dvUp 1s ease .5s forwards}
+  @keyframes dvIn{to{opacity:1}}
+  @keyframes dvOut{to{opacity:0}}
+  @keyframes dvUp{to{opacity:1}}
+  @keyframes dvReveal{0%{opacity:0;transform:translateX(-50%) translateY(14px) scale(.96)}100%{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
+  @media (prefers-reduced-motion:reduce){ .dvov *{animation-duration:.01ms!important} .te-glow,.te-pupil,.sauce-pool,.dvhalo{animation:none} }
+  `;
+  document.head.appendChild(st);
+}
+function buildTotemSVG(opts){ opts=opts||{};
+  const gC=opts.anim!==false?'te-glow':''; const pC=opts.anim!==false?'te-pupil':''; const sC=opts.anim!==false?'sauce-grp':'';
+  return `<svg viewBox="0 0 200 268" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+   <defs>
+    <linearGradient id="te_wood" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#2c1c0f"/><stop offset="22%" stop-color="#5a3a20"/><stop offset="50%" stop-color="#714a28"/><stop offset="78%" stop-color="#492f18"/><stop offset="100%" stop-color="#26180c"/></linearGradient>
+    <radialGradient id="te_knot" cx="50%" cy="48%" r="55%"><stop offset="0%" stop-color="#9a6638"/><stop offset="38%" stop-color="#6f4826"/><stop offset="74%" stop-color="#4a2f18"/><stop offset="100%" stop-color="#311e0e"/></radialGradient>
+    <radialGradient id="te_inner" cx="50%" cy="42%" r="60%"><stop offset="0%" stop-color="rgba(242,196,90,.55)"/><stop offset="55%" stop-color="rgba(224,138,60,.12)"/><stop offset="100%" stop-color="rgba(224,138,60,0)"/></radialGradient>
+    <radialGradient id="te_aura" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(242,196,90,.6)"/><stop offset="60%" stop-color="rgba(224,138,60,.18)"/><stop offset="100%" stop-color="rgba(224,138,60,0)"/></radialGradient>
+    <linearGradient id="te_sauce" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#E5381F"/><stop offset="55%" stop-color="#B71E10"/><stop offset="100%" stop-color="#7E140A"/></linearGradient>
+    <clipPath id="te_clip"><path d="M52,96 Q100,52 148,96 Q100,140 52,96 Z"/></clipPath>
+   </defs>
+   <circle class="${gC}" cx="100" cy="96" r="72" fill="url(#te_aura)"/>
+   <path d="M60,256 L58,118 Q58,92 76,82 L76,66 Q76,34 100,34 Q124,34 124,66 L124,82 Q142,92 142,118 L140,256 Z" fill="url(#te_wood)" stroke="#1a1008" stroke-width="2.5"/>
+   <g stroke="#3d2814" stroke-width="1.4" fill="none" opacity=".6">
+     <path d="M84,84 C80,140 82,200 84,254"/><path d="M100,80 C98,140 100,200 100,254"/><path d="M116,84 C120,140 118,200 116,254"/>
+     <path d="M72,120 C70,170 71,212 72,252"/><path d="M128,120 C130,170 129,212 128,252"/>
+   </g>
+   <g opacity=".5"><ellipse cx="86" cy="200" rx="7" ry="10" fill="none" stroke="#3d2814" stroke-width="1.4"/><ellipse cx="86" cy="200" rx="3.5" ry="5" fill="none" stroke="#3d2814" stroke-width="1.2"/></g>
+   <g stroke="#3d2814" stroke-width="2" fill="none" opacity=".55"><path d="M74,150 L100,160 L126,150"/><path d="M74,226 L100,234 L126,226"/></g>
+   <path d="M52,96 Q100,52 148,96 Q100,140 52,96 Z" fill="#231610" stroke="#150c06" stroke-width="3"/>
+   <g clip-path="url(#te_clip)">
+     <ellipse cx="100" cy="96" rx="30" ry="26" fill="url(#te_knot)"/>
+     <ellipse cx="100" cy="96" rx="24" ry="21" fill="none" stroke="#4a2f18" stroke-width="1.6" opacity=".85"/>
+     <ellipse cx="100" cy="96" rx="17" ry="15" fill="none" stroke="#5a3a20" stroke-width="1.4" opacity=".85"/>
+     <ellipse cx="100" cy="96" rx="22" ry="19" fill="url(#te_inner)"/>
+     <ellipse class="${pC}" cx="100" cy="96" rx="6" ry="15" fill="#0c0805"/>
+     <circle cx="92" cy="89" r="3" fill="#FFE9C0" opacity=".7"/>
+   </g>
+   <path d="M52,96 Q100,52 148,96 Q100,140 52,96 Z" fill="none" stroke="#7a5230" stroke-width="2"/>
+   <path d="M52,96 Q100,52 148,96" fill="none" stroke="rgba(255,232,163,.22)" stroke-width="1.4"/>
+   <g class="${sC}">
+     <ellipse class="sauce-pool" cx="100" cy="258" rx="30" ry="6.5" fill="url(#te_sauce)"/>
+     <ellipse cx="90" cy="256" rx="9" ry="2" fill="#F4795C" opacity=".4"/>
+     <ellipse cx="100" cy="114" rx="20" ry="6" fill="url(#te_sauce)"/>
+     <path d="M81,112 q-3,38 0,74 q3,6 6,0 q3,-36 0,-74 z" fill="url(#te_sauce)"/>
+     <path d="M96,114 q-4,69 0,138 q4,7 8,0 q4,-69 0,-138 z" fill="url(#te_sauce)"/>
+     <path d="M115,112 q-2,26 0,50 q3,6 6,0 q2,-24 0,-50 z" fill="url(#te_sauce)"/>
+     <ellipse cx="95" cy="112" rx="6" ry="2" fill="#F4795C" opacity=".45"/>
+   </g>
+  </svg>`;
+}
+
+function verdictOf(o){
+  if(o.special==='free')   return {line:'The Eye is unmoved — your devotion is returned to you.',reward:'stake returned',tone:'neutral'};
+  if(o.special==='x2')     return {line:'A blessing settles upon you.',reward:'×2 your next deed or challenge',tone:'buff'};
+  if(o.special==='x3')     return {line:'Twice-blessed — the Eye burns bright.',reward:'×3 your next deed or challenge',tone:'buff'};
+  if(o.special==='x2neg')  return {line:'The Eye marks you — a shadow waits on your next fall.',reward:'×2 your next penalty',tone:'bad'};
+  if(o.key==='jackpot')    return {line:'The Eye blazes — you are seen.',reward:'+250 ✦',tone:'great'};
+  if(o.key==='zero')       return {line:'The Eye keeps what you gave, and gives nothing.',reward:'−50 ✦',tone:'bad'};
+  if(typeof o.pts==='number' && o.pts>0) return {line:'The Eye acknowledges your devotion.',reward:`+${o.pts} ✦`,tone:'good'};
+  if(typeof o.pts==='number' && o.pts<0) return {line:(o.pts<=-100?'You have displeased the Eye.':'The Eye turns from you.'),reward:`${o.pts} ✦`,tone:'bad'};
+  return {line:'The Eye considers you.',reward:'',tone:'neutral'};
+}
+function devotionVerdict(o){
+  return new Promise((resolve)=>{
+    let done=false; const finish=()=>{ if(done)return; done=true; try{ trialsRefresh(); }catch(e){} resolve(); };
+    let ov=null, raf=0, alive=true, revealed=false, applied=false; let size=()=>{};
+    const cleanup=()=>{ alive=false; if(raf)cancelAnimationFrame(raf); try{ window.removeEventListener('resize',size);}catch(e){} };
+    try{
+      ensureTotemStyle();
+      const v=verdictOf(o);
+      const toneCol=v.tone==='great'?'#FFE08A':(v.tone==='good'?'#F2C45A':(v.tone==='buff'?'#E8C45A':(v.tone==='neutral'?'#CBB89A':'#E8A88F')));
+      const emberHot=(v.tone==='bad');
+      ov=document.createElement('div'); ov.className='dvov'; ov.id='dvOverlay';
+      ov.innerHTML=`<canvas class="emb"></canvas><div class="vig"></div><div class="dvflash"></div>`+
+        `<div class="dvhalo"></div><div class="totem">${buildTotemSVG({anim:true})}</div>`+
+        `<div class="dvweigh">THE EYE WEIGHS YOU</div>`+
+        `<div class="dvres"><div class="dvline" style="color:${toneCol}">${v.line}</div><div class="dvrew" style="color:${toneCol}">${v.reward}</div></div>`+
+        `<div class="skip">tap to continue</div>`;
+      document.body.appendChild(ov);
+      const cv=ov.querySelector('canvas.emb'), cx=cv.getContext('2d'); let W,H; const DPR=Math.min(2,window.devicePixelRatio||1);
+      size=function(){ W=cv.clientWidth||window.innerWidth; H=cv.clientHeight||window.innerHeight; cv.width=W*DPR; cv.height=H*DPR; cx.setTransform(DPR,0,0,DPR,0,0); }; size();
+      const P=[]; const NP=Math.min(70,Math.max(34,Math.floor(W/8)));
+      for(let i=0;i<NP;i++) P.push({x:Math.random()*W,y:H+Math.random()*H,r:.6+Math.random()*2.2,vy:-(.25+Math.random()*.8),vx:(Math.random()-.5)*.25,ph:Math.random()*6.28});
+      const frame=(now)=>{ if(!alive)return; cx.clearRect(0,0,W,H); cx.globalCompositeOperation='lighter';
+        for(const p of P){ p.y+=p.vy; p.x+=p.vx+Math.sin(now/900+p.ph)*.15; if(p.y<-10){p.y=H+Math.random()*30;p.x=Math.random()*W;} const tw=.55+.45*Math.sin(now/240+p.ph); cx.beginPath(); cx.fillStyle=emberHot?`rgba(224,90,46,${(.6*tw).toFixed(2)})`:`rgba(242,196,90,${(.6*tw).toFixed(2)})`; cx.arc(p.x,p.y,p.r,0,6.28); cx.fill(); }
+        raf=requestAnimationFrame(frame);
+      }; raf=requestAnimationFrame(frame);
+      try{ if(Snd.isOn&&Snd.isOn()) Snd.sfx('shimmer'); }catch(e){}
+      const end=()=>{ cleanup(); if(ov){ ov.classList.add('out'); const x=ov; setTimeout(()=>{ try{x.remove();}catch(e){} finish(); },650);} else finish(); };
+      setTimeout(async ()=>{ if(ov) ov.classList.add('reveal'); try{ if(Snd.isOn&&Snd.isOn()){ if(v.tone==='bad') Snd.sfx('thunder'); else Snd.sfx('gong'); } }catch(e){} if(!applied){ applied=true; try{ await communityAction({t:'wheel_spin',name:VOTER,outcome:o}); }catch(e){} } revealed=true; }, 2200);
+      const autoT=setTimeout(end, 5400);
+      ov.addEventListener('pointerdown',()=>{ if(revealed){ clearTimeout(autoT); end(); } });
+      window.addEventListener('resize',size);
+    }catch(e){ cleanup(); if(ov){ try{ov.remove();}catch(_){}} finish(); }
+  });
+}
+
 window.spinTheWheel=async function(){
   if(WHEEL_BUSY) return; const me=memByName(VOTER); if(!me) return;
   const now=Date.now()/1000;
   if(now-(me.lastSpin||0)<2*3600){ trialsRefresh(); return; }
-  if((me.points||0)<50){ toast("You need 50 points to spin."); return; }
+  if((me.points||0)<50){ toast("You need 50 ✦ to be tested."); return; }
   WHEEL_BUSY=true;
-  const o=spinWheel(), idx=WHEEL.indexOf(o), seg=360/WHEEL.length, jitter=(Math.random()*0.6-0.3)*seg;
-  const target=360*6 - (idx*seg+seg/2) + jitter;
-  const g=document.getElementById('wheelSpin'), btn=document.getElementById('spinBtn');
-  if(btn){ btn.disabled=true; btn.textContent='Spinning…'; }
-  if(g){ g.style.transform=`rotate(${target}deg)`; }
-  try{ Snd.wheel(4.2); }catch(e){}
-  setTimeout(async ()=>{
-    const lab=o.special==='free'?'Free spin — go again!':o.special==='x2'?'×2 your next win!':o.special==='x3'?'×3 your next win!':o.special==='x2neg'?'Cursed — ×2 your next penalty':o.key==='jackpot'?'JACKPOT!  +250':o.key==='zero'?'Nothing — the Eye keeps your 50':(o.pts>0?`+${o.pts} points`:`${o.pts} points`);
-    const rEl=document.getElementById('wheelResult'); if(rEl) rEl.textContent=lab;
-    await communityAction({t:'wheel_spin',name:VOTER,outcome:o});
-    WHEEL_BUSY=false;
-    toast(`🎡 ${VOTER}: ${lab}`);
-    setTimeout(()=>{ trialsRefresh(); }, 1500);
-  }, 4350);
+  const o=spinWheel();
+  const btn=document.getElementById('spinBtn'); if(btn){ btn.disabled=true; btn.textContent='The Eye weighs you…'; }
+  try{ await devotionVerdict(o); }catch(e){}
+  WHEEL_BUSY=false;
 };
 function wagerOpenCard(w){
   const mine=VOTER&&VOTER===w.proposer; const meM=VOTER?memByName(VOTER):null;
@@ -3781,6 +3906,91 @@ window.geoForm=function(){ const g=geo(); const st=sunTimes(); sheet.innerHTML=`
   </div>`; scrim.classList.add("show"); };
 window.geoSave=async function(){ const lat=parseFloat(document.getElementById('geoLat').value), lng=parseFloat(document.getElementById('geoLng').value); if(isNaN(lat)||isNaN(lng)||lat<-90||lat>90||lng<-180||lng>180){ document.getElementById('kerr').textContent='Enter a valid latitude (−90…90) and longitude (−180…180).'; return; } MEM.geo={lat,lng}; await saveData(); try{ atmoUpdate(); }catch(e){} const st=sunTimes(); toast(`Sky set — sunrise ${fmtH(st.sunrise)}, sunset ${fmtH(st.sunset)}.`); deedsForm(); };
 window.geoReset=async function(){ MEM.geo={lat:43.6532,lng:-79.3832}; await saveData(); try{ atmoUpdate(); }catch(e){} const la=document.getElementById('geoLat'),lo=document.getElementById('geoLng'); if(la)la.value=43.6532; if(lo)lo.value=-79.3832; const st=sunTimes(); toast(`Sky reset to Toronto — sunrise ${fmtH(st.sunrise)}, sunset ${fmtH(st.sunset)}.`); };
+
+
+/* ====================== THE OFFERING — ceremony overlay ====================== */
+function offeringCeremony(name){
+  try{
+    if(document.getElementById('offCeremony')) return;
+    name=String(name||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});
+    if(!document.getElementById('offCerStyle')){
+      const st=document.createElement('style'); st.id='offCerStyle';
+      st.textContent=`
+      .offcer{position:fixed;inset:0;z-index:100000;overflow:hidden;background:radial-gradient(130% 130% at 50% 42%,rgba(22,14,9,.86),rgba(4,3,2,.98));opacity:0;animation:offcerIn .55s ease forwards;-webkit-tap-highlight-color:transparent;cursor:pointer}
+      .offcer.out{animation:offcerOut .7s ease forwards}
+      .offcer canvas.emb{position:absolute;inset:0;width:100%;height:100%}
+      .offcer .vig{position:absolute;inset:0;box-shadow:inset 0 0 220px 70px rgba(0,0,0,.92);pointer-events:none}
+      .offcer .eye{position:absolute;top:39%;left:50%;transform:translate(-50%,-50%);width:min(64vw,300px);height:min(64vw,300px);filter:drop-shadow(0 0 30px rgba(242,196,90,.5))}
+      .offcer .txt{position:absolute;top:62.5%;left:50%;transform:translateX(-50%);text-align:center;width:92%;max-width:540px;pointer-events:none}
+      .offcer .kick{font-family:'Silkscreen',monospace;font-size:12px;letter-spacing:.36em;color:#E8A88F;opacity:0;animation:offUp .9s ease 1.9s forwards}
+      .offcer .nm{font-family:'Cinzel',serif;font-weight:700;font-size:clamp(32px,9.5vw,60px);color:#F4E4C1;margin:8px 0 6px;opacity:0;transform:translateY(18px);animation:offName 1.15s cubic-bezier(.2,.85,.2,1) 2.45s forwards;text-shadow:0 0 24px rgba(242,196,90,.45)}
+      .offcer .sub{font-family:'Spectral',Georgia,serif;font-style:italic;color:#CBB89A;font-size:clamp(13px,3.8vw,18px);opacity:0;animation:offUp 1s ease 3.15s forwards}
+      .offcer .skip{position:absolute;bottom:7%;left:50%;transform:translateX(-50%);font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.22em;color:rgba(244,228,193,.42);opacity:0;animation:offUp 1s ease 4.4s forwards}
+      @keyframes offcerIn{to{opacity:1}}
+      @keyframes offcerOut{to{opacity:0}}
+      @keyframes offUp{to{opacity:1}}
+      @keyframes offName{to{opacity:1;transform:translateY(0)}}
+      .offcer .eyeG{transform-box:fill-box;transform-origin:center;animation:offEyeOpen 1.4s cubic-bezier(.2,.9,.2,1) .55s both}
+      @keyframes offEyeOpen{0%{transform:scaleY(.05);opacity:0}50%{opacity:1}72%{transform:scaleY(1.09)}100%{transform:scaleY(1);opacity:1}}
+      .offcer .rays{transform-box:fill-box;transform-origin:center;animation:offSpin 30s linear infinite,offUp 1.6s ease .8s both}
+      @keyframes offSpin{to{transform:rotate(360deg)}}
+      .offcer .pupil{transform-box:fill-box;transform-origin:center;animation:offPupil 4.6s ease-in-out 2s infinite}
+      @keyframes offPupil{0%,100%{transform:scaleY(1)}46%{transform:scaleY(.6) scaleX(1.14)}}
+      .offcer .ring{transform-box:fill-box;transform-origin:center;opacity:0;animation:offRing 3.6s ease-out 1.7s infinite}
+      @keyframes offRing{0%{transform:scale(.5);opacity:.5}100%{transform:scale(1.55);opacity:0}}
+      .offcer .glow{animation:offGlow 2.8s ease-in-out 1s infinite}
+      @keyframes offGlow{0%,100%{opacity:.45}50%{opacity:.95}}
+      @media (prefers-reduced-motion:reduce){ .offcer *{animation-duration:.01ms!important} }
+      `;
+      document.head.appendChild(st);
+    }
+    let rays=''; const N=40;
+    for(let i=0;i<N;i++){ const a=(i/N)*Math.PI*2; const x1=110+Math.cos(a)*60,y1=110+Math.sin(a)*60,x2=110+Math.cos(a)*104,y2=110+Math.sin(a)*104; const w=i%2?1.2:2.4; rays+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#F2C45A" stroke-width="${w}" stroke-linecap="round" opacity="${i%2?.22:.5}"/>`; }
+    const eyeSVG=`<svg viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="oc_iris" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#FFE8A3"/><stop offset="45%" stop-color="#F2C45A"/><stop offset="80%" stop-color="#E08A3C"/><stop offset="100%" stop-color="#9E3F1E"/></radialGradient>
+        <radialGradient id="oc_glow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(242,196,90,.9)"/><stop offset="55%" stop-color="rgba(224,138,60,.35)"/><stop offset="100%" stop-color="rgba(224,138,60,0)"/></radialGradient>
+        <clipPath id="oc_clip"><path d="M28,110 Q110,48 192,110 Q110,172 28,110 Z"/></clipPath>
+      </defs>
+      <circle class="glow" cx="110" cy="110" r="96" fill="url(#oc_glow)"/>
+      <g class="rays">${rays}</g>
+      <circle class="ring" cx="110" cy="110" r="74" fill="none" stroke="#F2C45A" stroke-width="1.5"/>
+      <circle class="ring" cx="110" cy="110" r="74" fill="none" stroke="#E8A88F" stroke-width="1.2" style="animation-delay:2.9s"/>
+      <g class="eyeG">
+        <path d="M28,110 Q110,48 192,110 Q110,172 28,110 Z" fill="rgba(20,14,10,.65)" stroke="#F2C45A" stroke-width="2.5"/>
+        <g clip-path="url(#oc_clip)">
+          <circle cx="110" cy="110" r="34" fill="url(#oc_iris)"/>
+          <circle cx="110" cy="110" r="34" fill="none" stroke="#FFE8A3" stroke-width="1.2" opacity=".6"/>
+          <ellipse class="pupil" cx="110" cy="110" rx="9" ry="27" fill="#0A0705"/>
+          <circle cx="99" cy="98" r="5" fill="#FFF7E0" opacity=".85"/>
+        </g>
+      </g>
+    </svg>`;
+    const ov=document.createElement('div'); ov.id='offCeremony'; ov.className='offcer';
+    ov.innerHTML=`<canvas class="emb"></canvas><div class="vig"></div><div class="eye">${eyeSVG}</div>`+
+      `<div class="txt"><div class="kick">\u25B2 THE OFFERING</div><div class="nm">${name}</div><div class="sub">is given to the Eye \u2014 let the grove decide.</div></div>`+
+      `<div class="skip">tap to continue</div>`;
+    document.body.appendChild(ov);
+    // rising embers
+    const cv=ov.querySelector('canvas.emb'); const cx=cv.getContext('2d'); let W,H; const DPR=Math.min(2,window.devicePixelRatio||1);
+    function size(){ W=cv.clientWidth||window.innerWidth; H=cv.clientHeight||window.innerHeight; cv.width=W*DPR; cv.height=H*DPR; cx.setTransform(DPR,0,0,DPR,0,0); }
+    size();
+    const P=[]; const NP=Math.min(80,Math.max(36,Math.floor(W/7)));
+    for(let i=0;i<NP;i++){ P.push({x:Math.random()*W,y:H+Math.random()*H,r:.6+Math.random()*2.4,vy:-(.25+Math.random()*.85),vx:(Math.random()-.5)*.25,ph:Math.random()*6.28,hot:Math.random()<.5}); }
+    let raf, t0=performance.now(), alive=true;
+    function frame(now){ if(!alive) return; cx.clearRect(0,0,W,H); cx.globalCompositeOperation='lighter';
+      for(const p of P){ p.y+=p.vy; p.x+=p.vx+Math.sin((now/900)+p.ph)*.15; if(p.y<-10){ p.y=H+Math.random()*30; p.x=Math.random()*W; } const tw=.55+.45*Math.sin(now/240+p.ph); const col=p.hot?`rgba(242,196,90,${(.7*tw).toFixed(2)})`:`rgba(224,110,52,${(.6*tw).toFixed(2)})`; cx.beginPath(); cx.fillStyle=col; cx.arc(p.x,p.y,p.r,0,6.28); cx.fill(); }
+      raf=requestAnimationFrame(frame);
+    }
+    raf=requestAnimationFrame(frame);
+    try{ if(Snd.isOn&&Snd.isOn()){ Snd.sfx('shimmer'); setTimeout(()=>{ try{ Snd.sfx('gong'); }catch(e){} },2350); } }catch(e){}
+    let ended=false;
+    function end(){ if(ended) return; ended=true; alive=false; cancelAnimationFrame(raf); window.removeEventListener('resize',size); ov.classList.add('out'); setTimeout(()=>{ try{ ov.remove(); }catch(e){} },720); }
+    ov.addEventListener('pointerdown',()=>{ if(performance.now()-t0>800) end(); });
+    window.addEventListener('resize',size);
+    setTimeout(end,7600);
+  }catch(e){}
+}
 
 /* ====================== BOOT ====================== */
 (async function(){

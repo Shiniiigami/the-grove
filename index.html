@@ -960,10 +960,6 @@ function drawChibi(ctx,f,px,ox,oy,ti,nT){
   }
   if(f.ears==="stud"){P(9,12,"#C9CDD2");P(20,12,"#C9CDD2");}
   else if(f.ears==="dangle"){const ec=f.earCol||"#E8C45A";P(9,12,ec);P(9,13,ec);P(20,12,ec);P(20,13,ec);}
-  if(ti!=null && nT>1){
-    if(ti===nT-1){ const hc="#FFF1C8"; row(11,18,-2,hc); P(10,-1,hc); P(19,-1,hc); P(13,-3,hc); P(16,-3,hc); }
-    else if(ti===nT-2){ const cg="#F2C45A", cgl="#FFF3C0"; row(12,17,0,cg); P(12,-1,cgl); P(15,-1,cgl); P(17,-1,cgl); }
-  }
 }
 function drawChibiSprite(canvas,soul,scale,t,base,dpr){
   const f=soul.chibi;
@@ -2224,7 +2220,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the lake keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27 · wheel·fire·luminary</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27c · wager-form-fix</p>`;
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 function memByName(n){ return (MEM.members||[]).find(x=>x.name===n); }
@@ -2448,6 +2444,7 @@ window.newWagerForm=function(){
       <button class="ghostbtn" onclick="closeSheet()">Back</button>
       <div class="err" id="kerr"></div>
     </div>`;
+  scrim.classList.add("show");
 };
 window.commitWager=async function(){
   const title=(document.getElementById("wgTitle").value||"").trim();

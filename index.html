@@ -994,7 +994,7 @@ function sortedMembers(){return [...MEM.members].sort((a,b)=>b.points-a.points);
 function layoutGrove(){
   groveEl.innerHTML=""; spirits=[];
   const members=sortedMembers();
-  const w=groveEl.clientWidth||340;
+  const w = (groveEl.clientWidth>40 ? groveEl.clientWidth : 0) || Math.min(688,(window.innerWidth||360)-34) || 340;
   const cols = w<360?3:(w<520?4:5);
   const cellW = w/cols;
   const rowH = 144;
@@ -1022,6 +1022,8 @@ function layoutGrove(){
   const rows=Math.ceil(members.length/cols);
   groveEl.style.height=(rows*rowH+30)+"px";
 }
+let _glResizeT;
+window.addEventListener('resize',()=>{ clearTimeout(_glResizeT); _glResizeT=setTimeout(()=>{ try{ if(groveEl && groveEl.offsetParent!==null) layoutGrove(); }catch(e){} },150); });
 
 let LEDGER_SORT="season";
 window.setLedgerSort=function(s){ LEDGER_SORT=s; renderLedger(); };
@@ -2221,7 +2223,8 @@ function renderRules(){
     <p class="rtext">Tap any spirit → <b>Edit this spirit</b> to shape your form. New gear — held items and the Offering Robe — unlocks as you rise in rank.</p>
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
-    <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the lake keeps."</p>`;
+    <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the lake keeps."</p>
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27 · wheel·fire·luminary</p>`;
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 function memByName(n){ return (MEM.members||[]).find(x=>x.name===n); }

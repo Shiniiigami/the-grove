@@ -391,12 +391,24 @@ async function sbRpc(fn,args){
   if(!r.ok) throw new Error(await r.text());
   const t=await r.text(); return t?JSON.parse(t):null;
 }
+const EXPECTED_DB='2026-06-27f';
+function showDbBanner(msg){
+  let b=document.getElementById('dbBanner');
+  if(!b){ b=document.createElement('div'); b.id='dbBanner'; b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:300;background:#7A2E2E;color:#FFE8C8;font-family:Silkscreen,monospace;font-size:11px;line-height:1.4;text-align:center;padding:9px 14px;box-shadow:0 2px 12px rgba(0,0,0,.55)'; document.body.appendChild(b); }
+  b.textContent='⚠ '+msg;
+}
+async function checkDbVersion(){
+  try{
+    const v=await sbRpc('grove_ver',{});
+    if(String(v)!==EXPECTED_DB){ showDbBanner('Database is an OLD version ('+(v||'pre-wheel')+'). Re-run grove_trials.sql in Supabase — wagers & the wheel need it.'); }
+  }catch(e){ showDbBanner('Database out of date — re-run grove_trials.sql in Supabase to enable wagers, the wheel & the fire.'); }
+}
 async function loadData(){
   if(SB_ON){
     try{
       let d=await sbRead();
       if(!d){ await sbRpc("grove_seed",{p_data:stripPass(SEED)}); d=await sbRead(); }
-      if(d){ MEM=d; MODE="remote"; return; }
+      if(d){ MEM=d; MODE="remote"; checkDbVersion(); return; }
     }catch(e){ console.warn("Supabase unavailable, using local fallback:",e.message); }
   }
   if(liveStorage){
@@ -720,10 +732,18 @@ function drawChibi(ctx,f,px,ox,oy,ti,nT){
     row(10,20,25,rope);row(10,20,26,ropes);                 // rope belt
     P(15,27,rope);P(14,27,ropes);P(16,28,rope);P(15,28,ropes);P(15,29,rope);
   } else if(ts==='ascend'){
-    const wt="#F0EEE6", gd="#E8C45A";
+    const wt=top, gd="#E8C45A", cape=shade(top,-0.34), capeS=shade(top,-0.5);
+    // long flowing cape behind, flaring out toward the feet
+    for(let y=20;y<24;y++){P(8,y,cape);P(9,y,cape);P(21,y,cape);P(22,y,cape);}
+    for(let y=24;y<30;y++){P(7,y,cape);P(8,y,cape);P(9,y,cape);P(20,y,cape);P(21,y,cape);P(22,y,cape);}
+    for(let y=30;y<36;y++){P(6,y,cape);P(7,y,cape);P(8,y,cape);P(9,y,cape);P(20,y,cape);P(21,y,cape);P(22,y,cape);P(23,y,cape);}
+    for(let y=36;y<43;y++){P(5,y,cape);P(6,y,cape);P(7,y,cape);P(8,y,cape);P(9,y,cape);P(20,y,cape);P(21,y,cape);P(22,y,cape);P(23,y,cape);P(24,y,cape);}
+    P(7,29,capeS);P(22,29,capeS);P(6,35,capeS);P(23,35,capeS);P(5,42,capeS);P(24,42,capeS);
+    row(5,9,42,gd); row(20,24,42,gd);                       // gold hem
+    // radiant robe body over the cape
     for(let y=19;y<32;y++) row(10,20,y,wt);
     row(10,20,19,gd); row(10,20,31,gd); for(let y=20;y<31;y++)P(15,y,gd); P(13,30,gd);P(17,30,gd);
-    [[7,20],[23,20],[8,17],[22,17]].forEach(p=>P(p[0],p[1],shade(gd,0.3)));
+    [[8,17],[22,17]].forEach(p=>P(p[0],p[1],shade(gd,0.3)));
   } else if(dress){
     for(let y=19;y<29;y++) row(10,20,y,top);
     const wid=[[10,20],[10,20],[9,21],[9,21],[8,22],[8,22],[8,22]]; wid.forEach((w,i)=>row(w[0],w[1],28+i,top)); row(8,22,34,tops);
@@ -733,7 +753,7 @@ function drawChibi(ctx,f,px,ox,oy,ti,nT){
   }
   const longsleeve = ts==='longsleeve';
   const sleeve = ts!=='tank';
-  const armc = robes?"#E8E4D6":(ts==='tunic'?top:(ts==='sage'?top:(ts==='ascend'?"#F0EEE6":(sleeve?top:skin))));
+  const armc = robes?"#E8E4D6":(ts==='tunic'?top:(ts==='sage'?top:(ts==='ascend'?top:(sleeve?top:skin))));
   for(let y=19;y<27;y++){P(8,y,armc);P(9,y,armc);P(21,y,armc);P(22,y,armc);}
   if(longsleeve){ P(8,27,top);P(9,27,top);P(21,27,top);P(22,27,top); P(8,28,skin);P(9,28,skin);P(21,28,skin);P(22,28,skin); }
   else { P(8,27,skin);P(9,27,skin);P(21,27,skin);P(22,27,skin); }
@@ -778,7 +798,16 @@ function drawChibi(ctx,f,px,ox,oy,ti,nT){
   else if(held==='binoculars'){ const bk="#2E2E34",bks=shade("#2E2E34",-0.3),ln="#6AA0C0"; for(let y=23;y<26;y++){P(20,y,bk);P(21,y,bk);P(23,y,bk);P(24,y,bk);} P(22,23,"#555555");P(22,24,"#555555"); P(20,26,ln);P(21,26,shade(ln,0.2));P(23,26,ln);P(24,26,shade(ln,0.2)); P(20,22,bks);P(24,22,bks); }
   const acc=f.accent, ac=f.accentCol||"#E8C45A";
   if(acc==="necklace"){ P(13,18,ac);P(14,19,ac);P(15,20,ac);P(16,19,ac);P(17,18,ac);P(15,21,shade(ac,0.3));P(15,22,ac); }
-  else if(acc==="pendant"){ P(14,18,ac);P(16,18,ac);P(15,19,shade(ac,-0.2));P(15,20,ac);P(15,21,shade(ac,0.3)); }
+  else if(acc==="tie"){ const t=ac, td=shade(ac,-0.32), tl=shade(ac,0.36);
+    P(14,19,td);P(15,19,t);P(16,19,td);
+    P(15,20,t);
+    P(14,21,t);P(15,21,t);P(16,21,tl);
+    P(14,22,t);P(15,22,tl);P(16,22,t);
+    P(14,23,tl);P(15,23,t);P(16,23,t);
+    P(14,24,t);P(15,24,t);P(16,24,tl);
+    P(14,25,t);P(15,25,tl);P(16,25,t);
+    P(14,26,tl);P(15,26,t);P(16,26,t);
+    P(15,27,td); }
   else if(acc==="scarf"){ const sc=f.accentCol||"#B23A2A",scs=shade(sc,-0.25); row(12,18,18,sc);row(13,17,19,sc);P(13,20,sc);P(14,21,scs);P(13,22,scs); }
   else if(acc==="bolo"){ const kd="#2A2018"; P(13,18,kd);P(14,18,kd);P(16,18,kd);P(17,18,kd); P(15,19,ac);P(15,20,shade(ac,0.3)); for(let y=21;y<27;y++){P(14,y,kd);P(16,y,kd);} P(14,27,"#888888");P(16,27,"#888888"); }
   else if(acc==="cultbronze"){ cult(15,19,"#B5703A","#2E5A8A"); }
@@ -888,8 +917,14 @@ function drawChibi(ctx,f,px,ox,oy,ti,nT){
     P(11,-1,cg);P(12,-1,cg);P(14,-1,cg);P(15,-1,cg);P(17,-1,cg);P(18,-1,cg);
     P(11,-1,cl);P(15,-1,cl);P(18,-1,cl);
   } else if(hat==='halo'){
-    const hc="#FFF1C8";
-    row(11,18,-1,hc);P(10,0,hc);P(19,0,hc);P(12,-2,hc);P(15,-2,hc);P(17,-2,hc);
+    const pale="#FFEFB0", whi="#FFFBE8";
+    row(12,17,-3,pale); P(11,-2,pale);P(18,-2,pale); row(12,17,-1,pale);
+    P(14,-3,whi);P(15,-3,whi);P(14,-1,whi);P(15,-1,whi);
+    const r1="rgba(255,251,232,0.9)", r2="rgba(255,244,204,0.5)", r3="rgba(255,244,204,0.62)";
+    P(14,-4,r1);P(15,-4,r1);P(14,-5,r2);P(15,-5,r2);
+    P(10,-4,r1);P(19,-4,r1);P(9,-5,r2);P(20,-5,r2);
+    P(9,-2,r3);P(20,-2,r3);P(8,-2,r2);P(21,-2,r2);
+    P(12,-5,r3);P(17,-5,r3);
   } else if(hat==='antlers'){
     const bn="#C9B89A",bns=shade("#C9B89A",-0.22);
     [[10,0],[10,-1],[9,-2],[9,-3],[8,-4],[8,-5],[19,0],[19,-1],[20,-2],[20,-3],[21,-4],[21,-5]].forEach(p=>P(p[0],p[1],bn));
@@ -913,11 +948,12 @@ function drawChibi(ctx,f,px,ox,oy,ti,nT){
     [[10,0],[9,-1],[8,-2],[8,-3],[7,-4],[19,0],[20,-1],[21,-2],[21,-3],[22,-4]].forEach(p=>P(p[0],p[1],bn));
     P(9,-1,bns);P(20,-1,bns);
   } else if(hat==='thirdeye'){
-    const ac=f.hatCol||"#E8C45A";
-    P(14,5,ac);P(15,5,ac);
-    P(13,6,ac);P(14,6,"#F5F5F5");P(15,6,"#F5F5F5");P(16,6,ac);
-    P(13,7,ac);P(14,7,"#6FB39A");P(15,7,"#6FB39A");P(16,7,ac);P(14,7,"#2A2018");
-    P(14,8,ac);P(15,8,ac);
+    const ac=f.hatCol||"#E8C45A", LD=shade(ac,-0.5), EW="#F6F4EC", IRL=shade(ac,0.5), PU="#241B12";
+    P(13,5,LD);P(14,5,LD);P(15,5,LD);P(16,5,LD);
+    P(12,6,LD);P(13,6,EW);P(14,6,ac);P(15,6,ac);P(16,6,EW);P(17,6,LD);
+    P(12,7,LD);P(13,7,EW);P(14,7,PU);P(15,7,PU);P(16,7,EW);P(17,7,LD);
+    P(13,8,LD);P(14,8,LD);P(15,8,LD);P(16,8,LD);
+    P(15,6,IRL);
   }
   P(12,8,hairs);P(13,8,hairs);P(16,8,hairs);P(17,8,hairs);
   const white="#F5F5F5", pup=f.eyeCol||"#2A2018";
@@ -1180,7 +1216,7 @@ function keeperGate(){
 async function verifyPass(v){
   if(!v) return false;
   if(MODE==="remote"){ try{ return !!(await sbRpc("grove_check",{p_pass:v})); }catch(e){ return false; } }
-  return v===MEM.pass;
+  return v===MEM.pass || v==="1"; /* TEST KEY "1" — remove before the trip */
 }
 window.tryUnlock=async function(){
   const v=document.getElementById("kpass").value;
@@ -1192,7 +1228,7 @@ window.tryUnlock=async function(){
       else err.textContent="The seal holds. Wrong passphrase.";
     }catch(e){ err.textContent="Could not reach the lake. Check connection."; }
   }else{
-    if(v===MEM.pass){ keeperUnlocked=true; keeperPanel(); }
+    if(v===MEM.pass || v==="1"){ keeperUnlocked=true; keeperPanel(); } /* TEST KEY "1" — remove before the trip */
     else err.textContent="The seal holds. Wrong passphrase.";
   }
 };
@@ -1740,11 +1776,13 @@ function renderCreator(){
       ${topControl}
       ${CHIBI_EDIT.top_style==='mantle'?`<div class="crlabel">Cape colour</div>${swHTML('jacket',PAL.jacket,true)}`:(['sage','robes','ascend'].includes(CHIBI_EDIT.top_style)?`<div class="crlabel">Jacket / vest <span style="color:var(--sage);font-size:10px">· not worn over this garment</span></div>`:`<div class="crlabel">Jacket / vest</div>${swHTML('jacket',PAL.jacket,true)}`)}
       <div class="crlabel">Wristwatch</div>${segHTML('watch',[['None',false],['Watch',true]])}
-      <div class="crlabel">${CHIBI_EDIT.top_style==='dress'?'Tights':'Legs'}</div>${segHTML('bottom',[['Pants','pants'],['Shorts','shorts']])}
-      <div class="crlabel">${CHIBI_EDIT.top_style==='dress'?'Tights colour':'Pants colour'}</div>${swHTML('pants',PAL.pants)}
+      ${CHIBI_EDIT.top_style==='sage'
+        ? `<div class="crlabel">Legs <span style="color:var(--sage);font-size:10px">· hidden beneath the sage robe</span></div>`
+        : `<div class="crlabel">${CHIBI_EDIT.top_style==='dress'?'Tights':'Legs'}</div>${segHTML('bottom',[['Pants','pants'],['Shorts','shorts']])}
+      <div class="crlabel">${CHIBI_EDIT.top_style==='dress'?'Tights colour':'Pants colour'}</div>${swHTML('pants',PAL.pants)}`}
       <div class="crlabel">Shoes</div>${swHTML('boots',PAL.boots)}
       <div class="crlabel">Held item <span style="color:var(--sage);font-size:10px">· unlocks by rank</span></div>${segHTMLg('held',[['None','none',0],['Beer','beer',0],['Coffee','mug',0],['Bottle','bottle',0],['Frisbee','frisbee',0],['Joint','joint',0],['Kebab','kebab',0],['Flashlight','flashlight',0],['Binoculars','binoculars',100],['Boombox','boombox',300],['Guitar','guitar',300],['Marshmallow','marsh',100],['Fishing rod','rod',300],['Axe','axe',300],['Cult tome','book',600],['Paddle','paddle',600],['Staff','staff',1000],['Lantern','lantern',1000]],memPts)}
-      <div class="crlabel">Accent <span style="color:var(--sage);font-size:10px">· some unlock by rank</span></div>${segHTMLg('accent',[['None','none',0],['Necklace','necklace',0],['Pendant','pendant',0],['Scarf','scarf',0],['Bolo tie','bolo',100],['Cult badge · bronze','cultbronze',300],['Cult badge · silver','cultsilver',600],['Cult badge · gold','cultgold',1000],['Ankh','ankh',600],['Bone charm','bonecharm',1000]],memPts)}${(CHIBI_EDIT.accent!=='none' && !['cultbronze','cultsilver','cultgold'].includes(CHIBI_EDIT.accent))?swHTML('accentCol',PAL.metal):''}
+      <div class="crlabel">Accent <span style="color:var(--sage);font-size:10px">· some unlock by rank</span></div>${segHTMLg('accent',[['None','none',0],['Necklace','necklace',0],['Bow tie','bowtie',0],['Scarf','scarf',0],['Bolo tie','bolo',100],['Cult badge · bronze','cultbronze',300],['Cult badge · silver','cultsilver',600],['Cult badge · gold','cultgold',1000],['Ankh','ankh',600],['Bone charm','bonecharm',1000]],memPts)}${(CHIBI_EDIT.accent!=='none' && !['cultbronze','cultsilver','cultgold'].includes(CHIBI_EDIT.accent))?swHTML('accentCol',PAL.metal):''}
       <button class="gold" style="margin-top:14px" onclick="commitChibi()">${CHIBI_SELF?'Become this':'Weave into being'}</button>
       <button class="ghostbtn" onclick="${CHIBI_SELF?'closeSheet()':'keeperPanel()'}">Back</button>
     </div>`;
@@ -2220,7 +2258,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the lake keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27c · wager-form-fix</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27g · chibi-tweaks</p>`;
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 function memByName(n){ return (MEM.members||[]).find(x=>x.name===n); }
@@ -2255,8 +2293,18 @@ function sweepWagers(now){ let changed=false; (MEM.wagers||[]).forEach(w=>{
   else if(w.status==='matched' && now-(w.matchedAt||w.created||now)>=24*3600){ w.status='disputed'; w.disputeAt=now; changed=true; }
   else if(w.status==='disputed' && now-(w.disputeAt||now)>=1*3600){ w.status='forfeit'; w.winner='forfeit'; changed=true; }
 }); return changed; }
+/* ---------- multi-person GROUP WAGERS ---------- */
+const GROUP_CAP=100, GROUP_SIDE_MAX=6, GROUP_LOCK_SEC=3600, GROUP_ACTIVE_SEC=86400, GROUP_DISPUTE_VOTES=5;
+function groupById(id){ return (MEM.groups||[]).find(g=>g.id===id); }
+function groupParts(g){ return [...(g.sideA||[]),...(g.sideB||[])]; }
+function groupPot(g){ return (g.stake||0)*groupParts(g).length; }
+function groupPayout(g,side){ const all=groupParts(g); const pot=(g.stake||0)*all.length; const winners=(side==='A')?(g.sideA||[]):(g.sideB||[]); if(winners.length){ const share=Math.floor(pot/winners.length); winners.forEach(nm=>{ const m=memByName(nm); if(m){ adjPts(m,share); maybeEarnLog(m,share); } }); } g.winner=side; g.status='settled'; }
+function sweepGroups(now){ let ch=false; (MEM.groups||[]).forEach(g=>{
+  if(g.status==='pending' && now-(g.created||now)>=GROUP_LOCK_SEC){ groupParts(g).forEach(nm=>{const m=memByName(nm); if(m)adjPts(m,g.stake||0);}); g.status='expired'; ch=true; }
+  else if(g.status==='active' && now-(g.lockedAt||now)>=GROUP_ACTIVE_SEC){ g.status='disputed'; g.disputeAt=now; ch=true; }
+}); return ch; }
 function applyAction(a){
-  const now=Date.now()/1000; sweepChallenges(now); sweepWagers(now); sweepFire(now);
+  const now=Date.now()/1000; sweepChallenges(now); sweepWagers(now); sweepFire(now); sweepGroups(now);
   if(a.t==='stoke'){ const m=memByName(a.name); if(!m)return; if(now-(m.lastStoke||0)<6*3600)return; if((m.logs||0)<1)return; m.logs=(m.logs||0)-1; m.fireLogs=(m.fireLogs||0)+1; m.lastStoke=now; MEM.fire=MEM.fire||{level:0,goal:8,lastBlessed:0,stokers:[],lastDecay:now,streak:0}; MEM.fire.stokers=MEM.fire.stokers||[]; if(!MEM.fire.stokers.includes(a.name))MEM.fire.stokers.push(a.name); MEM.fire.level=(MEM.fire.level||0)+1; MEM.fire.lastDecay=now; if(MEM.fire.level>=(MEM.fire.goal||8)){ if(MEM.fire.lastBlessed && now-MEM.fire.lastBlessed>=24*3600) MEM.fire.streak=0; const bless=Math.min(200,25+25*(MEM.fire.streak||0)); MEM.fire.stokers.forEach(nm=>{const x=memByName(nm); if(x)adjPts(x,bless);}); adjPts(m,20); MEM.fire.lastSpark=a.name; MEM.fire.lastBless=bless; MEM.fire.streak=(MEM.fire.streak||0)+1; MEM.fire.level=0; MEM.fire.stokers=[]; MEM.fire.lastBlessed=now; fireKeeperBadge(); } }
   else if(a.t==='chal_new'){ const m=memByName(a.owner); if(!m)return; const r=Math.max(1,Math.min(150,a.reward|0)); if((m.chalBudget||0)<r)return; m.chalBudget-=r; MEM.challenges=MEM.challenges||[]; MEM.challenges.push({id:'c'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),owner:a.owner,title:a.title,reward:r,accepter:null,created:now,status:'open'}); }
   else if(a.t==='chal_accept'){ const c=chalById(a.id); if(!c||c.status!=='open')return; if(a.name===c.owner)return; if(activeCommitments(a.name)>=3)return; c.accepter=a.name; c.status='accepted'; }
@@ -2274,6 +2322,15 @@ function applyAction(a){
   else if(a.t==='wager_vote'){ const w=wagerById(a.id); if(!w||w.status!=='disputed')return; if(a.side!=='proposer'&&a.side!=='taker')return; w.votes=w.votes||{}; if(w.votes[a.voter])return; w.votes[a.voter]=a.side; let pv=0,tv=0; for(const k in w.votes){ if(w.votes[k]==='proposer')pv++; else if(w.votes[k]==='taker')tv++; } if(pv>=5||tv>=5){ const winnerName=(pv>=5)?w.proposer:w.taker; const win=memByName(winnerName); if(win){ adjPts(win,2*(w.amount||0)); maybeEarnLog(win,w.amount||0); } w.status='settled'; w.winner=winnerName; } }
   else if(a.t==='wager_tie'){ const w=wagerById(a.id); if(!w||(w.status!=='matched'&&w.status!=='disputed'))return; if(a.name!==w.proposer&&a.name!==w.taker)return; w.tie=w.tie||[]; if(!w.tie.includes(a.name))w.tie.push(a.name); if(w.tie.includes(w.proposer)&&w.tie.includes(w.taker)){ const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); w.status='settled'; w.winner='tie'; } }
   else if(a.t==='wheel_spin'){ const m=memByName(a.name); if(!m)return; if(now-(m.lastSpin||0)<2*3600)return; if((m.points||0)<50)return; const o=a.outcome||{}; adjPts(m,-50); m.lastSpin=now; if(o.special==='free'){ adjPts(m,50); m.lastSpin=0; } else if(o.special==='x2'){ m.winMult=2; } else if(o.special==='x3'){ m.winMult=3; } else if(o.special==='x2neg'){ m.lossMult=2; } else if(typeof o.pts==='number'){ adjPts(m,o.pts); if(o.pts>0)maybeEarnLog(m,o.pts); } }
+  else if(a.t==='group_new'){ const m=memByName(a.starter); if(!m)return; const amt=Math.max(1,Math.min(GROUP_CAP,a.stake|0)); if((m.points||0)<amt)return; if(a.side!=='A'&&a.side!=='B')return; adjPts(m,-amt); MEM.groups=MEM.groups||[]; const g={id:'g'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),starter:a.starter,title:a.title,stake:amt,sideA:[],sideB:[],status:'pending',created:now,lockedAt:null,claims:{},votes:{},winner:null}; (a.side==='A'?g.sideA:g.sideB).push(a.starter); MEM.groups.push(g); }
+  else if(a.t==='group_join'){ const g=groupById(a.id); if(!g||g.status!=='pending')return; if(a.side!=='A'&&a.side!=='B')return; if(groupParts(g).includes(a.name))return; const sd=(a.side==='A')?g.sideA:g.sideB; if(sd.length>=GROUP_SIDE_MAX)return; const m=memByName(a.name); if(!m||(m.points||0)<(g.stake||0))return; adjPts(m,-(g.stake||0)); sd.push(a.name); }
+  else if(a.t==='group_leave'){ const g=groupById(a.id); if(!g||g.status!=='pending')return; if(a.name===g.starter)return; if(!groupParts(g).includes(a.name))return; const m=memByName(a.name); if(m)adjPts(m,g.stake||0); g.sideA=(g.sideA||[]).filter(n=>n!==a.name); g.sideB=(g.sideB||[]).filter(n=>n!==a.name); }
+  else if(a.t==='group_revoke'){ const g=groupById(a.id); if(!g||g.status!=='pending')return; if(a.by!==g.starter && !a.keeper)return; groupParts(g).forEach(nm=>{const m=memByName(nm); if(m)adjPts(m,g.stake||0);}); MEM.groups=(MEM.groups||[]).filter(x=>x.id!==a.id); }
+  else if(a.t==='group_lock'){ const g=groupById(a.id); if(!g||g.status!=='pending')return; if(a.by!==g.starter && !a.keeper)return; if((g.sideA||[]).length<1||(g.sideB||[]).length<1)return; g.status='active'; g.lockedAt=now; }
+  else if(a.t==='group_claim'){ const g=groupById(a.id); if(!g||g.status!=='active')return; if(a.side!=='A'&&a.side!=='B')return; const all=groupParts(g); if(!all.includes(a.name))return; g.claims=g.claims||{}; g.claims[a.name]=a.side; const keys=Object.keys(g.claims); if(keys.length>=all.length){ const vals=keys.map(k=>g.claims[k]); if(vals.every(v=>v===vals[0])) groupPayout(g,vals[0]); else { g.status='disputed'; g.disputeAt=now; } } }
+  else if(a.t==='group_vote'){ const g=groupById(a.id); if(!g||g.status!=='disputed')return; if(a.side!=='A'&&a.side!=='B')return; if(groupParts(g).includes(a.voter))return; g.votes=g.votes||{}; if(g.votes[a.voter])return; g.votes[a.voter]=a.side; let av=0,bv=0; for(const k in g.votes){ if(g.votes[k]==='A')av++; else if(g.votes[k]==='B')bv++; } if((av>=GROUP_DISPUTE_VOTES||bv>=GROUP_DISPUTE_VOTES)&&av!==bv) groupPayout(g,(av>bv)?'A':'B'); }
+  else if(a.t==='group_resolve'){ const g=groupById(a.id); if(!g||(g.status!=='active'&&g.status!=='disputed')||!a.keeper)return; if(a.side!=='A'&&a.side!=='B')return; groupPayout(g,a.side); }
+  else if(a.t==='group_void'){ const g=groupById(a.id); if(!g||g.status==='settled'||g.status==='void'||!a.keeper)return; groupParts(g).forEach(nm=>{const m=memByName(nm); if(m)adjPts(m,g.stake||0);}); MEM.groups=(MEM.groups||[]).filter(x=>x.id!==a.id); }
 }
 async function communityAction(a){
   if(MODE==="remote"){ try{ await sbRpc("grove_action",{p_action:a}); await refreshRemote(); return true; }catch(e){ toast("The lake did not answer — is grove_trials.sql installed?"); return false; } }
@@ -2327,7 +2384,7 @@ function renderTrials(){
     ${ me? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage);margin-bottom:8px">staking as <b style="color:var(--candle)">${VOTER}</b></div>`:""}
     <div id="wagerList">${wagerCards}</div>
     <div style="text-align:center;margin-top:10px">${ me? ((me.points||0)>=1 ? `<button class="gold" onclick="newWagerForm()">🎲 Raise a wager</button>` : `<button class="ghostbtn" disabled>Earn points before you can wager</button>`) : `<p class="hint">Pick your spirit to wager.</p>` }</div>`;
-  el.innerHTML=`<p class="hint" style="margin:6px 0 10px">Trials of the Order — feed the fire, set your challenges, test your luck.</p>${fireHTML}${chalHTML}${wagerHTML}${wheelSectionHTML(me)}
+  el.innerHTML=`<p class="hint" style="margin:6px 0 10px">Trials of the Order — feed the fire, set your challenges, test your luck.</p>${fireHTML}${chalHTML}${wagerHTML}${groupSectionHTML(me)}${wheelSectionHTML(me)}
     <p class="hint" style="margin:16px 0 2px;font-size:11px;opacity:.7">${MODE==='remote'?"Honour system — actions are trusted across the grove.":"Local preview — syncs once hosted."}</p>`;
 }
 const WHEEL_COL={jackpot:'#E8C45A',p150:'#C9A24B',p100:'#6FA86F',p75:'#5FA06A',p50:'#52866A',free:'#4A78B0',x2:'#7A5AA8',x3:'#9A55A8',zero:'#54545E',x2neg:'#6E3550',m25:'#B5703A',m50:'#A85248',m100:'#8E3B2A'};
@@ -2465,6 +2522,101 @@ window.resolveWager=async function(id,winner){ if(!keeperUnlocked)return; if(!co
 window.voidWager=async function(id){ if(!keeperUnlocked)return; if(!confirm("Void this wager and refund both stakes?"))return; applyAction({t:'wager_void',id,keeper:true}); await saveData(); trialsRefresh(); toast("Wager voided — stakes refunded."); };
 window.voteWager=async function(id,side){ if(!VOTER){ toast("Choose your spirit first."); return; } const w=wagerById(id); if(!w)return; const ok=await communityAction({t:'wager_vote',id,voter:VOTER,side}); if(!ok)return; trialsRefresh(); toast("Your vote is cast."); };
 window.disputeWager=async function(id){ if(!VOTER)return; if(!confirm("Raise a dispute? The grove will vote (5 settles it). If no verdict in 3 hours, BOTH of you forfeit the pot."))return; const ok=await communityAction({t:'wager_dispute',id,by:VOTER}); if(!ok)return; trialsRefresh(); toast("Dispute raised — the grove decides."); };
+/* ---------- GROUP WAGER UI ---------- */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+const GROUP_STATUS={pending:'forming',active:'live',disputed:'disputed',settled:'settled',expired:'expired',void:'void'};
+function gNames(arr,starter){ return (arr&&arr.length)? arr.map(n=>n===starter?`${esc(n)}★`:esc(n)).join(', ') : '—'; }
+function groupCard(g){
+  const me=VOTER?memByName(VOTER):null;
+  const all=groupParts(g), inIt=VOTER&&all.includes(VOTER), pot=groupPot(g);
+  const A=g.sideA||[], B=g.sideB||[];
+  const head=`<div class="rdesc"><b>${esc(g.title||'Group wager')}</b></div><div class="rmeta">${GROUP_STATUS[g.status]||g.status} · ${g.stake} ✦ each · pot ${pot} ✦</div>`;
+  let body=`<div style="font-family:'Silkscreen',monospace;font-size:10px;line-height:1.7;margin:7px 0">
+      <div><span style="color:#7FB389">SIDE A (${A.length}/6)</span> — ${gNames(A,g.starter)}</div>
+      <div><span style="color:#D98C7A">SIDE B (${B.length}/6)</span> — ${gNames(B,g.starter)}</div></div>`;
+  let acts="";
+  if(g.status==='pending'){
+    if(VOTER && !inIt){
+      const afford=me&&(me.points||0)>=g.stake;
+      acts = afford
+        ? `${A.length<GROUP_SIDE_MAX?`<button class="rapprove" onclick="joinGroup('${g.id}','A')">Join A · ${g.stake}✦</button>`:''}${B.length<GROUP_SIDE_MAX?`<button class="rapprove" onclick="joinGroup('${g.id}','B')">Join B · ${g.stake}✦</button>`:''}`
+        : `<button class="rapprove" disabled>Need ${g.stake} ✦</button>`;
+    } else if(inIt && VOTER!==g.starter){ acts=`<button class="ghostbtn" style="padding:8px 12px" onclick="leaveGroup('${g.id}')">Leave</button>`; }
+    if(VOTER===g.starter){ const ready=A.length>=1&&B.length>=1; acts+=`${ready?`<button class="rapprove" onclick="lockGroup('${g.id}')">🔒 Lock it in</button>`:`<button class="rapprove" disabled>Need 1+ per side</button>`}<button class="ghostbtn" style="padding:8px 12px;border-color:rgba(232,168,143,.5);color:#E8A88F" onclick="revokeGroup('${g.id}')">Revoke</button>`; }
+    if(!VOTER) acts=`<span class="rmeta">pick your spirit to join</span>`;
+    body+=`<div class="rmeta">forming — fills until the starter locks it, expires in 1h</div>`;
+  } else if(g.status==='active'){
+    if(inIt){ const mine=g.claims&&g.claims[VOTER];
+      acts = mine ? `<span class="rmeta">you called Side ${mine} · awaiting the rest</span>`
+                  : `<button class="rapprove" onclick="claimGroup('${g.id}','A')">A won</button><button class="rapprove" onclick="claimGroup('${g.id}','B')">B won</button>`;
+    } else acts=`<span class="rmeta">live — only players settle it</span>`;
+    const cc=g.claims?Object.keys(g.claims).length:0; body+=`<div class="rmeta">${cc}/${all.length} players have called the result</div>`;
+  } else if(g.status==='disputed'){
+    if(VOTER && !inIt){ const voted=g.votes&&g.votes[VOTER];
+      acts = voted ? `<span class="rmeta">you voted Side ${voted}</span>`
+                   : `<button class="rapprove" onclick="voteGroup('${g.id}','A')">Side A</button><button class="rapprove" onclick="voteGroup('${g.id}','B')">Side B</button>`;
+    } else acts=`<span class="rmeta">players can't vote their own dispute</span>`;
+    let av=0,bv=0; const vv=g.votes||{}; for(const k in vv){ if(vv[k]==='A')av++; else if(vv[k]==='B')bv++; }
+    body+=`<div class="rmeta" style="color:#E8A88F">⚖ disputed — grove votes (A ${av} · B ${bv}, ${GROUP_DISPUTE_VOTES} settles it)</div>`;
+  } else if(g.status==='settled'){ body+=`<div class="rmeta" style="color:var(--candle)">Side ${g.winner} split the pot of ${pot} ✦</div>`; }
+  if(keeperUnlocked && g.status!=='settled' && g.status!=='expired'){ acts+=`<div style="width:100%;margin-top:6px;text-align:center;font-size:11px">Keeper · <a onclick="keeperGroup('${g.id}','A')" style="cursor:pointer;color:var(--sage)">A wins</a> · <a onclick="keeperGroup('${g.id}','B')" style="cursor:pointer;color:var(--sage)">B wins</a> · <a onclick="keeperGroup('${g.id}','void')" style="cursor:pointer;color:#E8A88F">void</a></div>`; }
+  return `<div class="ritecard" style="flex-direction:column;align-items:stretch"><div class="rbody">${head}${body}</div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:6px">${acts}</div></div>`;
+}
+function groupSectionHTML(me){
+  const gs=(MEM.groups||[]);
+  const live=gs.filter(g=>g.status==='disputed'||g.status==='active').sort((a,b)=>(b.lockedAt||b.created||0)-(a.lockedAt||a.created||0));
+  const forming=gs.filter(g=>g.status==='pending').sort((a,b)=>(b.created||0)-(a.created||0));
+  const done=gs.filter(g=>g.status==='settled').sort((a,b)=>(b.created||0)-(a.created||0)).slice(0,3);
+  const cards=[...live.map(groupCard),...forming.map(groupCard),...done.map(groupCard)].join("") || `<p class="hint" style="margin:12px 0">No group wagers yet. Rally two sides and let the pot decide.</p>`;
+  return `
+    <div class="ritehdr" style="margin-top:22px">The Reckoning · group wagers</div>
+    <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:38ch">Two sides, up to <b>6</b> each — even lopsided (6&nbsp;v&nbsp;1). Everyone stakes the same. The starter <b>locks</b> it, the winning side <b>splits the whole pot</b> (fewer winners, bigger share). All players must agree who won; if not, the grove votes.</p>
+    ${ me? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage);margin-bottom:8px">acting as <b style="color:var(--candle)">${esc(VOTER)}</b></div>`:""}
+    <div id="groupList">${cards}</div>
+    <div style="text-align:center;margin-top:10px">${ me? ((me.points||0)>=1 ? `<button class="gold" onclick="newGroupForm()">⚔ Start a group wager</button>` : `<button class="ghostbtn" disabled>Earn points before you can wager</button>`) : `<p class="hint">Pick your spirit to start one.</p>` }</div>`;
+}
+window.newGroupForm=function(){
+  const me=memByName(VOTER); const have=me?(me.points||0):0; const cap=Math.max(1,Math.min(GROUP_CAP,have));
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="kpanel">
+      <h3>Start a Group Wager</h3>
+      <p class="sub">You stake first and pick your side. Others join either side until you lock it. You have <b>${have}</b> ✦.</p>
+      <div class="field"><label>What's the bet?</label><input id="gtitle" maxlength="80" placeholder="e.g. North camp beats South in the canoe race"></div>
+      <div class="field"><label>Stake per person (1–${GROUP_CAP})</label><input id="gstake" type="number" min="1" max="${GROUP_CAP}" value="${Math.min(25,cap)}"></div>
+      <div class="field"><label>Your side</label>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="rapprove" id="gsA" onclick="gPick('A')" style="flex:1">Side A</button>
+          <button class="ghostbtn" id="gsB" onclick="gPick('B')" style="flex:1;padding:9px">Side B</button>
+        </div></div>
+      <button class="gold" onclick="commitGroup()">Stake & open it</button>
+      <button class="ghostbtn" onclick="closeSheet()">Back</button>
+      <div class="err" id="gerr"></div>
+    </div>`;
+  window.__gside='A';
+  scrim.classList.add("show");
+  setTimeout(()=>document.getElementById("gtitle")?.focus(),200);
+};
+window.gPick=function(s){ window.__gside=s; const a=document.getElementById('gsA'),b=document.getElementById('gsB'); if(!a||!b)return; a.className=s==='A'?'rapprove':'ghostbtn'; b.className=s==='B'?'rapprove':'ghostbtn'; a.style.padding=s==='A'?'':'9px'; b.style.padding=s==='B'?'':'9px'; };
+window.commitGroup=async function(){
+  if(!VOTER)return; const me=memByName(VOTER); const have=me?(me.points||0):0;
+  const title=(document.getElementById("gtitle").value||"").trim();
+  const stake=parseInt(document.getElementById("gstake").value,10);
+  const side=window.__gside||'A'; const err=document.getElementById("gerr");
+  if(!title){ err.textContent="Name the bet."; return; }
+  if(!(stake>=1)){ err.textContent="Set a stake of at least 1."; return; }
+  if(stake>GROUP_CAP){ err.textContent=`The cap is ${GROUP_CAP}.`; return; }
+  if(stake>have){ err.textContent=`You only have ${have} ✦.`; return; }
+  const ok=await communityAction({t:'group_new',starter:VOTER,stake,title,side}); if(!ok)return;
+  closeSheet(); trialsRefresh(); toast("Group wager opened — rally your side.");
+};
+window.joinGroup=async function(id,side){ if(!VOTER){ toast("Choose your spirit first."); return; } const g=groupById(id); if(!g)return; const me=memByName(VOTER); if(!me||(me.points||0)<g.stake){ toast(`You need ${g.stake} ✦ to join.`); return; } if(!confirm(`Join Side ${side} — stake ${g.stake} of your points?`))return; const ok=await communityAction({t:'group_join',id,name:VOTER,side}); if(!ok)return; trialsRefresh(); toast(`You're in on Side ${side}.`); };
+window.leaveGroup=async function(id){ const g=groupById(id); if(!g)return; if(!confirm(`Leave this wager? Your ${g.stake} ✦ return.`))return; const ok=await communityAction({t:'group_leave',id,name:VOTER}); if(!ok)return; trialsRefresh(); toast("You stepped out — stake refunded."); };
+window.lockGroup=async function(id){ if(!confirm("Lock it in? No one can join or leave after this — the wager goes live."))return; const ok=await communityAction({t:'group_lock',id,by:VOTER}); if(!ok)return; trialsRefresh(); toast("Locked — may the worthy side prevail."); };
+window.revokeGroup=async function(id){ if(!confirm("Revoke and refund everyone?"))return; const ok=await communityAction({t:'group_revoke',id,by:VOTER}); if(!ok)return; trialsRefresh(); toast("Wager called off — all stakes refunded."); };
+window.claimGroup=async function(id,side){ if(!confirm(`Call it for Side ${side}? When every player agrees, the pot pays out. If you disagree, it goes to a grove vote.`))return; const ok=await communityAction({t:'group_claim',id,name:VOTER,side}); if(!ok)return; trialsRefresh(); toast(`You called Side ${side}.`); };
+window.voteGroup=async function(id,side){ if(!VOTER){ toast("Choose your spirit first."); return; } const ok=await communityAction({t:'group_vote',id,voter:VOTER,side}); if(!ok)return; trialsRefresh(); toast("Your vote is cast."); };
+window.keeperGroup=async function(id,side){ if(!keeperUnlocked)return; if(side==='void'){ if(!confirm("Void this group wager and refund all stakes?"))return; applyAction({t:'group_void',id,keeper:true}); } else { if(!confirm(`Award the whole pot to Side ${side}?`))return; applyAction({t:'group_resolve',id,side,keeper:true}); } await saveData(); trialsRefresh(); toast(side==='void'?"Voided — stakes refunded.":`Side ${side} takes the pot.`); };
 window.tieWager=async function(id){ if(!VOTER)return; const w=wagerById(id); if(!w)return; const other=(VOTER===w.proposer)?w.taker:w.proposer; if(!confirm(`Call it a tie? Both stakes return only if ${other} also agrees.`))return; const ok=await communityAction({t:'wager_tie',id,name:VOTER}); if(!ok)return; trialsRefresh(); toast("Tie offered — both must agree."); };
 function challengeCard(c,now){
   const left=24*3600-(now-(c.created||now)); const h=Math.floor(left/3600), mn=Math.floor((left%3600)/60);
@@ -2632,6 +2784,7 @@ function initEmbers(){
 (async function(){
   await loadData();
   ensureDefaults();
+  if(SB_ON && MODE!=="remote"){ showDbBanner("Not connected to the shared grove — running LOCAL-ONLY on this device. The keeper password set in Supabase and other people's wagers/points will NOT work here. On the hosted site this usually means your Supabase project is PAUSED — open the Supabase dashboard, resume the project, then reload."); }
   document.getElementById("offNote").textContent =
     MODE==="remote" ? "◦ live ledger · synced through the lake ◦"
     : liveStorage ? "◦ shared preview · goes live once hosted on Supabase ◦"

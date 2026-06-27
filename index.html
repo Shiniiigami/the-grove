@@ -127,9 +127,27 @@
   .seg button.locked{opacity:.4;cursor:not-allowed;font-size:8px;border-style:dashed;color:var(--sage);}
   .crlabel{font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.08em;color:var(--sage);
     text-transform:uppercase;margin:11px 0 4px;}
-  .crprev{display:flex;justify-content:center;align-items:flex-end;margin:4px 0 8px;
-    min-height:150px;background:radial-gradient(60% 70% at 50% 60%,rgba(242,196,90,.06),transparent);}
-  .crprev canvas{image-rendering:pixelated;}
+  .crprev{display:flex;justify-content:center;align-items:flex-end;
+    position:sticky;top:0;z-index:6;margin:0 -20px 10px;padding:10px 20px 8px;
+    min-height:140px;
+    background:linear-gradient(180deg,#0f1812 78%,rgba(15,24,18,.97));
+    border-bottom:1px solid rgba(242,196,90,.16);
+    box-shadow:0 10px 18px -10px rgba(0,0,0,.7);}
+  .crprev::after{content:"live";position:absolute;top:8px;right:14px;font-family:'Silkscreen',monospace;font-size:8px;letter-spacing:.1em;color:var(--sage);opacity:.5;}
+  .crprev canvas{image-rendering:pixelated;transition:height .18s ease;}
+  .crprev.shrunk{min-height:0;padding:6px 20px 5px;}
+  .crprev.shrunk canvas{height:74px!important;width:auto!important;}
+  .crprev.shrunk::after{opacity:0;}
+  /* collapsible editor sections */
+  .crsec{border:1px solid var(--moss);border-radius:12px;margin-bottom:10px;overflow:hidden;background:rgba(20,32,25,.32);}
+  .crsec-h{width:100%;text-align:left;background:rgba(38,53,44,.42);border:none;color:var(--parch);
+    font-family:'Cinzel',serif;font-size:13px;letter-spacing:.03em;padding:13px 14px;
+    display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+  .crsec-h .cs-sub{font-family:'Silkscreen',monospace;font-size:8px;color:var(--sage);opacity:.7;letter-spacing:.06em;margin-left:8px;font-weight:400;}
+  .crsec-ar{transition:transform .2s ease;color:var(--sage);font-size:12px;}
+  .crsec.open .crsec-ar{transform:rotate(180deg);}
+  .crsec-b{display:none;padding:2px 14px 12px;}
+  .crsec.open .crsec-b{display:block;}
   .lsort{font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.1em;padding:7px 13px;border-radius:8px;
     background:rgba(38,53,44,.5);border:1px solid var(--moss);color:var(--sage);cursor:pointer;text-transform:uppercase;}
   .lsort.on{background:linear-gradient(180deg,rgba(242,196,90,.18),rgba(242,196,90,.04));color:var(--candle);border-color:rgba(242,196,90,.5);}
@@ -1813,8 +1831,8 @@ function cloneChibi(m){
 window.creatorForm=function(){ CHIBI_SELF=false; const first=sortedMembers()[0].name; CHIBI_MEMBER=first; CHIBI_EDIT=cloneChibi(MEM.members.find(m=>m.name===first)); renderCreator(); };
 window.editMySpirit=function(name){ if(!((VOTER&&VOTER===name)||keeperUnlocked)){ toast(`Only ${name} may shape this spirit.`); return; } CHIBI_SELF=true; CHIBI_MEMBER=name; CHIBI_EDIT=cloneChibi(MEM.members.find(m=>m.name===name)); renderCreator(); };
 window.chibiPick=function(name){ CHIBI_MEMBER=name; CHIBI_EDIT=cloneChibi(MEM.members.find(m=>m.name===name)); renderCreator(); };
-window.cset=function(k,v){ CHIBI_EDIT[k]=v; renderCreator(); };
-window.csetb=function(k,v){ CHIBI_EDIT[k]=v; renderCreator(); };
+window.cset=function(k,v){ const s=sheet.scrollTop; CHIBI_EDIT[k]=v; renderCreator(); sheet.scrollTop=s; };
+window.csetb=function(k,v){ const s=sheet.scrollTop; CHIBI_EDIT[k]=v; renderCreator(); sheet.scrollTop=s; };
 function swHTML(key,arr,allowNone){
   let h='<div class="swrow">';
   if(allowNone) h+=`<button class="sw none ${!CHIBI_EDIT[key]?'on':''}" onclick="cset('${key}',null)">∅</button>`;
@@ -1853,6 +1871,10 @@ function segHTMLg(key,opts,memPts){
     return `<button class="${on}" onclick="cset('${key}','${val}')">${label}</button>`;
   }).join('')+'</div>';
 }
+let CRSEC_OPEN={regalia:true,outfit:false,body:false};
+window.toggleSec=function(id){ const el=document.querySelector('.crsec[data-sec="'+id+'"]'); if(!el)return; el.classList.toggle('open'); CRSEC_OPEN[id]=el.classList.contains('open'); };
+function crSection(id,title,sub,inner,open){ return `<div class="crsec ${open?'open':''}" data-sec="${id}"><button class="crsec-h" type="button" onclick="toggleSec('${id}')"><span>${title}<span class="cs-sub">${sub}</span></span><span class="crsec-ar">▾</span></button><div class="crsec-b">${inner}</div></div>`; }
+function applyCrShrink(){ const p=document.querySelector('.crprev'); if(p) p.classList.toggle('shrunk', sheet.scrollTop>58); }
 function renderCreator(){
   const opts=sortedMembers().map(m=>`<option value="${m.name}" ${m.name===CHIBI_MEMBER?'selected':''}>${m.name}</option>`).join('');
   const _cm=MEM.members.find(x=>x.name===CHIBI_MEMBER)||{}; const memPts=_cm.points||0;
@@ -1865,6 +1887,26 @@ function renderCreator(){
        <p class="sub" style="font-size:11px;color:#E8A88F;margin-top:4px">You wear the robes until the offering fades.</p>`
     : `<div class="crlabel">Top <span style="color:var(--sage);font-size:10px">· ${memTier}</span></div>${segHTMLg('top_style',gatedList('top_style'),memPts)}
        <div class="crlabel">Top colour</div>${swHTML('top',PAL.top)}`;
+  const jacketCtl = CHIBI_EDIT.top_style==='mantle'?`<div class="crlabel">Cape colour</div>${swHTML('jacket',PAL.jacket,true)}`:(['sage','robes','ascend','luminary'].includes(CHIBI_EDIT.top_style)?`<div class="crlabel">Jacket / vest <span style="color:var(--sage);font-size:10px">· not worn over this garment</span></div>`:`<div class="crlabel">Jacket / vest</div>${swHTML('jacket',PAL.jacket,true)}`);
+  const legsCtl = CHIBI_EDIT.top_style==='sage'
+    ? `<div class="crlabel">Legs <span style="color:var(--sage);font-size:10px">· hidden beneath the sage robe</span></div>`
+    : `<div class="crlabel">${CHIBI_EDIT.top_style==='dress'?'Tights':'Legs'}</div>${segHTML('bottom',[['Pants','pants'],['Shorts','shorts']])}
+       <div class="crlabel">${CHIBI_EDIT.top_style==='dress'?'Tights colour':'Pants colour'}</div>${swHTML('pants',PAL.pants)}`;
+  const secRegalia = `${topControl}
+      ${jacketCtl}
+      <div class="crlabel">Headwear <span style="color:var(--sage);font-size:10px">· some unlock by rank</span></div>${segHTMLg('hat',gatedList('hat'),memPts)}${['beanie','cap','bandana','headband','witch','thirdeye'].includes(CHIBI_EDIT.hat)?swHTML('hatCol',PAL.hat):''}
+      <div class="crlabel">Accent <span style="color:var(--sage);font-size:10px">· some unlock by rank</span></div>${segHTMLg('accent',gatedList('accent'),memPts)}${(CHIBI_EDIT.accent!=='none' && !['cultbronze','cultsilver','cultgold'].includes(CHIBI_EDIT.accent))?swHTML('accentCol',['tie','scarf'].includes(CHIBI_EDIT.accent)?PAL.tie:PAL.metal):''}
+      <div class="crlabel">Held item <span style="color:var(--sage);font-size:10px">· unlocks by rank</span></div>${segHTMLg('held',gatedList('held'),memPts)}`;
+  const secOutfit = `${legsCtl}
+      <div class="crlabel">Shoes</div>${swHTML('boots',PAL.boots)}
+      <div class="crlabel">Wristwatch</div>${segHTML('watch',[['None',false],['Watch',true]])}
+      <div class="crlabel">Eyewear</div>${segHTML('glasses',[['None','none'],['Specs','specs'],['Shades','shades']])}${CHIBI_EDIT.glasses!=='none'?swHTML('glassCol',PAL.lens):''}
+      <div class="crlabel">Earrings</div>${segHTML('ears',[['None','none'],['Stud','stud'],['Dangle','dangle']])}${CHIBI_EDIT.ears==='dangle'?swHTML('earCol',PAL.metal):''}`;
+  const secBody = `<div class="crlabel">Skin</div>${swHTML('skin',PAL.skin)}
+      <div class="crlabel">Hair style</div>${segHTML('hair_style',[['Short','short'],['Fade','fade'],['Curly','curly'],['Long','long'],['Curly-long','curlylong'],['Wavy','wavy'],['Ponytail','ponytail'],['Afro','afro'],['Pixie','pixie'],['Bun','bun'],['Buzz','buzz'],['Bald','bald'],['Mohawk','mohawk'],['Mullet','mullet'],['Spiky','spiky'],['Dreads','dreads'],['Pigtails','pigtails']])}
+      <div class="crlabel">Hair colour</div>${swHTML('hair',PAL.hair)}
+      <div class="crlabel">Facial hair</div>${segHTML('facial',[['None','none'],['Mustache','mustache'],['Goatee','goatee'],['Full','full'],['Overgrown','overgrown']])}${CHIBI_EDIT.facial!=='none'?swHTML('beard',PAL.hair):''}
+      <div class="crlabel">Eye colour</div>${swHTML('eyeCol',PAL.eye)}`;
   sheet.innerHTML=`
     <div class="grip"></div>
     <div class="kpanel">
@@ -1873,24 +1915,9 @@ function renderCreator(){
         ? `<p class="sub">Shape your own form, ${CHIBI_MEMBER}. New items unlock as you rise — you're a <b style="color:var(--candle)">${memTier}</b>.</p>`
         : `<div class="field"><label>Weaving the form of</label><select onchange="chibiPick(this.value)">${opts}</select></div>`}
       <div class="crprev"><canvas id="chibiPrev"></canvas></div>
-      <div class="crlabel">Skin</div>${swHTML('skin',PAL.skin)}
-      <div class="crlabel">Hair style</div>${segHTML('hair_style',[['Short','short'],['Fade','fade'],['Curly','curly'],['Long','long'],['Curly-long','curlylong'],['Wavy','wavy'],['Ponytail','ponytail'],['Afro','afro'],['Pixie','pixie'],['Bun','bun'],['Buzz','buzz'],['Bald','bald'],['Mohawk','mohawk'],['Mullet','mullet'],['Spiky','spiky'],['Dreads','dreads'],['Pigtails','pigtails']])}
-      <div class="crlabel">Hair colour</div>${swHTML('hair',PAL.hair)}
-      <div class="crlabel">Facial hair</div>${segHTML('facial',[['None','none'],['Mustache','mustache'],['Goatee','goatee'],['Full','full'],['Overgrown','overgrown']])}${CHIBI_EDIT.facial!=='none'?swHTML('beard',PAL.hair):''}
-      <div class="crlabel">Eye colour</div>${swHTML('eyeCol',PAL.eye)}
-      <div class="crlabel">Headwear <span style="color:var(--sage);font-size:10px">· some unlock by rank</span></div>${segHTMLg('hat',gatedList('hat'),memPts)}${['beanie','cap','bandana','headband','witch','thirdeye'].includes(CHIBI_EDIT.hat)?swHTML('hatCol',PAL.hat):''}
-      <div class="crlabel">Eyewear</div>${segHTML('glasses',[['None','none'],['Specs','specs'],['Shades','shades']])}${CHIBI_EDIT.glasses!=='none'?swHTML('glassCol',PAL.lens):''}
-      <div class="crlabel">Earrings</div>${segHTML('ears',[['None','none'],['Stud','stud'],['Dangle','dangle']])}${CHIBI_EDIT.ears==='dangle'?swHTML('earCol',PAL.metal):''}
-      ${topControl}
-      ${CHIBI_EDIT.top_style==='mantle'?`<div class="crlabel">Cape colour</div>${swHTML('jacket',PAL.jacket,true)}`:(['sage','robes','ascend','luminary'].includes(CHIBI_EDIT.top_style)?`<div class="crlabel">Jacket / vest <span style="color:var(--sage);font-size:10px">· not worn over this garment</span></div>`:`<div class="crlabel">Jacket / vest</div>${swHTML('jacket',PAL.jacket,true)}`)}
-      <div class="crlabel">Wristwatch</div>${segHTML('watch',[['None',false],['Watch',true]])}
-      ${CHIBI_EDIT.top_style==='sage'
-        ? `<div class="crlabel">Legs <span style="color:var(--sage);font-size:10px">· hidden beneath the sage robe</span></div>`
-        : `<div class="crlabel">${CHIBI_EDIT.top_style==='dress'?'Tights':'Legs'}</div>${segHTML('bottom',[['Pants','pants'],['Shorts','shorts']])}
-      <div class="crlabel">${CHIBI_EDIT.top_style==='dress'?'Tights colour':'Pants colour'}</div>${swHTML('pants',PAL.pants)}`}
-      <div class="crlabel">Shoes</div>${swHTML('boots',PAL.boots)}
-      <div class="crlabel">Held item <span style="color:var(--sage);font-size:10px">· unlocks by rank</span></div>${segHTMLg('held',gatedList('held'),memPts)}
-      <div class="crlabel">Accent <span style="color:var(--sage);font-size:10px">· some unlock by rank</span></div>${segHTMLg('accent',gatedList('accent'),memPts)}${(CHIBI_EDIT.accent!=='none' && !['cultbronze','cultsilver','cultgold'].includes(CHIBI_EDIT.accent))?swHTML('accentCol',['tie','scarf'].includes(CHIBI_EDIT.accent)?PAL.tie:PAL.metal):''}
+      ${crSection('regalia','Regalia &amp; garb','robes · hats · accents · held',secRegalia,CRSEC_OPEN.regalia)}
+      ${crSection('outfit','Outfit details','legs · shoes · eyewear · more',secOutfit,CRSEC_OPEN.outfit)}
+      ${crSection('body','Body &amp; face','skin · hair · eyes',secBody,CRSEC_OPEN.body)}
       <button class="gold" style="margin-top:14px" onclick="commitChibi()">${CHIBI_SELF?'Become this':'Weave into being'}</button>
       <button class="ghostbtn" onclick="${CHIBI_SELF?'closeSheet()':'keeperPanel()'}">Back</button>
     </div>`;
@@ -1901,6 +1928,7 @@ function renderCreator(){
     const c=pv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.imageSmoothingEnabled=false; c.clearRect(0,0,cw,ch);
     drawChibi(c,CHIBI_EDIT,px,8,padTop);
   }
+  sheet.onscroll=applyCrShrink; applyCrShrink();
 }
 window.commitChibi=async function(){
   const m=MEM.members.find(x=>x.name===CHIBI_MEMBER);
@@ -2519,7 +2547,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27n · icon</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27p · editor-sections</p>`;
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 function memByName(n){ return (MEM.members||[]).find(x=>x.name===n); }

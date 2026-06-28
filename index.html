@@ -290,6 +290,12 @@
   body.sky-day #chronicle,body.sky-day #chronfull{
     background:rgba(7,11,9,.5);box-shadow:0 1px 0 rgba(255,255,255,.04) inset;
     padding:8px 12px 4px;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);}
+  /* daytime: lift headers/labels so they read over the bright blue sky */
+  body.sky-day .ritehdr{color:#F4ECD6;text-shadow:0 1px 2px rgba(6,12,9,.92),0 0 9px rgba(6,12,9,.55);}
+  body.sky-day .season{color:#F6EFDB;text-shadow:0 1px 2px rgba(6,12,9,.9);}
+  body.sky-day #identBar{color:#F6EFDC;text-shadow:0 1px 2px rgba(6,12,9,.85);}
+  body.sky-day .idtitle{text-shadow:0 1px 3px rgba(6,12,9,.8),0 0 16px rgba(6,12,9,.5);}
+  body.sky-day .rtext{color:#F3EAD2;text-shadow:0 1px 2px rgba(6,12,9,.7);}
   /* ---- rank-up confetti ---- */
   #confettiLayer{position:fixed;inset:0;pointer-events:none;z-index:400;overflow:hidden;}
   .confetti{position:absolute;width:9px;height:9px;top:-14px;opacity:.95;will-change:transform;animation:cfall linear forwards;}
@@ -532,9 +538,11 @@ function syncBadge(){ try{
 const VAPID_PUBLIC='BEoE3iruuvMNO8xYIvFYQDCwfb63OkCDRoqvoSWwuuykLsUMwsU5f6kvXvJUi80l7yVie8nc1vMKLQ4EtU0umJg';
 const PUSH_FN=(typeof SUPABASE!=='undefined' && SUPABASE.url ? SUPABASE.url : '')+'/functions/v1/grove_push';
 function pushSupported(){ try{ return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window); }catch(e){ return false; } }
+function pushIsOff(){ try{ return localStorage.getItem('grove-push-off')==='1'; }catch(e){ return false; } }
 function urlB64ToUint8(b64){ const pad='='.repeat((4-b64.length%4)%4); const base=(b64+pad).replace(/-/g,'+').replace(/_/g,'/'); const raw=atob(base); const arr=new Uint8Array(raw.length); for(let i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i); return arr; }
 async function ensurePushSub(){ try{
   if(!pushSupported() || (typeof MODE!=='undefined' && MODE!=='remote')) return;
+  if(pushIsOff()) return;
   if(Notification.permission!=='granted') return;
   const reg=await navigator.serviceWorker.ready;
   let sub=await reg.pushManager.getSubscription();
@@ -544,8 +552,15 @@ async function ensurePushSub(){ try{
 window.enablePush=async function(){ try{
   if(!pushSupported()){ toast('Notifications need the installed app (Add to Home Screen).'); return; }
   let p='default'; try{ p=await Notification.requestPermission(); }catch(_){}
-  if(p==='granted'){ await ensurePushSub(); toast('Notifications on.'); }
+  if(p==='granted'){ try{ localStorage.removeItem('grove-push-off'); }catch(_){} await ensurePushSub(); toast('Notifications on.'); }
   else { toast('Notifications were not enabled.'); }
+  try{ renderRules(); }catch(e){}
+}catch(e){} };
+window.disablePush=async function(){ try{
+  try{ localStorage.setItem('grove-push-off','1'); }catch(_){}
+  try{ if(pushSupported()){ const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription();
+    if(sub){ try{ await sbRpc('grove_push_del',{p_endpoint:sub.endpoint}); }catch(_){} try{ await sub.unsubscribe(); }catch(_){} } } }catch(_){}
+  toast('Notifications off.');
   try{ renderRules(); }catch(e){}
 }catch(e){} };
 function grovePush(payload){ try{
@@ -596,12 +611,14 @@ function offerPop(target, nominator){ try{
 function notifyRulesHTML(){
   if((typeof MODE!=='undefined'&&MODE!=='remote') || !pushSupported()) return '';
   let st='default'; try{ st=Notification.permission; }catch(_){}
-  const on=(st==='granted');
+  const on=(st==='granted' && !pushIsOff());
+  let btn;
+  if(st==='denied'){ btn='<p class="rtext" style="text-align:center;color:var(--ember)">Blocked in your phone settings for this app \u2014 turn it back on there.</p>'; }
+  else if(on){ btn='<div style="text-align:center"><button class="ghostbtn" onclick="disablePush()">\u2713 Notifications on \u00b7 tap to turn off</button></div>'; }
+  else { btn='<div style="text-align:center"><button class="gold" onclick="enablePush()">\ud83d\udd14 Enable notifications</button></div>'; }
   return '<div class="ritehdr" style="margin-top:22px">Notifications</div>'
     +'<p class="rtext" style="text-align:center;max-width:34ch;margin:0 auto 8px">Get pinged when a new deed needs a vote or the grove is blessed. Installed app only \u00b7 needs signal.</p>'
-    +(st==='denied'
-       ? '<p class="rtext" style="text-align:center;color:var(--ember)">Blocked in your phone settings for this app \u2014 turn it back on there.</p>'
-       : '<div style="text-align:center"><button class="'+(on?'ghostbtn':'gold')+'" onclick="enablePush()">'+(on?'\u2713 Notifications on':'\ud83d\udd14 Enable notifications')+'</button></div>');
+    +btn;
 }
 
 const EXPECTED_DB='2026-06-27h';
@@ -3205,14 +3222,19 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27ba · new app icon (hand & eye)</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27bb · notify toggle · shared moods · day contrast</p>`;
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 /* ===== emotive spirits — moods + reactions (client-side, no SQL) ===== */
 const MOODS={}; const MOOD_TTL=900; /* 15 min linger, or until a newer event */
 function setMood(name,type,label){ MOODS[name]={type,label,t:Date.now()/1000}; }
 function moodOf(name){ const m=MOODS[name]; if(!m) return null; if(Date.now()/1000-m.t>MOOD_TTL){ delete MOODS[name]; return null; } return m; }
-function moodExpr(name){ const m=moodOf(name); return m? m.type : 'neutral'; }
+function moodExpr(name){
+  const m=moodOf(name); if(m) return m.type;            /* local fresh reaction wins briefly */
+  try{ const mem=memByName(name); const h=(mem&&mem.history&&mem.history.length)?mem.history[mem.history.length-1]:null;
+    if(h&&h.t&&(Date.now()/1000-h.t)<=MOOD_TTL){ const dp=h.d||0; return dp>=100?'joyful':(dp>0?'happy':(dp<=-80?'dismayed':'sad')); } }catch(e){}
+  return 'neutral';
+}
 let MOOD_SNAP=null;
 function moodSnapshot(){ const s={}; (MEM.members||[]).forEach(m=>{ s[m.name]={p:m.points||0,h:(m.history||[]).length}; }); return s; }
 function initMoodSnap(){ MOOD_SNAP=moodSnapshot(); }

@@ -2417,11 +2417,13 @@ const Snd=(function(){
  {name:'Last Light',kit:'darksynth \u00b7 melancholy',desc:'melancholy drive, dark-piano topline fading to ash, A minor',bpm:96,drum:'drive',arp:false,pad:'dark',top:'piano',drone:'A1',prog:[['A1','min'],['F2','maj'],['C2','maj'],['G2','maj']],mel:[['C5',0,2,.2,2.6],['B4',4,2,.18,2.6],['A4',8,2,.18,2.8],['E5',12,3,.16,3]],winds:[[4,20,380,0.035]]}
 ];
   function nightNow(){ try{ return (typeof isNight==='function') ? isNight() : false; }catch(e){ return false; } }
-  function newMusicBus(){ killMusicBus(); if(!mIR) mIR=impulse(2.8,2.5); mBus=ctx.createGain(); mBus.gain.value=0.8; mBus.connect(master); OUT=mBus;
+  function freshBus(){ if(!mIR) mIR=impulse(2.8,2.5); mBus=ctx.createGain(); mBus.gain.value=0.8; mBus.connect(master); OUT=mBus;
     var cv=ctx.createConvolver(); cv.buffer=mIR; var cg=ctx.createGain(); cg.gain.value=0.5; cv.connect(cg); cg.connect(mBus); HALL=ctx.createGain(); HALL.connect(cv); PLATE=HALL; }
+  function newMusicBus(){ killMusicBus(); freshBus(); }
+  function retireBus(bus,nodes,rel){ if(!ctx) return; var t=ctx.currentTime; if(bus){ try{ bus.gain.cancelScheduledValues(t); bus.gain.setValueAtTime(bus.gain.value,t); bus.gain.linearRampToValueAtTime(0.0001,t+rel); }catch(e){} } nodes.forEach(function(n){ try{ if(n.stop) n.stop(t+rel+0.06);}catch(e){} }); setTimeout(function(){ nodes.forEach(function(n){ try{ if(n.disconnect)n.disconnect(); }catch(e){} }); if(bus){ try{ bus.disconnect(); }catch(e){} } }, (rel+0.3)*1000); }
   function killMusicBus(){ if(ctx){ var now=ctx.currentTime; mActive.forEach(function(n){ try{ if(n.stop) n.stop(now);}catch(e){} try{ if(n.disconnect) n.disconnect();}catch(e){} }); } mActive.length=0; if(mBus){ try{ mBus.disconnect(); }catch(e){} } mBus=null; OUT=null; HALL=null; PLATE=null; }
   function pickSel(){ var night=nightNow(); var arr=night?NIGHT:DAY; var i=Math.floor(Math.random()*arr.length); if(arr[i]&&arr[i].name===mCur&&arr.length>1) i=(i+1)%arr.length; mCur=arr[i].name; return {night:night,trk:arr[i]}; }
-  function musicNext(){ if(!mPlaying||!ctx) return; newMusicBus(); var sel=pickSel(); var t0=ctx.currentTime+0.08; try{ (sel.night?buildNight:buildDay)(sel.trk,t0); }catch(e){} mTimer=setTimeout(musicNext,30000); }
+  function musicNext(){ if(!mPlaying||!ctx) return; var oldBus=mBus, oldNodes=mActive.slice(); mActive.length=0; freshBus(); try{ var tn=ctx.currentTime; mBus.gain.setValueAtTime(0.0001,tn); mBus.gain.linearRampToValueAtTime(0.8,tn+0.6); }catch(e){} if(oldBus) retireBus(oldBus,oldNodes,1.8); var sel=pickSel(); var t0=ctx.currentTime+0.08; try{ (sel.night?buildNight:buildDay)(sel.trk,t0); }catch(e){} mTimer=setTimeout(musicNext,30000); }
   function startMusic(){ if(mPlaying||!ctx||chantActive) return; mPlaying=true; musicNext(); }
   function stopMusicSched(){ mPlaying=false; if(mTimer){ clearTimeout(mTimer); mTimer=null; } killMusicBus(); }
   function pickTrack(){} function pool(){ return []; } function playTrack(){}
@@ -2458,9 +2460,9 @@ const Snd=(function(){
   function thunder(){ if(!ctx) return; const t=ctx.currentTime; const dur=1.6+Math.random()*1.6; const len=Math.floor(ctx.sampleRate*dur),b=ctx.createBuffer(1,len,ctx.sampleRate),d=b.getChannelData(0); for(let i=0;i<len;i++){ d[i]=(Math.random()*2-1)*Math.pow(1-i/len,1.7); } const src=ctx.createBufferSource(); src.buffer=b; const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.setValueAtTime(420,t); lp.frequency.exponentialRampToValueAtTime(80,t+dur); const g=ctx.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.22,t+0.06); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); src.connect(lp); lp.connect(g); g.connect(sfxBus); src.start(t); }
   function scheduleTick(at,vol){ const o=ctx.createOscillator(); o.type='square'; o.frequency.value=1150; const g=ctx.createGain(); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(vol,at+0.002); g.gain.exponentialRampToValueAtTime(0.0001,at+0.05); o.connect(g); g.connect(sfxBus); o.start(at); o.stop(at+0.06); }
   function wheel(dur){ if(!on||!ctx) return; dur=dur||4.2; const t0=ctx.currentTime; let t=0; while(t<dur){ const k=t/dur; scheduleTick(t0+t, 0.055*(1-0.45*k)); t+=0.03+0.34*k*k; } setTimeout(()=>{ if(on) bell(659.25,1.1,0.11); }, dur*1000+40); }
-  function fire(level){ fireLevel=Math.max(0,level|0); if(!ctx||!fireBed) return; const t=ctx.currentTime; fireBed.gain.cancelScheduledValues(t); fireBed.gain.linearRampToValueAtTime(fireLevel>0?Math.min(0.10,0.02+fireLevel*0.011):0, t+0.8); }
-  function crackle(){ if(!ctx||!on||fireLevel<=0||fireBuf) return; const t=ctx.currentTime; const big=Math.random()<0.16; const dur=big?(0.05+Math.random()*0.07):(0.012+Math.random()*0.03); const len=Math.max(2,Math.floor(ctx.sampleRate*dur)),b=ctx.createBuffer(1,len,ctx.sampleRate),d=b.getChannelData(0); for(let i=0;i<len;i++){ d[i]=(Math.random()*2-1)*Math.pow(1-i/len, big?2.4:4.2); } const src=ctx.createBufferSource(); src.buffer=b; const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=big?(150+Math.random()*240):(550+Math.random()*1500); bp.Q.value=big?1.1:2.4; const g=ctx.createGain(); g.gain.value=(big?0.05:0.022)*Math.min(1,0.45+fireLevel/8); src.connect(bp); bp.connect(g); g.connect(fireOut); src.start(t); }
-  function crackleLoop(){ const base=Math.max(120, 560-fireLevel*52); setTimeout(()=>{ if(on && fireLevel>0 && !fireBuf){ crackle(); if(Math.random()<0.35) crackle(); } crackleLoop(); }, base+Math.random()*base); }
+  function fire(level){ fireLevel=Math.max(0,level|0); if(!ctx||!fireBed) return; const t=ctx.currentTime; fireBed.gain.cancelScheduledValues(t); fireBed.gain.linearRampToValueAtTime(fireLevel>0?Math.min(0.13,0.03+fireLevel*0.013):0, t+0.8); }
+  function crackle(){ if(!ctx||!on||fireLevel<=0||fireBuf) return; const t=ctx.currentTime; const big=Math.random()<0.16; const dur=big?(0.05+Math.random()*0.07):(0.012+Math.random()*0.03); const len=Math.max(2,Math.floor(ctx.sampleRate*dur)),b=ctx.createBuffer(1,len,ctx.sampleRate),d=b.getChannelData(0); for(let i=0;i<len;i++){ d[i]=(Math.random()*2-1)*Math.pow(1-i/len, big?2.4:4.2); } const src=ctx.createBufferSource(); src.buffer=b; const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=big?(150+Math.random()*240):(550+Math.random()*1500); bp.Q.value=big?1.1:2.4; const g=ctx.createGain(); g.gain.value=(big?0.06:0.028)*Math.min(1,0.5+fireLevel/7); src.connect(bp); bp.connect(g); g.connect(fireOut); src.start(t); }
+  function crackleLoop(){ const base=Math.max(70, 360-fireLevel*42); setTimeout(()=>{ if(on && fireLevel>0 && !fireBuf){ crackle(); if(Math.random()<0.5) crackle(); if(fireLevel>=4 && Math.random()<0.3) crackle(); } crackleLoop(); }, base+Math.random()*base); }
   function howl(){ if(!ctx) return; const t=ctx.currentTime; const base=150+Math.random()*55;
     const o=ctx.createOscillator(); o.type='triangle'; o.frequency.setValueAtTime(base*0.72,t); o.frequency.exponentialRampToValueAtTime(base*1.2,t+0.55); o.frequency.setValueAtTime(base*1.2,t+1.2); o.frequency.exponentialRampToValueAtTime(base*0.82,t+2.5);
     const vib=ctx.createOscillator(); vib.type='sine'; vib.frequency.value=4.6; const vg=ctx.createGain(); vg.gain.value=4.5; vib.connect(vg); vg.connect(o.frequency); vib.start(t); vib.stop(t+2.8);
@@ -2469,7 +2471,7 @@ const Snd=(function(){
     o.connect(bp); bp.connect(g); g.connect(sfxBus); g.connect(verb); o.start(t); o.stop(t+2.7); }
   function playHowlSample(){ if(!howlBuf||!ctx) return; try{ const s=ctx.createBufferSource(); s.buffer=howlBuf; const g=ctx.createGain(); g.gain.value=0.5; s.connect(g); g.connect(master); g.connect(verb); s.start(); }catch(e){} }
   function doHowl(){ if(howlBuf) playHowlSample(); else howl(); }
-  function howlLoop(){ const delay=35000+Math.random()*75000; setTimeout(()=>{ if(on && !document.hidden){ const p=nightNow()?0.55:0.16; if(Math.random()<p){ doHowl(); if(Math.random()<0.4) setTimeout(()=>{ if(on) doHowl(); }, 2900+Math.random()*1600); } } howlLoop(); }, delay); }
+  function howlLoop(){ var night=nightNow(); var delay=night?(28000+Math.random()*32000):(70000+Math.random()*90000); setTimeout(function(){ if(on){ var nt=nightNow(); var p=nt?0.85:0.16; if(Math.random()<p){ doHowl(); if(nt && Math.random()<0.45) setTimeout(function(){ if(on) doHowl(); }, 2600+Math.random()*1700); } } howlLoop(); }, delay); }
   function startFireSample(){ if(!fireBuf||!ctx||fireSrc) return; try{ fireSrc=ctx.createBufferSource(); fireSrc.buffer=fireBuf; fireSrc.loop=true; fireSrc.connect(fireBed); fireSrc.start(); }catch(e){} }
   async function loadSamples(){ if(samplesTried||!ctx) return; samplesTried=true; const grab=async(url)=>{ try{ const r=await fetch(url,{cache:'force-cache'}); if(!r.ok) return null; const ab=await r.arrayBuffer(); return await ctx.decodeAudioData(ab); }catch(e){ return null; } };
     try{ const fb=await grab('fire.mp3'); if(fb){ fireBuf=fb; if(synthBed) synthBed.gain.value=0; startFireSample(); } }catch(e){}
@@ -3088,7 +3090,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27at · offerings expire after 3h (cap no longer jams)</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27av · fire crackles continuously while logs burn; wolf howls more often at night</p>`;
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 /* ===== emotive spirits — moods + reactions (client-side, no SQL) ===== */
@@ -4143,6 +4145,7 @@ function offeringCeremony(name){
   setInterval(takeSnap, 120000);
   setInterval(pollRemote, 20000);
   setInterval(()=>{ try{ syncOffering(); }catch(e){} }, 8000);
+  setInterval(()=>{ try{ if(typeof Snd!=='undefined' && Snd.fire) Snd.fire((MEM.fire&&MEM.fire.level)||0); }catch(e){} }, 5000);
   try{ syncOffering(); }catch(e){}
   addEventListener("resize",()=>{drawTrees();layoutGrove();});
 })();

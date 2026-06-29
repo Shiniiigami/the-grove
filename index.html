@@ -2572,7 +2572,7 @@ const Snd=(function(){
   var CM_VOL=0.60, CM_XF=4.0, CM_OFFER_VOL=0.80, CM_EXTS=['mp3','m4a','ogg','wav'];
   var cmDay=null, cmNight=null, cmDisc=null, cmBus=null, cmDeckA=null, cmDeckB=null, cmCur=null, cmOrder=[], cmOi=0;
   var musicMode=null, cmCurSet=null, synthOn=false, cmDirTimer=null;
-  var offerWanted=false, offerCustom=false, cmOffer=null, cmOfferDeck=null;
+  var offerWanted=false, offerCustom=false, cmOffer=null, cmOfferG=null, cmOfferNode=null, cmPending=null;
   function cmHead(url){ return fetch(url,{method:'HEAD'}).then(function(r){ return (r&&r.ok)?url:null; }).catch(function(){ return null; }); }
   async function cmFindIndexed(base){ var out=[]; for(var i=1;i<=40;i++){ var hit=null; for(var k=0;k<CM_EXTS.length;k++){ hit=await cmHead('music/'+base+i+'.'+CM_EXTS[k]); if(hit) break; } if(hit) out.push(hit); else break; } return out; }
   function cmDiscover(){ if(cmDisc) return cmDisc; cmDisc=Promise.all([cmFindIndexed('day'),cmFindIndexed('night')]).then(function(r){ cmDay=r[0]||[]; cmNight=r[1]||[]; return r; }).catch(function(){ cmDay=cmDay||[]; cmNight=cmNight||[]; return [cmDay,cmNight]; }); return cmDisc; }
@@ -2580,21 +2580,28 @@ const Snd=(function(){
   function cmShuffleSet(){ var a=cmSetArr()||[]; cmOrder=a.map(function(_,i){return i;}); for(var i=cmOrder.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=cmOrder[i]; cmOrder[i]=cmOrder[j]; cmOrder[j]=t; } cmOi=0; }
   function cmNextIdx(){ var a=cmSetArr()||[]; if(!cmOrder.length||cmOi>=cmOrder.length){ var last=cmOrder.length?cmOrder[cmOrder.length-1]:-1; cmShuffleSet(); if(a.length>1&&cmOrder[0]===last){ var t=cmOrder[0]; cmOrder[0]=cmOrder[1]; cmOrder[1]=t; } } return cmOrder[cmOi++]; }
   function cmBusGet(){ if(!cmBus){ cmBus=ctx.createGain(); cmBus.gain.value=1.0; cmBus.connect(master); } return cmBus; }
-  function cmMakeDeck(){ var el=new Audio(); el.preload='auto'; var src=ctx.createMediaElementSource(el); var g=ctx.createGain(); g.gain.value=0.0001; src.connect(g); g.connect(cmBusGet()); return {el:el,g:g,src:src,guard:false,onT:null,onE:null}; }
+  var cmBuf={}, cmBufOrder=[];
+  function cmLoad(url){ if(cmBuf[url]) return Promise.resolve(cmBuf[url]); return fetch(url).then(function(r){ if(!r||!r.ok) throw 0; return r.arrayBuffer(); }).then(function(ab){ return new Promise(function(res){ try{ ctx.decodeAudioData(ab, function(bb){ cmBuf[url]=bb; cmBufOrder.push(url); while(cmBufOrder.length>2){ var o=cmBufOrder.shift(); if(o!==url && cmBuf[o]) delete cmBuf[o]; } res(bb); }, function(){ res(null); }); }catch(e){ res(null); } }); }).catch(function(){ return null; }); }
+  function cmMakeDeck(){ var g=ctx.createGain(); g.gain.value=0.0001; g.connect(cmBusGet()); return {g:g,node:null,dur:0,guard:false,tmr:null}; }
   function cmDecks(){ if(!cmDeckA) cmDeckA=cmMakeDeck(); if(!cmDeckB) cmDeckB=cmMakeDeck(); }
-  function cmDetach(d){ if(!d) return; if(d.onT){ d.el.removeEventListener('timeupdate',d.onT); d.onT=null; } if(d.onE){ d.el.removeEventListener('ended',d.onE); d.onE=null; } }
-  function cmArm(d){ cmDetach(d); d.guard=false;
-    d.onT=function(){ if(d.guard) return; var dur=d.el.duration; if(dur&&isFinite(dur)&&d.el.currentTime>dur-CM_XF){ d.guard=true; cmDetach(d); musicTrackEnded(); } };
-    d.onE=function(){ if(d.guard) return; d.guard=true; cmDetach(d); musicTrackEnded(); };
-    d.el.addEventListener('timeupdate',d.onT); d.el.addEventListener('ended',d.onE); }
-  function cmPlay(url){ if(!ctx||!url) return; cmDecks();
-    var inc=(cmCur===cmDeckA)?cmDeckB:cmDeckA; var out=(cmCur===cmDeckA||cmCur===cmDeckB)?cmCur:null;
-    try{ inc.el.src=url; inc.el.currentTime=0; }catch(e){}
-    var t=ctx.currentTime; try{ inc.g.gain.cancelScheduledValues(t); inc.g.gain.setValueAtTime(0.0001,t); inc.g.gain.linearRampToValueAtTime(CM_VOL,t+(out?CM_XF:1.2)); }catch(e){}
-    var pr=inc.el.play(); if(pr&&pr.catch) pr.catch(function(){});
-    if(out){ try{ var ot=ctx.currentTime; out.g.gain.cancelScheduledValues(ot); out.g.gain.setValueAtTime(out.g.gain.value,ot); out.g.gain.linearRampToValueAtTime(0.0001,ot+CM_XF); }catch(e){} cmDetach(out); (function(o){ setTimeout(function(){ try{ o.el.pause(); }catch(e){} },(CM_XF+0.15)*1000); })(out); }
-    cmCur=inc; cmArm(inc); }
-  function cmFadeDecks(rel){ if(!ctx) return; rel=rel||0.6; var t=ctx.currentTime; [cmDeckA,cmDeckB].forEach(function(d){ if(!d) return; cmDetach(d); try{ d.g.gain.cancelScheduledValues(t); d.g.gain.setValueAtTime(d.g.gain.value,t); d.g.gain.linearRampToValueAtTime(0.0001,t+rel); }catch(e){} (function(dd){ setTimeout(function(){ try{ dd.el.pause(); }catch(e){} },(rel+0.1)*1000); })(d); }); cmCur=null; }
+  function cmStopNode(d,when){ if(!d) return; if(d.tmr){ clearTimeout(d.tmr); d.tmr=null; } var nd=d.node; d.node=null; if(nd){ try{ nd.onended=null; }catch(e){} if(when&&when>0){ setTimeout(function(){ try{ nd.stop(); }catch(e){} try{ nd.disconnect(); }catch(e){} }, when*1000); } else { try{ nd.stop(); }catch(e){} try{ nd.disconnect(); }catch(e){} } } }
+  function cmArm(d){ if(!d) return; if(d.tmr){ clearTimeout(d.tmr); d.tmr=null; } d.guard=false; var lead=Math.max(400,(d.dur-CM_XF)*1000); d.tmr=setTimeout(function(){ if(d.guard) return; d.guard=true; musicTrackEnded(); }, lead); }
+  function cmPlay(url){ if(!ctx||!url) return; cmDecks(); var want=url; cmPending=want;
+    cmLoad(url).then(function(buf){ if(cmPending!==want||!mPlaying) return;
+      if(!buf){ if(!chantActive&&!offerWanted) switchToSynth(); return; }
+      var inc=(cmCur===cmDeckA)?cmDeckB:cmDeckA; var out=(cmCur===cmDeckA||cmCur===cmDeckB)?cmCur:null;
+      cmStopNode(inc,0);
+      var node=ctx.createBufferSource(); node.buffer=buf; node.loop=false; node.connect(inc.g);
+      node.onended=function(){ if(inc.node!==node||inc.guard) return; inc.guard=true; musicTrackEnded(); };
+      inc.node=node; inc.dur=buf.duration||30; inc.guard=false;
+      var t=ctx.currentTime; try{ inc.g.gain.cancelScheduledValues(t); inc.g.gain.setValueAtTime(0.0001,t); inc.g.gain.linearRampToValueAtTime(CM_VOL,t+(out?CM_XF:1.2)); }catch(e){}
+      try{ node.start(t); }catch(e){}
+      cmArm(inc);
+      if(out){ var ot=ctx.currentTime; try{ out.g.gain.cancelScheduledValues(ot); out.g.gain.setValueAtTime(out.g.gain.value,ot); out.g.gain.linearRampToValueAtTime(0.0001,ot+CM_XF); }catch(e){} cmStopNode(out,CM_XF+0.2); }
+      cmCur=inc;
+    });
+  }
+  function cmFadeDecks(rel){ if(!ctx) return; rel=rel||0.6; cmPending=null; var t=ctx.currentTime; [cmDeckA,cmDeckB].forEach(function(d){ if(!d) return; d.guard=true; try{ d.g.gain.cancelScheduledValues(t); d.g.gain.setValueAtTime(d.g.gain.value,t); d.g.gain.linearRampToValueAtTime(0.0001,t+rel); }catch(e){} cmStopNode(d,rel+0.15); }); cmCur=null; }
   /* synth fallback (used when the current period has no custom songs) */
   function synthStart(){ if(synthOn||!ctx) return; synthOn=true; musicNext(); }
   function synthStop(){ synthOn=false; if(mTimer){ clearTimeout(mTimer); mTimer=null; } killMusicBus(); }
@@ -2611,8 +2618,8 @@ const Snd=(function(){
   function musicTickStop(){ if(cmDirTimer){ clearTimeout(cmDirTimer); cmDirTimer=null; } }
   /* offering song (loops until decided), replaces the synth chant when music/offering.* exists */
   function cmOfferDiscover(){ if(cmOffer!==null) return Promise.resolve(cmOffer||null); return (async function(){ var hit=null; for(var k=0;k<CM_EXTS.length;k++){ hit=await cmHead('music/offering.'+CM_EXTS[k]); if(hit) break; } cmOffer=hit||false; return hit; })(); }
-  function cmOfferStart(){ if(!cmOffer) return false; if(!cmOfferDeck){ var el=new Audio(); el.preload='auto'; el.loop=true; var src=ctx.createMediaElementSource(el); var g=ctx.createGain(); g.gain.value=0.0001; src.connect(g); g.connect(master); cmOfferDeck={el:el,g:g,src:src}; } try{ cmOfferDeck.el.src=cmOffer; cmOfferDeck.el.currentTime=0; }catch(e){} var t=ctx.currentTime; try{ cmOfferDeck.g.gain.cancelScheduledValues(t); cmOfferDeck.g.gain.setValueAtTime(0.0001,t); cmOfferDeck.g.gain.linearRampToValueAtTime(CM_OFFER_VOL,t+0.8); }catch(e){} var pr=cmOfferDeck.el.play(); if(pr&&pr.catch) pr.catch(function(){}); return true; }
-  function cmOfferStop(){ if(!cmOfferDeck||!ctx) return; var t=ctx.currentTime; try{ cmOfferDeck.g.gain.cancelScheduledValues(t); cmOfferDeck.g.gain.setValueAtTime(cmOfferDeck.g.gain.value,t); cmOfferDeck.g.gain.linearRampToValueAtTime(0.0001,t+0.7); }catch(e){} var d=cmOfferDeck; setTimeout(function(){ try{ d.el.pause(); }catch(e){} },800); }
+  function cmOfferStart(){ if(!cmOffer) return false; cmLoad(cmOffer).then(function(buf){ if(!buf) return; if(!cmOfferG){ cmOfferG=ctx.createGain(); cmOfferG.gain.value=0.0001; cmOfferG.connect(master); } if(cmOfferNode){ try{ cmOfferNode.onended=null; cmOfferNode.stop(); cmOfferNode.disconnect(); }catch(e){} cmOfferNode=null; } var node=ctx.createBufferSource(); node.buffer=buf; node.loop=true; node.connect(cmOfferG); cmOfferNode=node; var t=ctx.currentTime; try{ cmOfferG.gain.cancelScheduledValues(t); cmOfferG.gain.setValueAtTime(0.0001,t); cmOfferG.gain.linearRampToValueAtTime(CM_OFFER_VOL,t+0.8); }catch(e){} try{ node.start(t); }catch(e){} }); return true; }
+  function cmOfferStop(){ if(!cmOfferG||!ctx) return; var t=ctx.currentTime; try{ cmOfferG.gain.cancelScheduledValues(t); cmOfferG.gain.setValueAtTime(cmOfferG.gain.value,t); cmOfferG.gain.linearRampToValueAtTime(0.0001,t+0.7); }catch(e){} var nd=cmOfferNode; cmOfferNode=null; if(nd){ setTimeout(function(){ try{ nd.onended=null; nd.stop(); nd.disconnect(); }catch(e){} },800); } }
 
   function startMusic(){ if(mPlaying||!ctx||chantActive||offerWanted) return; mPlaying=true; musicMode=null; cmCurSet=null; musicDirect(); musicTickStart(); }
   function stopMusicSched(){ mPlaying=false; musicTickStop(); synthStop(); cmFadeDecks(0.6); musicMode=null; cmCurSet=null; }
@@ -2680,24 +2687,20 @@ const Snd=(function(){
   function sfx(name){ if(!on||!ctx) return; try{ if(name==='gong')gong(); else if(name==='chime')chime(); else if(name==='shimmer')shimmer(); else if(name==='tick')tick(); else if(name==='whoosh')whoosh(); else if(name==='dice')dice(); else if(name==='note')note(); else if(name==='approve')approveS(); else if(name==='thunder')thunder(); }catch(e){} }
   function action(t){ if(!on||!ctx||!t) return; if(t==='stoke') return; if(t.indexOf('wager')===0||t.indexOf('group')===0) sfx('dice'); else if(t.indexOf('chal')===0) sfx('note'); }
   try{ cmDiscover(); cmOfferDiscover(); }catch(e){}
-  function _cmTeardown(){ [cmDeckA,cmDeckB,cmOfferDeck].forEach(function(d){ if(d&&d.el){ try{ d.el.pause(); }catch(e){} try{ d.el.removeAttribute('src'); }catch(e){} try{ d.el.load(); }catch(e){} } }); }
   function _audHide(){
     try{ musicTickStop(); }catch(e){}
-    try{ if(ctx){ var t=ctx.currentTime; var b=cmBusGet(); b.gain.cancelScheduledValues(t); b.gain.setValueAtTime(Math.max(0.0001,b.gain.value),t); b.gain.linearRampToValueAtTime(0.0001,t+0.12); } }catch(e){}
-    setTimeout(function(){
-      _cmTeardown();
-      try{ if(ctx&&ctx.state==='running') ctx.suspend(); }catch(e){}
-      try{ if('mediaSession' in navigator){ navigator.mediaSession.playbackState='none'; navigator.mediaSession.metadata=null; } }catch(e){}
-    }, 140);
+    try{ if(cmDeckA&&cmDeckA.tmr){ clearTimeout(cmDeckA.tmr); cmDeckA.tmr=null; } }catch(e){}
+    try{ if(cmDeckB&&cmDeckB.tmr){ clearTimeout(cmDeckB.tmr); cmDeckB.tmr=null; } }catch(e){}
+    try{ if(ctx){ var t=ctx.currentTime; var b=cmBusGet(); b.gain.cancelScheduledValues(t); b.gain.setValueAtTime(Math.max(0.0001,b.gain.value),t); b.gain.linearRampToValueAtTime(0.0001,t+0.08); } }catch(e){}
+    setTimeout(function(){ try{ if(ctx&&ctx.state==='running') ctx.suspend(); }catch(e){} }, 100);
   }
   function _audShow(){
     if(!on) return;
     try{ if(ctx&&ctx.state==='suspended') ctx.resume(); }catch(e){}
     try{ var t=ctx?ctx.currentTime:0; if(cmBus){ cmBus.gain.cancelScheduledValues(t); cmBus.gain.setValueAtTime(cmBus.gain.value,t); cmBus.gain.linearRampToValueAtTime(1.0,t+0.3); } }catch(e){}
-    try{ if(chantActive){ if(typeof cmOfferStart==='function') cmOfferStart(); } else { musicMode=null; cmCurSet=null; if(mPlaying){ musicDirect(); musicTickStart(); } else { startMusic(); } } }catch(e){}
+    try{ if(chantActive){ if(typeof cmOfferStart==='function') cmOfferStart(); } else { if(mPlaying){ musicTickStart(); } else { startMusic(); } } }catch(e){}
   }
   try{ document.addEventListener('visibilitychange', function(){ if(document.hidden) _audHide(); else _audShow(); }); }catch(e){}
-  try{ window.addEventListener('pagehide', function(){ try{ _cmTeardown(); }catch(e){} try{ if(ctx&&ctx.state==='running') ctx.suspend(); }catch(e){} }); }catch(e){}
   return { setOn, isOn:()=>on, sfx, action, playTrack, wheel, fire, offering };
 })();
 let SOUND_ON = (function(){ try{ return localStorage.getItem('grove-sound')==='1'; }catch(e){ return false; } })();
@@ -3341,7 +3344,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27bn · audio fade-out before release (no ding)</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27bo · music via web-audio buffers (no media widget)</p>`;
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 /* ===== emotive spirits — moods + reactions (client-side, no SQL) ===== */

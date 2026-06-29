@@ -1156,10 +1156,10 @@ function drawChibi(ctx,f,px,ox,oy,ti,nT,expr){
     row(9,20,1,hair); row(9,20,2,hair); row(9,20,3,hair);
     P(8,2,hair); P(21,2,hair); P(8,3,hair); P(21,3,hair);
     for(let y=4;y<19;y++){ P(8,y,hair); P(9,y,hair); P(20,y,hair); P(21,y,hair); }  // long sides framing the face
-    [6,10,14].forEach(y=>{ P(7,y,hair); P(22,y,hair); });               // soft curl bulges (waves)
-    [8,12,16].forEach(y=>{ P(7,y,hairs); P(22,y,hairs); });
+    row(10,14,4,hair); row(11,16,5,hair); P(16,6,hair); P(17,6,hair); P(18,4,hair); P(19,4,hair);  // side-swept bangs
+    P(10,15,hair); P(10,16,hairs); P(19,15,hair); P(19,16,hairs); P(11,17,hairs); P(18,17,hairs);  // jaw tendrils
     P(9,18,hairs); P(20,18,hairs); P(8,17,hairs); P(21,17,hairs);       // rounded curl tips
-    [[12,0],[15,0],[18,1],[11,2],[9,6],[20,7],[8,11],[21,12],[9,15],[20,16]].forEach(p=>P(p[0],p[1],hairl));
+    [[12,0],[15,0],[18,1],[11,2],[13,4],[18,5]].forEach(p=>P(p[0],p[1],hairl));   // highlights
   } else if(st==="wavy"){
     row(10,19,1,hair);row(9,20,2,hair);row(9,20,3,hair);
     for(let y=4;y<11;y++){P(9,y,hair);P(10,y,hair);P(19,y,hair);P(20,y,hair);}
@@ -3434,7 +3434,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27by · braids + Eye tunic + flannel + puffer · wager fix · offering cooldowns</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27bz · fire cooldown fix · reaction fix · curly-long opt 3</p>`;
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 /* ===== emotive spirits — moods + reactions (client-side, no SQL) ===== */
@@ -3458,7 +3458,7 @@ function initMoodSnap(){ MOOD_SNAP=moodSnapshot(); }
 function detectReactions(){
   if(!MOOD_SNAP){ MOOD_SNAP=moodSnapshot(); return; }
   const ev=[];
-  (MEM.members||[]).forEach(m=>{ const o=MOOD_SNAP[m.name]; if(!o) return; const dp=(m.points||0)-o.p; if(dp!==0){ let lbl=(dp>0?'+':'')+dp+' \u2726'; const hist=m.history||[]; if(hist.length>o.h){ const last=hist[hist.length-1]; if(last&&last.l) lbl=last.l+' '+(dp>0?'+':'')+dp; } ev.push({name:m.name,dp,lbl}); } });
+  (MEM.members||[]).forEach(m=>{ const o=MOOD_SNAP[m.name]; if(!o) return; const dp=((m.points||0)+lockedStake(m.name))-o.p; if(dp!==0){ let lbl=(dp>0?'+':'')+dp+' \u2726'; const hist=m.history||[]; if(hist.length>o.h){ const last=hist[hist.length-1]; if(last&&last.l) lbl=last.l+' '+(dp>0?'+':'')+dp; } ev.push({name:m.name,dp,lbl}); } });
   MOOD_SNAP=moodSnapshot();
   if(ev.length>8) return; /* bulk op (season reset / mass blessing) — no flood */
   ev.sort((a,b)=>Math.abs(b.dp)-Math.abs(a.dp));
@@ -3665,7 +3665,8 @@ function renderTrials(){
   const fire=MEM.fire||{level:0,goal:6}; const lvl=fire.level||0, goal=fire.goal||6;
   try{ Snd.fire(lvl); }catch(e){}
   const streak=(fire.lastBlessed && now-fire.lastBlessed>=24*3600) ? 0 : (fire.streak||0); const nextBless=Math.min(200,50+25*streak);
-  const cd = me? (3*3600-(now-(me.lastStoke||0))) : 0;
+  const _lastStoke = me? Math.max(me.lastStoke||0, localStokeGet(me.name)) : 0;
+  const cd = me? (3*3600-(now-_lastStoke)) : 0;
   const myLogs = me?(me.logs||0):0;
   const canStoke = me && cd<=0 && myLogs>=1;
   const cdLbl = cd>0? `${Math.floor(cd/3600)}h ${Math.floor((cd%3600)/60)}m` : "";
@@ -4104,7 +4105,13 @@ function challengeCard(c,now){
       <div class="rmeta">${sub}</div></div>
     ${foot}</div>`;
 }
-window.stokeFire=async function(){ if(!VOTER){ toast("Pick your name first."); return; } const before=(MEM.fire&&MEM.fire.level)||0; const ok=await communityAction({t:'stoke',name:VOTER}); if(!ok)return; trialsRefresh(); const f=MEM.fire||{}; if(f.lastBlessed && Date.now()/1000-f.lastBlessed<6){ Snd.sfx('gong'); toast(`The fire roars — blessed +${f.lastBless||50} each${f.lastSpark===VOTER?', and +20 spark for your final log!':'!'}`); } else { Snd.sfx('whoosh'); toast("You feed the fire."); } };
+function localStokeGet(name){ try{ return +(localStorage.getItem('grove-laststoke-'+name)||0)||0; }catch(e){ return 0; } }
+function localStokeSet(name){ try{ localStorage.setItem('grove-laststoke-'+name, String(Date.now()/1000)); }catch(e){} }
+window.stokeFire=async function(){ if(!VOTER){ toast("Pick your name first."); return; }
+  const _me=memByName(VOTER), _now=Date.now()/1000;
+  const _ls=_me?Math.max(_me.lastStoke||0, localStokeGet(VOTER)):0;
+  if(_me && _now-_ls < 3*3600){ const left=3*3600-(_now-_ls); toast(`Rest — add another in ${Math.floor(left/3600)}h ${Math.floor((left%3600)/60)}m.`); trialsRefresh(); return; }
+  const before=(MEM.fire&&MEM.fire.level)||0; const ok=await communityAction({t:'stoke',name:VOTER}); if(!ok)return; localStokeSet(VOTER); trialsRefresh(); const f=MEM.fire||{}; if(f.lastBlessed && Date.now()/1000-f.lastBlessed<6){ Snd.sfx('gong'); toast(`The fire roars — blessed +${f.lastBless||50} each${f.lastSpark===VOTER?', and +20 spark for your final log!':'!'}`); } else { Snd.sfx('whoosh'); toast("You feed the fire."); } };
 window.trialsKeeperForm=function(){ if(!keeperUnlocked){ toast("Only the Keeper may override trials."); return; } renderTrialsKeeper(); };
 function trialRow(head,btns){ return `<div style="padding:8px 2px;border-bottom:1px solid rgba(60,80,68,.25)">${head}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${btns}</div></div>`; }
 function kbtn(fn,label,danger){ return `<button class="ghostbtn" style="width:auto;padding:5px 10px;font-size:11px${danger?';color:var(--ember)':''}" onclick="${fn}">${label}</button>`; }

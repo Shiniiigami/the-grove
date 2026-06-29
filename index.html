@@ -699,10 +699,19 @@ window.rollback=async function(mins){
   try{ MEM=JSON.parse(snap.d); }catch(e){ toast("That snapshot is unreadable."); return; }
   ensureDefaults(); await saveData(); layoutGrove(); renderLedger(); renderRites(); closeSheet(); toast(`Rolled back ~${age} min.`);
 };
+let REACT_SUPPRESS=false;
+function rebaselineSnaps(){ try{ MOOD_SNAP=moodSnapshot(); }catch(e){} try{ OFFER_SNAP=offerIds(); APPLIED_OFFER_SNAP=appliedOfferIds(); }catch(e){} try{ const snap={}; (MEM.members||[]).forEach(m=>{ snap[m.name]=tierIndex(m.points||0); }); saveRankSnap(snap); }catch(e){} }
 async function pollRemote(){
   if(MODE!=="remote") return;
   if(scrim.classList.contains("show")) return;   // don't yank the UI mid-edit
-  try{ const d=await sbRead(); if(d && JSON.stringify(d)!==JSON.stringify(MEM)){ MEM=d; ensureDefaults(); cacheRemote(); try{ detectReactions(); }catch(e){} try{ detectNewOffers(); }catch(e){} takeSnap(); layoutGrove(); renderLedger(); renderRites(); const tr=document.getElementById('trials'); if(tr && tr.style.display!=='none') renderTrials(); checkRankUps(); } }catch(e){}
+  try{ const d=await sbRead(); if(d && JSON.stringify(d)!==JSON.stringify(MEM)){
+    MEM=d; ensureDefaults(); cacheRemote();
+    const quiet = document.hidden || REACT_SUPPRESS; REACT_SUPPRESS=false;
+    if(quiet){ rebaselineSnaps(); }
+    else { try{ detectReactions(); }catch(e){} try{ detectNewOffers(); }catch(e){} }
+    takeSnap(); layoutGrove(); renderLedger(); renderRites(); const tr=document.getElementById('trials'); if(tr && tr.style.display!=='none') renderTrials();
+    if(!quiet) checkRankUps();
+  } }catch(e){}
 }
 
 /* ====================== PIXEL SPIRIT ENGINE ====================== */
@@ -2707,7 +2716,7 @@ const Snd=(function(){
       else { _audRestore(); }
     }catch(e){ try{ _audRestore(); }catch(e2){} }
   }
-  try{ document.addEventListener('visibilitychange', function(){ if(document.hidden) _audHide(); else _audShow(); }); }catch(e){}
+  try{ document.addEventListener('visibilitychange', function(){ if(document.hidden){ _audHide(); } else { REACT_SUPPRESS=true; _audShow(); } }); }catch(e){}
   return { setOn, isOn:()=>on, sfx, action, playTrack, wheel, fire, offering };
 })();
 let SOUND_ON = (function(){ try{ return localStorage.getItem('grove-sound')==='1'; }catch(e){ return false; } })();
@@ -3351,7 +3360,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27bs · no self-suspend (avoid iOS session-deactivation pop)</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27bt · no reaction chimes on lock/return (the real ding)</p>`;
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 /* ===== emotive spirits — moods + reactions (client-side, no SQL) ===== */

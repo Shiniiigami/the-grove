@@ -2680,20 +2680,24 @@ const Snd=(function(){
   function sfx(name){ if(!on||!ctx) return; try{ if(name==='gong')gong(); else if(name==='chime')chime(); else if(name==='shimmer')shimmer(); else if(name==='tick')tick(); else if(name==='whoosh')whoosh(); else if(name==='dice')dice(); else if(name==='note')note(); else if(name==='approve')approveS(); else if(name==='thunder')thunder(); }catch(e){} }
   function action(t){ if(!on||!ctx||!t) return; if(t==='stoke') return; if(t.indexOf('wager')===0||t.indexOf('group')===0) sfx('dice'); else if(t.indexOf('chal')===0) sfx('note'); }
   try{ cmDiscover(); cmOfferDiscover(); }catch(e){}
-  function _teardownDeck(d){ if(!d||!d.el) return; try{ d.el.pause(); }catch(e){} try{ d.el.removeAttribute('src'); }catch(e){} try{ d.el.srcObject=null; }catch(e){} try{ d.el.load(); }catch(e){} }
+  function _cmTeardown(){ [cmDeckA,cmDeckB,cmOfferDeck].forEach(function(d){ if(d&&d.el){ try{ d.el.pause(); }catch(e){} try{ d.el.removeAttribute('src'); }catch(e){} try{ d.el.load(); }catch(e){} } }); }
   function _audHide(){
-    try{ stopMusicSched(); }catch(e){}
-    _teardownDeck(cmDeckA); _teardownDeck(cmDeckB); _teardownDeck(cmOfferDeck);
-    try{ if(ctx&&ctx.state==='running') ctx.suspend(); }catch(e){}
-    try{ if('mediaSession' in navigator){ navigator.mediaSession.playbackState='none'; navigator.mediaSession.metadata=null; } }catch(e){}
+    try{ musicTickStop(); }catch(e){}
+    try{ if(ctx){ var t=ctx.currentTime; var b=cmBusGet(); b.gain.cancelScheduledValues(t); b.gain.setValueAtTime(Math.max(0.0001,b.gain.value),t); b.gain.linearRampToValueAtTime(0.0001,t+0.12); } }catch(e){}
+    setTimeout(function(){
+      _cmTeardown();
+      try{ if(ctx&&ctx.state==='running') ctx.suspend(); }catch(e){}
+      try{ if('mediaSession' in navigator){ navigator.mediaSession.playbackState='none'; navigator.mediaSession.metadata=null; } }catch(e){}
+    }, 140);
   }
   function _audShow(){
     if(!on) return;
     try{ if(ctx&&ctx.state==='suspended') ctx.resume(); }catch(e){}
-    try{ if(chantActive){ if(typeof cmOfferStart==='function') cmOfferStart(); } else { startMusic(); } }catch(e){}
+    try{ var t=ctx?ctx.currentTime:0; if(cmBus){ cmBus.gain.cancelScheduledValues(t); cmBus.gain.setValueAtTime(cmBus.gain.value,t); cmBus.gain.linearRampToValueAtTime(1.0,t+0.3); } }catch(e){}
+    try{ if(chantActive){ if(typeof cmOfferStart==='function') cmOfferStart(); } else { musicMode=null; cmCurSet=null; if(mPlaying){ musicDirect(); musicTickStart(); } else { startMusic(); } } }catch(e){}
   }
   try{ document.addEventListener('visibilitychange', function(){ if(document.hidden) _audHide(); else _audShow(); }); }catch(e){}
-  try{ window.addEventListener('pagehide', function(){ _audHide(); }); }catch(e){}
+  try{ window.addEventListener('pagehide', function(){ try{ _cmTeardown(); }catch(e){} try{ if(ctx&&ctx.state==='running') ctx.suspend(); }catch(e){} }); }catch(e){}
   return { setOn, isOn:()=>on, sfx, action, playTrack, wheel, fire, offering };
 })();
 let SOUND_ON = (function(){ try{ return localStorage.getItem('grove-sound')==='1'; }catch(e){ return false; } })();
@@ -3337,7 +3341,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27bm · audio teardown on background · ledger DP label</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27bn · audio fade-out before release (no ding)</p>`;
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 /* ===== emotive spirits — moods + reactions (client-side, no SQL) ===== */

@@ -100,6 +100,69 @@
   @keyframes spiritbob{0%,100%{transform:translateY(-3px);}50%{transform:translateY(3px);}}
   .spirit canvas{animation:spiritbob var(--bd,3s) ease-in-out infinite;animation-delay:var(--dl,0s);will-change:transform;}
   /* ---------- shell ---------- */
+  /* ===== Rite of the Chalice ===== */
+  #chalOverlay{position:fixed;inset:0;z-index:60;background:rgba(5,9,7,.86);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:max(env(safe-area-inset-top,0),14px) 12px 40px}
+  #chalOverlay.show{display:flex}
+  #chalPanel{width:100%;max-width:520px;background:linear-gradient(180deg,#101a14,#0a120d);border:1px solid rgba(242,196,90,.3);border-radius:16px;box-shadow:0 18px 60px rgba(0,0,0,.6);overflow:hidden}
+  .chal-top{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid rgba(242,196,90,.18)}
+  .chal-title{font-family:'Silkscreen',monospace;font-size:14px;color:var(--candle,#F2C45A);letter-spacing:.03em}
+  .chal-x{background:none;border:none;color:var(--sage,#9FB3A3);font-size:18px;cursor:pointer;padding:2px 6px}
+  .chal-body{padding:14px 14px 18px;display:flex;flex-direction:column;gap:10px;align-items:stretch;text-align:center}
+  .chal-p,.chal-hint{font-size:12.5px;color:var(--sage,#9FB3A3);line-height:1.5;margin:0 auto;max-width:38ch}
+  .chal-hint{font-size:11px;opacity:.8}
+  .chal-sub{font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage,#9FB3A3);letter-spacing:.03em}
+  .chal-btn{font-family:'Silkscreen',monospace;font-size:12px;color:#E8DCC2;background:rgba(255,255,255,.04);border:1px solid rgba(242,196,90,.4);border-radius:11px;padding:12px 14px;cursor:pointer}
+  .chal-btn.gold{background:linear-gradient(180deg,rgba(242,196,90,.26),rgba(242,196,90,.06));border-color:#F2C45A;color:#FFE9A3}
+  .chal-btn.ghost{border-color:rgba(159,179,163,.3);color:var(--sage,#9FB3A3)}
+  .chal-btn:disabled{opacity:.4;cursor:default}
+  .chal-mini{font-family:'Silkscreen',monospace;font-size:10px;color:var(--sage,#9FB3A3);background:rgba(255,255,255,.03);border:1px solid rgba(242,196,90,.3);border-radius:8px;padding:7px 10px;cursor:pointer}
+  .chal-mini.ghost{border-color:rgba(159,179,163,.25)}
+  .chal-pills{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+  .chal-pill{font-size:12px;color:#E8DCC2;background:rgba(255,255,255,.04);border:1px solid rgba(242,196,90,.25);border-radius:999px;padding:5px 11px}
+  .chal-pill.mine{border-color:#F2C45A;color:#FFE9A3}
+  .chal-pill a{color:#cf4a3f;cursor:pointer;margin-left:4px}
+  .chal-meter{display:flex;gap:8px;align-items:center;justify-content:center;margin-bottom:2px}
+  .chal-meter .cg{width:22px;height:28px;opacity:.3} .chal-meter .cg.full{opacity:1;filter:drop-shadow(0 0 6px rgba(224,116,58,.7))}
+  .chal-deckn{font-family:'Silkscreen',monospace;font-size:9px;color:var(--sage,#9FB3A3);margin-left:6px}
+  .chal-turn{font-size:13px;color:#E8DCC2}
+  .chal-stage{display:flex;justify-content:center;margin:4px auto}
+  .chal-deckback{width:120px;aspect-ratio:5/7;border-radius:11px;border:1.5px solid #b9912f;background:repeating-linear-gradient(45deg,#10231a 0 7px,#0c1b14 7px 14px);display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .chal-deckback svg{width:54%;filter:drop-shadow(0 0 8px rgba(242,196,90,.4))}
+  .chal-q{font-size:12.5px;color:#E8DCC2;margin-bottom:4px}
+  .chal-pick,.chal-conf{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center}
+  .chal-chip{font-size:12px;color:#E8DCC2;background:rgba(255,255,255,.04);border:1px solid rgba(242,196,90,.3);border-radius:999px;padding:7px 12px;cursor:pointer}
+  .chal-chip.on{background:linear-gradient(180deg,rgba(242,196,90,.28),rgba(242,196,90,.06));border-color:#F2C45A;color:#FFE9A3}
+  .chal-laws{border:1px solid rgba(207,74,63,.3);border-radius:10px;padding:8px 10px;text-align:left;background:rgba(207,74,63,.05)}
+  .chal-lawhdr{font-family:'Silkscreen',monospace;font-size:9px;color:#cf8a3f;letter-spacing:.04em;margin-bottom:4px}
+  .chal-law{font-size:12px;color:#E8DCC2;margin:2px 0} .chal-law span{color:var(--sage,#9FB3A3);font-size:10px}
+  .chal-report{font-size:11.5px;color:#E8DCC2;margin:4px 0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .chal-report button{font-size:10px;background:rgba(207,74,63,.18);border:1px solid #cf4a3f;color:#ffd9d2;border-radius:7px;padding:3px 8px;cursor:pointer}
+  .chal-feed{text-align:left;font-size:11px;color:var(--sage,#9FB3A3);line-height:1.5;border-top:1px solid rgba(242,196,90,.12);padding-top:8px;max-height:120px;overflow-y:auto}
+  .chal-result{display:flex;flex-direction:column;gap:4px;max-width:280px;margin:4px auto}
+  .chal-row{display:flex;justify-content:space-between;font-size:13px;color:#E8DCC2;border-bottom:1px dashed rgba(242,196,90,.15);padding:4px 2px}
+  .chal-row b.pos{color:#6FB58A} .chal-row b.neg{color:#cf4a3f}
+  .chal-foot{margin-top:4px}
+  /* in-game card */
+  .chal-card{position:relative;aspect-ratio:5/7;border-radius:11px;overflow:hidden;background:linear-gradient(160deg,#142019,#0d1611 60%,#0a120d);border:1.5px solid var(--mech);box-shadow:0 0 0 1px rgba(0,0,0,.5) inset,0 6px 16px rgba(0,0,0,.45);display:flex;flex-direction:column;align-items:center;padding:7px 8px;color:#E8DCC2;width:120px}
+  .chal-card.big{width:210px;max-width:70vw;padding:11px 12px}
+  .chal-card::before{content:"";position:absolute;inset:4px;border:1px solid color-mix(in srgb,var(--mech) 45%,transparent);border-radius:8px;pointer-events:none}
+  .chal-card.mech-gain{--mech:#b9912f} .chal-card.mech-pen{--mech:#8f2a22} .chal-card.mech-chal{--mech:#b3502a}
+  .chal-corner{position:absolute;display:flex;flex-direction:column;align-items:center;line-height:1;z-index:2}
+  .chal-corner.tl{top:6px;left:8px} .chal-corner.br{bottom:6px;right:8px;transform:rotate(180deg)}
+  .chal-rank{font-weight:700;font-size:13px;color:#F2C45A;font-family:'Spectral',Georgia,serif} .chal-card.big .chal-rank{font-size:17px}
+  .chal-suit{width:13px;height:11px;margin-top:1px;display:block} .chal-card.big .chal-suit{width:17px;height:14px} .chal-suit svg{width:100%;height:100%;display:block}
+  .chal-emblem{flex:1;display:flex;align-items:center;justify-content:center;width:100%;margin-top:6px} .chal-emblem svg{width:62%;height:auto}
+  .chal-cname{font-variant:small-caps;letter-spacing:.04em;font-size:12.5px;color:#F2C45A;font-weight:600;line-height:1.15} .chal-card.big .chal-cname{font-size:17px}
+  .chal-cact{font-size:11.5px;color:#E8DCC2;opacity:.85;line-height:1.3;margin:4px 2px 0}
+  .chal-cdev{margin-top:5px;font-family:'Silkscreen',monospace;font-size:8.5px;color:var(--mech);border:1px solid var(--mech);border-radius:999px;padding:3px 8px;background:rgba(0,0,0,.25)}
+  .chal-card.mech-pen .chal-cdev{color:#cf4a3f} .chal-card.mech-chal .chal-cdev{color:#E0743A} .chal-card.mech-gain .chal-cdev{color:#E0B466}
+  .chal-mid{display:flex;justify-content:center;margin:6px 0} .chal-card-mini{width:120px}
+  .chal-pill.away{opacity:.45;border-style:dashed}
+  .chal-cd{font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage,#9FB3A3);margin-left:6px}
+  .chal-cd.low{color:#cf4a3f}
+  .chal-roster{border:1px solid rgba(242,196,90,.16);border-radius:10px;padding:8px 10px;text-align:center}
+  .chal-rejoin{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:6px}
+  .chal-rowbtns{margin-top:8px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
   #app{position:relative;z-index:5;max-width:720px;margin:0 auto;padding:18px 16px 120px;}
   header{text-align:center;padding:14px 0 6px;}
   .eyebrow{font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.32em;color:var(--sage);
@@ -3492,7 +3555,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27ce · lake visible (lit waterline · brighter night water)</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27cg · Chalice: host succession · rejoin · 2m turn timer · kick vote (needs grove_chalice.sql)</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4670,6 +4733,524 @@ function offeringCeremony(name){
   setInterval(()=>{ try{ if(typeof Snd!=='undefined' && Snd.fire) Snd.fire((MEM.fire&&MEM.fire.level)||0); }catch(e){} }, 5000);
   try{ syncOffering(); }catch(e){}
   addEventListener("resize",()=>{drawTrees();layoutGrove();});
+})();
+</script>
+<script>
+/* ============================================================
+   RITE OF THE CHALICE — live group ritual (King's Cup)
+   Self-contained, additive module. State lives in MEM.chalice.
+   All writes flow through communityAction({t:'chalice', state, commit}).
+   ============================================================ */
+(function(){
+'use strict';
+
+/* ---------- rite data (resolution metadata) ---------- */
+const CR=[
+ {r:'A', name:'The Cascade',       em:'cascade', mech:'gain', dev:'+5 all',          kind:'all',       conf:'nominee'},
+ {r:'2', name:'Twin Offering',     em:'twin',    mech:'gain', dev:'+5 each',         kind:'pick2',     conf:'giver',   each:5},
+ {r:'3', name:'The Eye Upon You',  em:'eye',     mech:'gain', dev:'+10',             kind:'self',      conf:'nominee', self:10},
+ {r:'4', name:'Shared Burden',     em:'burden',  mech:'gain', dev:'+10 you · +5 ea', kind:'pick2self', conf:'nominee', self:10, each:5},
+ {r:'5', name:'The Decree',        em:'decree',  mech:'pen',  dev:'−5 / break',      kind:'law',       conf:'nominee'},
+ {r:'6', name:'The Hidden Sign',   em:'hidden',  mech:'pen',  dev:'−10 last',        kind:'loser',     conf:'nominee', pen:10},
+ {r:'7', name:'Reach for the Eye', em:'reach',   mech:'pen',  dev:'−10 last',        kind:'loser',     conf:'nominee', pen:10},
+ {r:'8', name:'The Binding',       em:'binding', mech:'gain', dev:'+5 / linked',     kind:'bind',      conf:'giver',   each:5},
+ {r:'9', name:'The Incantation',   em:'incant',  mech:'pen',  dev:'−10 loser',       kind:'loser',     conf:'nominee', pen:10},
+ {r:'10',name:'The Litany',        em:'litany',  mech:'pen',  dev:'−10 loser',       kind:'loser',     conf:'nominee', pen:10},
+ {r:'J', name:'The Summons',       em:'summons', mech:'gain', dev:'+5 each',         kind:'summon',    conf:'nominee', each:5},
+ {r:'Q', name:'The Anointed',      em:'anointed',mech:'gain', dev:'+5 each',         kind:'anoint',    conf:'nominee', each:5},
+ {r:'K', name:'The Chalice',       em:'chalice', mech:'chal', dev:'drain +20',       kind:'king',      conf:'nominee', drain:20},
+];
+const ROMAN={'A':'A','2':'II','3':'III','4':'IV','5':'V','6':'VI','7':'VII','8':'VIII','9':'IX','10':'X','J':'J','Q':'Q','K':'K'};
+const SUITS=[
+ {k:'fire', col:'#E0743A', g:'<svg viewBox="0 0 24 24"><path d="M13 2c1 4 5 5 5 10a6 6 0 0 1-12 0c0-3 2-4 3-6 .5 2 2 2 2.5 .8C12 5 12 4 13 2Z" fill="currentColor"/></svg>'},
+ {k:'eye',  col:'#F2C45A', g:'<svg viewBox="0 0 24 16"><path d="M2 8Q12 1 22 8Q12 15 2 8Z" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="8" r="3" fill="currentColor"/></svg>'},
+ {k:'skull',col:'#D2C9B2', g:'<svg viewBox="0 0 24 24"><path d="M12 2.5c4.4 0 7.5 3.3 7.5 7.5 0 2.6-1.3 4.4-3 5.5v1.6c0 .8-.6 1.4-1.4 1.4H8.9c-.8 0-1.4-.6-1.4-1.4V15.5c-1.7-1.1-3-2.9-3-5.5C4.5 5.8 7.6 2.5 12 2.5Z" fill="currentColor"/><circle cx="8.8" cy="10" r="1.9" fill="#0a120d"/><circle cx="15.2" cy="10" r="1.9" fill="#0a120d"/><path d="M12 12.6l-1 2.2h2l-1-2.2Z" fill="#0a120d"/><path d="M10 17.9v1.9M12 17.9v2.1M14 17.9v1.9" stroke="#0a120d" stroke-width="0.9" stroke-linecap="round"/></svg>'},
+ {k:'blood',col:'#D14338', g:'<svg viewBox="0 0 24 24"><path d="M12 3C12 3 5 12 5 16a7 7 0 0 0 14 0C19 12 12 3 12 3Z" fill="currentColor"/></svg>'},
+];
+
+/* ---------- emblem engine (Eye, retold) ---------- */
+function eyeAt(cx,cy,w,h,c,sw){ sw=sw||3.2; const x0=cx-w/2,x1=cx+w/2;
+  return '<path d="M'+x0+' '+cy+' Q'+cx+' '+(cy-h)+' '+x1+' '+cy+' Q'+cx+' '+(cy+h)+' '+x0+' '+cy+' Z" fill="none" stroke="'+c+'" stroke-width="'+sw+'" stroke-linejoin="round"/>'
+    +'<circle cx="'+cx+'" cy="'+cy+'" r="'+(h*0.5).toFixed(1)+'" fill="'+c+'"/>'
+    +'<circle cx="'+cx+'" cy="'+cy+'" r="'+(h*0.22).toFixed(1)+'" fill="#0c1410"/>'; }
+function drop(x,y,c){ return '<path d="M'+x+' '+y+' c4.4 4 4.4 9.6 0 12.6 c-4.4 -3 -4.4 -8.6 0 -12.6 Z" fill="'+c+'"/>'; }
+function L(x1,y1,x2,y2,c,w){ return '<path d="M'+x1+' '+y1+' L'+x2+' '+y2+'" stroke="'+c+'" stroke-width="'+(w||2.2)+'" stroke-linecap="round"/>'; }
+function crack(c){ return '<path d="M50 22 L45 38 L54 46 L47 58" fill="none" stroke="'+c+'" stroke-width="2" stroke-linecap="round" opacity=".9"/>'; }
+function emblem(key,mech){
+  const c = mech==='pen' ? '#df5a4f' : (mech==='chal' ? '#F0A85A' : '#F2C45A');
+  switch(key){
+    case 'cascade': return eyeAt(50,34,56,18,c)+drop(50,52,c)+drop(50,67,c)+drop(50,82,c)+L(50,49,50,52,c,1.4)+L(50,64,50,67,c,1.4)+L(50,79,50,82,c,1.4);
+    case 'twin':    return eyeAt(33,46,32,13,c)+eyeAt(67,46,32,13,c);
+    case 'eye':     return eyeAt(50,48,64,24,c,3.6)+'<g stroke="'+c+'" stroke-width="2" stroke-linecap="round">'+L(50,16,50,24,c)+L(50,72,50,80,c)+L(18,48,10,48,c)+L(82,48,90,48,c)+L(27,27,22,22,c)+L(73,27,78,22,c)+L(27,69,22,74,c)+L(73,69,78,74,c)+'</g>';
+    case 'burden':  return eyeAt(50,34,50,16,c)+L(28,66,72,66,c,2.6)+'<circle cx="28" cy="66" r="5" fill="none" stroke="'+c+'" stroke-width="2.4"/><circle cx="72" cy="66" r="5" fill="none" stroke="'+c+'" stroke-width="2.4"/>'+L(40,50,40,66,c,1.8)+L(60,50,60,66,c,1.8);
+    case 'decree':  return eyeAt(50,30,46,14,c)+'<rect x="33" y="52" width="34" height="34" rx="3" fill="none" stroke="'+c+'" stroke-width="2.6"/>'+L(40,62,60,62,c,1.8)+L(40,69,60,69,c,1.8)+L(40,76,54,76,c,1.8)+crack(c);
+    case 'hidden':  return eyeAt(50,30,44,13,c)+'<path d="M43 46 q7 -4 14 0 v22 q0 8 -7 8 q-7 0 -7 -8 Z" fill="none" stroke="'+c+'" stroke-width="2.6" stroke-linejoin="round"/>'+'<path d="M45.5 70 q4.5 3.5 9 0" fill="none" stroke="'+c+'" stroke-width="1.6"/>'+L(28,80,72,80,c,2.6)+crack(c);
+    case 'reach':   return eyeAt(50,38,50,16,c)+'<g fill="none" stroke="'+c+'" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M30 86 L38 64 L44 80"/><path d="M70 86 L62 64 L56 80"/></g>'+crack(c);
+    case 'binding': return eyeAt(31,34,28,12,c)+eyeAt(69,34,28,12,c)+L(31,42,47,56,c,2)+L(69,42,53,56,c,2)+'<path d="M50 54 C39 54 39 67 50 67 C61 67 61 80 50 80 C39 80 39 67 50 67 C61 67 61 54 50 54 Z" fill="none" stroke="'+c+'" stroke-width="2.5" stroke-linejoin="round"/>';
+    case 'incant':  return eyeAt(50,48,48,18,c)+'<g fill="none" stroke="'+c+'" stroke-width="2" stroke-linecap="round"><path d="M14 38 Q8 48 14 58"/><path d="M8 32 Q-1 48 8 64"/><path d="M86 38 Q92 48 86 58"/><path d="M92 32 Q101 48 92 64"/></g>'+crack(c);
+    case 'litany':  return eyeAt(50,32,46,14,c)+'<g stroke="'+c+'" stroke-width="2.6" stroke-linecap="round">'+L(38,58,38,82,c,2.6)+L(46,58,46,82,c,2.6)+L(54,58,54,82,c,2.6)+L(62,58,62,82,c,2.6)+L(34,80,66,60,c,2.6)+'</g>';
+    case 'summons': return eyeAt(50,38,48,16,c)+'<rect x="36" y="58" width="28" height="28" rx="5" fill="none" stroke="'+c+'" stroke-width="2.6"/><circle cx="44" cy="66" r="2.4" fill="'+c+'"/><circle cx="56" cy="78" r="2.4" fill="'+c+'"/><circle cx="50" cy="72" r="2.4" fill="'+c+'"/>';
+    case 'anointed':return eyeAt(50,54,52,19,c)+'<path d="M28 32 L33 14 L42 26 L50 10 L58 26 L67 14 L72 32 Z" fill="none" stroke="'+c+'" stroke-width="2.6" stroke-linejoin="round"/><circle cx="33" cy="14" r="2.2" fill="'+c+'"/><circle cx="50" cy="10" r="2.2" fill="'+c+'"/><circle cx="67" cy="14" r="2.2" fill="'+c+'"/>';
+    case 'chalice': return eyeAt(50,26,40,13,c,3)+'<g fill="none" stroke="'+c+'" stroke-width="2.6" stroke-linecap="round">'+L(50,40,50,46,c,2)+'<path d="M34 52 Q50 70 66 52 Z" stroke-linejoin="round"/>'+L(50,68,50,82,c,2.8)+L(38,86,62,86,c,2.8)+'<path d="M40 46 Q50 38 60 46"/></g>';
+  }
+  return eyeAt(50,46,56,20,c);
+}
+function cardFace(ri,si,big){
+  const R=CR[ri], S=SUITS[si];
+  const suit='<span class="chal-suit" style="color:'+S.col+'">'+S.g+'</span>';
+  return '<div class="chal-card mech-'+R.mech+(big?' big':'')+'">'
+    +'<div class="chal-corner tl"><span class="chal-rank">'+(ROMAN[R.r]||R.r)+'</span>'+suit+'</div>'
+    +'<div class="chal-corner br"><span class="chal-rank">'+(ROMAN[R.r]||R.r)+'</span>'+suit+'</div>'
+    +'<div class="chal-emblem"><svg viewBox="0 0 100 100">'+emblem(R.em,R.mech)+'</svg></div>'
+    +'<div class="chal-cname">'+R.name+'</div>'
+    +(big?'<div class="chal-cact">'+R.act4()+'</div>':'')
+    +'<div class="chal-cdev">'+R.dev+'</div></div>';
+}
+CR.forEach(R=>{ R.act4=function(){ return ({
+  'A':'Chain-drink around the circle — none stop until the one before them stops.',
+  '2':'Send two spirits to drink — or one of them twice.',
+  '3':'The Eye falls on you. You drink.',
+  '4':'Choose two to drink; you drink twice over.',
+  '5':'Lay down a law until the rite ends. Breakers are reported.',
+  '6':'Press your thumb to the earth. The last to follow loses.',
+  '7':'All hands to the sky. The last to raise loses.',
+  '8':'Bind a mate — they drink whenever you do. Holds until the next Binding.',
+  '9':'Speak a word; rhyme around. First to break or repeat loses.',
+  '10':'Name a category; round it goes. First to falter loses.',
+  'J':'A rank present is chosen by lot — every spirit of that rank drinks.',
+  'Q':'Name a rank — every spirit who holds it drinks.',
+  'K':'Pour into the Chalice. The fourth King drains it — and ends the rite.'
+})[R.r]; }; });
+
+/* ---------- helpers ---------- */
+function GC(){ return MEM.chalice||null; }
+function me(){ return (typeof VOTER!=='undefined'&&VOTER)?VOTER:''; }
+function hands(){ try{ return JSON.parse(localStorage.getItem('chal-hands')||'[]'); }catch(e){ return []; } }
+function setHands(a){ try{ localStorage.setItem('chal-hands', JSON.stringify(a||[])); }catch(e){} }
+function controls(name){ return hands().indexOf(name)>=0; }
+function members(){ return (MEM.members||[]); }
+function memNames(){ return members().map(m=>m.name); }
+function clone(o){ try{ return JSON.parse(JSON.stringify(o)); }catch(e){ return o; } }
+function nowS(){ return Math.floor(Date.now()/1000); }
+function tierOf(name){ const m=(typeof memByName==='function')?memByName(name):members().find(x=>x.name===name); return (typeof tierIndex==='function')?tierIndex((m&&m.points)||0):0; }
+function tierName(ti){ try{ return tiers()[ti].name; }catch(e){ return 'rank '+ti; } }
+function shuffleDeck(){ const d=[]; for(let ri=0;ri<13;ri++)for(let si=0;si<4;si++)d.push([ri,si]); for(let i=d.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=d[i]; d[i]=d[j]; d[j]=t; } return d; }
+function thr(n){ return Math.max(1, Math.ceil(n/3)); }
+const TURN_SECS=120;
+function isAway(n,s){ return !!((n.away&&n.away[s])||(n.kicked&&n.kicked[s])); }
+function liveSpirits(n){ return (n.spirits||[]).filter(s=>!isAway(n,s)); }
+function advanceTurn(n){ const L=(n.spirits||[]).length; for(let k=1;k<=L;k++){ const idx=(n.turn+k)%L; if(!isAway(n,n.spirits[idx])){ n.turn=idx; return true; } } return false; }
+function firstLiveHost(n, exclude){ for(let i=0;i<(n.spirits||[]).length;i++){ const s=n.spirits[i]; if(s!==exclude && !isAway(n,s)) return s; } return null; }
+function setDeadline(n){ n.deadline = nowS()+TURN_SECS; }
+function fmtCd(s){ s=Math.max(0,s|0); return Math.floor(s/60)+':'+('0'+(s%60)).slice(-2); }
+
+/* ---------- send (persist blob, optional commit) ---------- */
+let BUSY=false;
+async function send(state, commit){
+  if(BUSY) return; BUSY=true;
+  const a={t:'chalice', state:state}; if(commit) a.commit=commit;
+  try{
+    if(typeof MODE!=='undefined' && MODE==='remote'){
+      let online=true; try{ online=navigator.onLine; }catch(_){}
+      if(online){
+        try{ await sbRpc('grove_chalice',{p_action:a}); await refreshRemote(); }
+        catch(e){ if(typeof isNetErr==='function'&&isNetErr(e)){ window.applyAction(a); try{cacheRemote();}catch(_){} try{enqueueOp('grove_chalice',{p_action:a});}catch(_){} } else { try{ toast('Run grove_chalice.sql in Supabase to enable the Rite.'); }catch(_){}}}
+      } else { window.applyAction(a); try{cacheRemote();}catch(_){} try{enqueueOp('grove_chalice',{p_action:a});}catch(_){} }
+    } else { window.applyAction(a); if(typeof saveData==='function') await saveData(); }
+  }catch(e){}
+  BUSY=false; render();
+}
+
+/* ---------- transitions ---------- */
+function openLobby(){
+  const who=me(); if(!who){ try{ switchIdentity(); }catch(e){} return; }
+  const g={ status:'lobby', nominee:who, spirits:[who], deck:[], drawn:0, turn:0, kings:0,
+    current:null, phase:'lobby', tally:{}, laws:[], reports:[], reportCd:{}, bind:null, feed:[],
+    away:{}, kicked:{}, kicks:[], deadline:0, started:0, ended:0 };
+  setHands([who]); send(g);
+}
+function joinGame(){
+  const g=GC(); if(!g||g.status!=='lobby') return; const who=me();
+  if(!who){ try{ switchIdentity(); }catch(e){} return; }
+  if(g.spirits.indexOf(who)>=0){ if(!controls(who)) setHands(hands().concat([who])); render(); return; }
+  if(g.spirits.length>=20){ toast('The circle is full (20).'); return; }
+  const n=clone(g); n.spirits.push(who); setHands(hands().concat([who])); send(n);
+}
+function addSpirit(){
+  const g=GC(); if(!g||g.status!=='lobby') return;
+  const pool=memNames().filter(nm=>g.spirits.indexOf(nm)<0);
+  if(!pool.length){ toast('Every spirit has joined.'); return; }
+  const nm=prompt('Add another spirit to THIS phone:\n'+pool.join(', '));
+  if(!nm) return; const match=pool.find(p=>p.toLowerCase()===nm.trim().toLowerCase());
+  if(!match){ toast('No unjoined spirit by that name.'); return; }
+  if(g.spirits.length>=20){ toast('The circle is full (20).'); return; }
+  const n=clone(g); n.spirits.push(match); setHands(hands().concat([match])); send(n);
+}
+function leaveLobby(nm){
+  const g=GC(); if(!g||g.status!=='lobby') return;
+  if(nm===g.nominee){ toast('The nominee cannot leave — end the rite instead.'); return; }
+  const n=clone(g); n.spirits=n.spirits.filter(s=>s!==nm); setHands(hands().filter(s=>s!==nm)); send(n);
+}
+function startGame(){
+  const g=GC(); if(!g||g.status!=='lobby') return; if(g.nominee!==me()&&!controls(g.nominee)){ toast('Only the nominee may begin.'); return; }
+  if(g.spirits.length<4){ toast('Four spirits are needed to begin.'); return; }
+  const n=clone(g); n.status='playing'; n.phase='draw'; n.deck=shuffleDeck(); n.turn=0; n.started=nowS(); setDeadline(n);
+  n.feed=[{t:nowS(),x:'The rite begins. '+n.spirits[0]+' draws first.'}]; send(n);
+}
+function curDrawer(){ const g=GC(); return g&&g.spirits?g.spirits[g.turn%g.spirits.length]:null; }
+function feedPush(n,x){ n.feed=n.feed||[]; n.feed.unshift({t:nowS(),x:x}); if(n.feed.length>30)n.feed.length=30; }
+
+function draw(){
+  const g=GC(); if(!g||g.status!=='playing'||g.phase!=='draw') return;
+  const drawer=curDrawer(); if(!controls(drawer)){ toast('It is '+drawer+'\u2019s draw.'); return; }
+  if(!g.deck.length){ return endGame('The deck is spent.'); }
+  const n=clone(g); const [ri,si]=n.deck.shift(); n.drawn++;
+  const R=CR[ri]; n.current={ri,si,drawer,picks:[],tier:null,law:'',loser:null};
+  // auto-resolve setup
+  if(R.kind==='summon'){ const present=[...new Set(n.spirits.map(tierOf))]; n.current.tier=present[Math.floor(Math.random()*present.length)]; }
+  // phase: needs drawer input?
+  if(R.kind==='pick2'||R.kind==='pick2self'||R.kind==='bind'||R.kind==='anoint'||R.kind==='law'){ n.phase='resolve'; }
+  else { n.phase='confirm'; }
+  setDeadline(n);
+  feedPush(n, drawer+' draws '+R.name+'.');
+  send(n);
+}
+
+function tallyAdd(n,name,d){ n.tally=n.tally||{}; n.tally[name]=(n.tally[name]||0)+d; }
+
+function submitPicks(picks){
+  const g=GC(); if(!g||g.phase!=='resolve'||!g.current) return; const R=CR[g.current.ri];
+  if(!controls(g.current.drawer)){ toast('Only '+g.current.drawer+' may choose.'); return; }
+  const n=clone(g); n.current.picks=picks.slice();
+  if(R.kind==='pick2'){ // giver self-resolves
+    picks.forEach(p=>tallyAdd(n,p,R.each)); feedPush(n,g.current.drawer+' sends '+picks.join(' & ')+' to drink.'); resolveDone(n);
+  } else if(R.kind==='bind'){
+    n.bind={owner:g.current.drawer, mate:picks[0]}; tallyAdd(n,picks[0],R.each); feedPush(n,g.current.drawer+' binds '+picks[0]+'.'); resolveDone(n);
+  } else { // pick2self -> nominee confirm
+    n.phase='confirm'; send(n); return;
+  }
+  send(n);
+}
+function submitTier(ti){
+  const g=GC(); if(!g||g.phase!=='resolve'||!g.current) return;
+  if(!controls(g.current.drawer)){ toast('Only '+g.current.drawer+' may choose.'); return; }
+  const n=clone(g); n.current.tier=ti; n.phase='confirm'; send(n);
+}
+function submitLaw(){
+  const g=GC(); if(!g||g.phase!=='resolve'||!g.current) return;
+  if(!controls(g.current.drawer)){ toast('Only '+g.current.drawer+' may decree.'); return; }
+  const txt=prompt('Decree a law that holds until the rite ends:');
+  if(!txt||!txt.trim()) return;
+  const n=clone(g); n.current.law=txt.trim(); n.phase='confirm'; send(n);
+}
+function pickLoser(nm){
+  const g=GC(); if(!g||g.phase!=='confirm'||!g.current) return;
+  if(g.nominee!==me()&&!controls(g.nominee)){ toast('The nominee names the loser.'); return; }
+  const n=clone(g); n.current.loser=nm; send(n);
+}
+
+function confirmCard(){
+  const g=GC(); if(!g||g.phase!=='confirm'||!g.current) return; const R=CR[g.current.ri]; const c=g.current;
+  // who may confirm
+  if(R.conf==='nominee'){ if(g.nominee!==me()&&!controls(g.nominee)){ toast('The nominee confirms this.'); return; } }
+  const n=clone(g);
+  if(R.kind==='all'){ n.spirits.forEach(s=>tallyAdd(n,s,5)); feedPush(n,'The Cascade — all drink (+5).'); }
+  else if(R.kind==='self'){ tallyAdd(n,c.drawer,R.self); feedPush(n,c.drawer+' drinks (+'+R.self+').'); if(n.bind&&n.bind.owner===c.drawer){ tallyAdd(n,n.bind.mate,5); feedPush(n,n.bind.mate+' is bound — also drinks (+5).'); } }
+  else if(R.kind==='pick2self'){ tallyAdd(n,c.drawer,R.self); (c.picks||[]).forEach(p=>tallyAdd(n,p,R.each)); feedPush(n,c.drawer+' drinks twice; '+(c.picks||[]).join(' & ')+' drink.'); }
+  else if(R.kind==='law'){ n.laws.push({id:'L'+nowS()+Math.floor(Math.random()*999), text:c.law, by:c.drawer, t:nowS()}); feedPush(n,c.drawer+' decrees: \u201c'+c.law+'\u201d'); }
+  else if(R.kind==='loser'){ if(!c.loser){ toast('Name the loser first.'); return; } tallyAdd(n,c.loser,-R.pen); feedPush(n,c.loser+' lost '+R.name+' (\u2212'+R.pen+').'); }
+  else if(R.kind==='summon'){ const tg=n.spirits.filter(s=>tierOf(s)===c.tier); tg.forEach(s=>tallyAdd(n,s,R.each)); feedPush(n,'The Summons calls '+tierName(c.tier)+' \u2014 '+(tg.join(', ')||'none')+' drink.'); }
+  else if(R.kind==='anoint'){ const tg=n.spirits.filter(s=>tierOf(s)===c.tier); tg.forEach(s=>tallyAdd(n,s,R.each)); feedPush(n,c.drawer+' anoints '+tierName(c.tier)+' \u2014 '+(tg.join(', ')||'none')+' drink.'); }
+  else if(R.kind==='king'){ n.kings=(n.kings||0)+1; if(n.kings>=4){ tallyAdd(n,c.drawer,R.drain); feedPush(n,c.drawer+' drains the Chalice (+'+R.drain+')!'); n.current=null; return endGameState(n,'The Chalice is drained.'); } else { feedPush(n,c.drawer+' pours into the Chalice ('+n.kings+'/4).'); } }
+  resolveDone(n); send(n);
+}
+function resolveDone(n){
+  n.current=null; n.phase='draw';
+  if(!advanceTurn(n)){ return endGameState(n,'No spirits remain in the circle.'); }
+  if(!n.deck.length){ return endGameState(n,'The deck is spent.'); }
+  setDeadline(n);
+  feedPush(n, n.spirits[n.turn]+' to draw.');
+}
+
+/* ---------- Decree reports ---------- */
+function report(){
+  const g=GC(); if(!g||g.status!=='playing'||!(g.laws||[]).length) return; const who=me();
+  if(!who){ toast('Pick your spirit first.'); return; }
+  const acc=prompt('Report who broke a law? (name)\nPlaying: '+g.spirits.join(', '));
+  if(!acc) return; const accused=g.spirits.find(s=>s.toLowerCase()===acc.trim().toLowerCase());
+  if(!accused){ toast('No such spirit in the rite.'); return; }
+  const cd=(g.reportCd||{})[accused]||0; if(nowS()-cd<60){ toast('That spirit was just judged — let it rest a moment.'); return; }
+  const n=clone(g); n.reports=n.reports||[]; n.reports.push({id:'R'+nowS()+Math.floor(Math.random()*999), accused:accused, by:who, agrees:[who], t:nowS(), status:'open'}); feedPush(n, who+' reports '+accused+' for breaking a law.'); send(n);
+}
+function agreeReport(id){
+  const g=GC(); if(!g) return; const who=me(); if(!who) return;
+  const r=(g.reports||[]).find(x=>x.id===id); if(!r||r.status!=='open') return;
+  if(r.accused===who){ toast('You cannot judge your own report.'); return; }
+  if(r.agrees.indexOf(who)>=0){ toast('You already agreed.'); return; }
+  const n=clone(g); const nr=n.reports.find(x=>x.id===id); nr.agrees.push(who);
+  if(nr.agrees.length>=thr(n.spirits.length)){ nr.status='passed'; tallyAdd(n,nr.accused,-5); n.reportCd=n.reportCd||{}; n.reportCd[nr.accused]=nowS(); feedPush(n,nr.accused+' is judged \u2014 the law was broken (\u22125, and a drink).'); }
+  send(n);
+}
+
+/* ---------- leave / rejoin / host succession / kick ---------- */
+function leaveGame(){
+  const g=GC(); if(!g) return; const mine=hands();
+  if(!mine.length){ closeUI(); return; }
+  const n=clone(g); n.away=n.away||{}; let leftNom=false; let any=false;
+  mine.forEach(s=>{ if((n.spirits||[]).indexOf(s)<0) return; any=true;
+    if(n.status==='lobby'){ n.spirits=n.spirits.filter(x=>x!==s); if(n.away)delete n.away[s]; }
+    else { n.away[s]=true; }
+    if(s===n.nominee) leftNom=true;
+  });
+  if(!any){ setHands([]); closeUI(); return; }
+  if(leftNom){ const h=firstLiveHost(n,null); if(h){ n.nominee=h; feedPush(n,'The host stepped away \u2014 '+h+' now keeps the rite.'); } }
+  if(n.status==='lobby' && n.spirits.length===0){ n.status='idle'; }
+  if(n.status==='playing'){ if(isAway(n, n.spirits[n.turn])){ n.current=null; if(advanceTurn(n)){ n.phase='draw'; setDeadline(n); } else { setHands([]); return endGameState(n,'All spirits have left the circle.'); } } }
+  setHands([]); feedPush(n,'A spirit steps away from the circle.'); send(n);
+}
+function rejoin(nm){
+  const g=GC(); if(!g) return;
+  if((g.spirits||[]).indexOf(nm)<0){ toast('That spirit never joined this rite.'); return; }
+  if(g.kicked&&g.kicked[nm]){ toast(nm+' was cast out and cannot return.'); return; }
+  const n=clone(g); n.away=n.away||{}; delete n.away[nm];
+  const hs=hands(); if(hs.indexOf(nm)<0) hs.push(nm); setHands(hs);
+  feedPush(n, nm+' returns to the circle.'); send(n);
+}
+function proposeKick(){
+  const g=GC(); if(!g||(g.status!=='playing'&&g.status!=='lobby')) return; const who=me();
+  if(!who){ toast('Pick your spirit first.'); return; }
+  const live=liveSpirits(g).filter(s=>!controls(s));
+  if(!live.length){ toast('No one to cast out.'); return; }
+  const t=prompt('Cast out which spirit? (half the circle must agree)\n'+live.join(', '));
+  if(!t) return; const target=(g.spirits||[]).find(s=>s.toLowerCase()===t.trim().toLowerCase());
+  if(!target||isAway(g,target)){ toast('No such spirit in the rite.'); return; }
+  if(controls(target)){ toast('You cannot cast out your own spirit.'); return; }
+  const n=clone(g); n.kicks=n.kicks||[];
+  if(n.kicks.find(k=>k.target===target&&k.status==='open')){ toast('A vote is already open for '+target+'.'); return; }
+  n.kicks.push({id:'K'+nowS()+Math.floor(Math.random()*999), target:target, by:who, agrees:[who], status:'open', t:nowS()});
+  feedPush(n, who+' calls to cast out '+target+'.'); send(n);
+}
+function agreeKick(id){
+  const g=GC(); if(!g) return; const who=me(); if(!who) return;
+  const k=(g.kicks||[]).find(x=>x.id===id); if(!k||k.status!=='open') return;
+  if(k.target===who||controls(k.target)){ toast('You cannot vote on your own removal.'); return; }
+  if(k.agrees.indexOf(who)>=0){ toast('You already agreed.'); return; }
+  const n=clone(g); const nk=n.kicks.find(x=>x.id===id); nk.agrees.push(who);
+  const need=Math.max(2, Math.ceil(liveSpirits(n).length/2));
+  if(nk.agrees.length>=need){
+    nk.status='passed'; n.away=n.away||{}; n.kicked=n.kicked||{}; n.away[nk.target]=true; n.kicked[nk.target]=true;
+    feedPush(n, nk.target+' is cast out of the rite.');
+    if(n.nominee===nk.target){ const h=firstLiveHost(n,null); if(h){ n.nominee=h; feedPush(n, h+' now keeps the rite.'); } }
+    if(n.status==='playing' && isAway(n, n.spirits[n.turn])){ n.current=null; if(advanceTurn(n)){ n.phase='draw'; setDeadline(n); } else { return endGameState(n,'No spirits remain in the circle.'); } }
+  }
+  send(n);
+}
+
+/* ---------- end ---------- */
+function endGame(reason){
+  const g=GC(); if(!g) return;
+  if(g.status==='lobby'){ const n=clone(g); n.status='idle'; send(n); return; }
+  if(g.nominee!==me()&&!controls(g.nominee)){ toast('Only the nominee may end the rite.'); return; }
+  if(!confirm('End the Rite of the Chalice now? Each spirit\u2019s Devotion will commit.')) return;
+  endGameState(clone(g), reason||'The nominee ends the rite.', true);
+}
+function endGameState(n, reason, immediate){
+  n.status='ended'; n.phase='ended'; n.ended=nowS(); n.endReason=reason; feedPush(n, reason+' The rite is sealed.');
+  const commit=[]; const tl=n.tally||{};
+  Object.keys(tl).forEach(name=>{ const d=tl[name]; if(d) commit.push({name:name, delta:d}); });
+  send(n, commit);
+}
+function dismiss(){ const g=GC(); if(!g) return; if(g.nominee!==me()&&!controls(g.nominee)){ closeUI(); return; } const n=clone(g); n.status='idle'; setHands([]); send(n); }
+
+/* ---------- applyAction mirror (local / offline) ---------- */
+const _origApply = window.applyAction;
+window.applyAction = function(a){
+  if(a && a.t==='chalice'){
+    MEM.chalice = a.state || null;
+    if(a.commit && a.commit.length){ a.commit.forEach(c=>{ const m=(typeof memByName==='function')?memByName(c.name):null; if(m){ m.points=Math.max(0,(m.points||0)+c.delta); m.season=Math.max(0,(m.season||0)+c.delta); m.history=m.history||[]; m.history.push({t:nowS(), d:c.delta, l:'Rite of the Chalice'}); } }); }
+    return;
+  }
+  return _origApply ? _origApply.apply(this, arguments) : undefined;
+};
+
+/* ====================== UI ====================== */
+function ensureOverlay(){
+  let o=document.getElementById('chalOverlay');
+  if(!o){ o=document.createElement('div'); o.id='chalOverlay'; o.innerHTML='<div id="chalPanel"></div>'; document.body.appendChild(o); o.addEventListener('click',e=>{ if(e.target===o) closeUI(); }); }
+  return o;
+}
+function openUI(){ ensureOverlay().classList.add('show'); render(); startPoll(); startTick(); }
+function closeUI(){ const o=document.getElementById('chalOverlay'); if(o)o.classList.remove('show'); if(POLL){ clearInterval(POLL); POLL=0; } if(TICK){ clearInterval(TICK); TICK=0; } }
+let POLL=0, TICK=0;
+function startTick(){ if(TICK) return; TICK=setInterval(()=>{ const o=document.getElementById('chalOverlay'); if(!o||!o.classList.contains('show')){ clearInterval(TICK); TICK=0; return; } const el=document.getElementById('chalCD'); const g=GC(); if(el&&g&&g.deadline){ el.textContent=fmtCd(g.deadline-nowS()); } }, 1000); }
+function startPoll(){ if(POLL) return; POLL=setInterval(async()=>{
+  const o=document.getElementById('chalOverlay'); if(!o||!o.classList.contains('show')){ clearInterval(POLL); POLL=0; return; }
+  let g=GC(); const editing=g&&g.current&&(g.current.picks||[]).length>0&&controls(g.current.drawer);
+  if(typeof MODE!=='undefined'&&MODE==='remote'&&!editing){ try{ await refreshRemote(); }catch(e){} }
+  g=GC();
+  if(g&&g.status==='playing'&&(g.nominee===me()||controls(g.nominee))){
+    const drawerAway=isAway(g, g.spirits[g.turn]);
+    const timedOut=g.deadline&&nowS()>g.deadline;
+    if(drawerAway||timedOut){
+      const n=clone(g); feedPush(n, drawerAway?'An absent spirit\u2019s turn is skipped.':(n.spirits[n.turn]+'\u2019s turn ran out \u2014 skipped.')); n.current=null;
+      if(advanceTurn(n)){ n.phase='draw'; setDeadline(n); send(n); return; }
+      else { endGameState(n,'No spirits remain in the circle.'); return; }
+    }
+  }
+  render();
+}, 2200); }
+
+function chip(nm, on, click){ return '<button class="chal-chip'+(on?' on':'')+'" onclick="'+click+'">'+nm+'</button>'; }
+
+function render(){
+  const o=document.getElementById('chalOverlay'); if(!o||!o.classList.contains('show')) return;
+  const p=document.getElementById('chalPanel'); const g=GC();
+  let h='<div class="chal-top"><div class="chal-title">Rite of the Chalice</div><button class="chal-x" onclick="closeUI()">\u2715</button></div>';
+  if(!g || g.status==='idle' || !g.status){ h+=renderIntro(); }
+  else if(g.status==='lobby'){ h+=renderLobby(g); }
+  else if(g.status==='playing'){ h+=renderPlay(g); }
+  else if(g.status==='ended'){ h+=renderEnded(g); }
+  p.innerHTML=h;
+}
+function renderIntro(){
+  return '<div class="chal-body"><p class="chal-p">A 52-card King\u2019s Cup for the Order. A nominee opens the circle; spirits join (a phone may hold several). Devotion rides a hidden tally and commits as one line when the rite ends.</p>'
+    +'<div class="chal-mid"><div class="chal-card-mini">'+cardFace(12,1,false)+'</div></div>'
+    +'<button class="chal-btn gold" onclick="chalAPI.open()">Open the circle</button>'
+    +'<p class="chal-hint">Min 4 spirits \u00b7 max 20.</p></div>';
+}
+function renderLobby(g){
+  const isNom = g.nominee===me()||controls(g.nominee);
+  let list=g.spirits.map(s=>'<span class="chal-pill'+(controls(s)?' mine':'')+'">'+s+(s===g.nominee?' \u2726':'')+(controls(s)&&s!==g.nominee?' <a onclick="chalAPI.leave(\''+s+'\')">\u2715</a>':'')+'</span>').join('');
+  const joined=g.spirits.indexOf(me())>=0;
+  let h='<div class="chal-body"><div class="chal-sub">The circle is forming \u00b7 '+g.spirits.length+'/20</div>';
+  h+='<div class="chal-pills">'+list+'</div>';
+  if(!joined) h+='<button class="chal-btn gold" onclick="chalAPI.join()">Join the rite</button>';
+  h+='<button class="chal-btn" onclick="chalAPI.addSpirit()">+ Add another spirit to this phone</button>';
+  if(isNom){ h+='<button class="chal-btn '+(g.spirits.length>=4?'gold':'')+'" '+(g.spirits.length<4?'disabled':'')+' onclick="chalAPI.start()">Begin the rite ('+g.spirits.length+'/4)</button>'; }
+  else { h+='<p class="chal-hint">Waiting for '+g.nominee+' to begin\u2026</p>'; }
+  if(joined) h+='<button class="chal-btn ghost" onclick="chalAPI.leaveAll()">Leave the rite</button>';
+  if(isNom) h+='<button class="chal-mini ghost" style="align-self:center" onclick="chalAPI.end()">Close the circle entirely</button>';
+  h+='</div>'; return h;
+}
+function lawsStrip(g){
+  if(!(g.laws||[]).length) return '';
+  let h='<div class="chal-laws"><div class="chal-lawhdr">Active Laws</div>';
+  h+=g.laws.map(l=>'<div class="chal-law">\u00a7 \u201c'+l.text+'\u201d <span>\u2014 '+l.by+'</span></div>').join('');
+  const openR=(g.reports||[]).filter(r=>r.status==='open');
+  if(openR.length){ h+=openR.map(r=>{ const can=me()&&r.accused!==me()&&r.agrees.indexOf(me())<0; return '<div class="chal-report">\u2696 '+r.by+' reports <b>'+r.accused+'</b> ('+r.agrees.length+'/'+thr(g.spirits.length)+') '+(can?'<button onclick="chalAPI.agree(\''+r.id+'\')">Agree</button>':'')+'</div>'; }).join(''); }
+  h+='<button class="chal-mini" onclick="chalAPI.report()">Report a law-breaker</button>';
+  h+='</div>'; return h;
+}
+function feedStrip(g){ const f=(g.feed||[]).slice(0,6); if(!f.length) return ''; return '<div class="chal-feed">'+f.map(e=>'<div>'+e.x+'</div>').join('')+'</div>'; }
+
+function rosterStrip(g){
+  const live=liveSpirits(g); const away=(g.spirits||[]).filter(s=>isAway(g,s));
+  let h='<div class="chal-roster"><div class="chal-lawhdr">The Circle ('+live.length+')</div><div class="chal-pills">';
+  h+=g.spirits.map(s=>{ const aw=isAway(g,s), kk=g.kicked&&g.kicked[s]; return '<span class="chal-pill'+(controls(s)?' mine':'')+(aw?' away':'')+'">'+s+(s===g.nominee?' \u2726':'')+(aw?(kk?' \u2715':' \u2193'):'')+'</span>'; }).join('');
+  h+='</div>';
+  const rj=away.filter(s=>!(g.kicked&&g.kicked[s]));
+  if(rj.length){ h+='<div class="chal-rejoin">'+rj.map(s=>'<button class="chal-mini" onclick="chalAPI.rejoin(\''+s+'\')">Rejoin as '+s+'</button>').join('')+'</div>'; }
+  const ok=(g.kicks||[]).filter(k=>k.status==='open');
+  if(ok.length){ h+=ok.map(k=>{ const can=me()&&k.target!==me()&&!controls(k.target)&&k.agrees.indexOf(me())<0; return '<div class="chal-report">\u2715 cast out <b>'+k.target+'</b> ('+k.agrees.length+'/'+Math.max(2,Math.ceil(live.length/2))+') '+(can?'<button onclick="chalAPI.agreeKick(\''+k.id+'\')">Agree</button>':'')+'</div>'; }).join(''); }
+  h+='<div class="chal-rowbtns"><button class="chal-mini" onclick="chalAPI.kick()">Cast out\u2026</button><button class="chal-mini ghost" onclick="chalAPI.leaveAll()">Leave the rite</button></div></div>';
+  return h;
+}
+function renderPlay(g){
+  const drawer=curDrawer(); const R=g.current?CR[g.current.ri]:null; const c=g.current;
+  const rem=g.deadline?(g.deadline-nowS()):0;
+  const cd=g.deadline?' <span class="chal-cd'+(rem<=20?' low':'')+'" id="chalCD">'+fmtCd(rem)+'</span>':'';
+  let h='<div class="chal-body play">';
+  h+='<div class="chal-meter">'+[0,1,2,3].map(i=>'<svg class="cg'+(i<g.kings?' full':'')+'" viewBox="0 0 24 30"><path d="M5 3h14l-1 7a6 6 0 0 1-12 0L5 3Z" fill="#E0743A"/><path d="M12 16v8M7 27h10" stroke="#E0743A" stroke-width="2" stroke-linecap="round"/></svg>').join('')+'<span class="chal-deckn">'+g.deck.length+' left</span></div>';
+  if(g.phase==='draw'){
+    h+='<div class="chal-turn">'+(controls(drawer)?('<b>'+drawer+'</b>, it\u2019s your draw'):('Waiting for <b>'+drawer+'</b> to draw'))+cd+'</div>';
+    h+='<div class="chal-stage" '+(controls(drawer)?'onclick="chalAPI.draw()"':'')+'>'+deckBack()+'</div>';
+    if(controls(drawer)) h+='<button class="chal-btn gold" onclick="chalAPI.draw()">Draw</button>';
+  } else if(c){
+    h+='<div class="chal-mini" style="border:none;background:none">'+R.name+cd+'</div>';
+    h+='<div class="chal-stage big">'+cardFace(c.ri,c.si,true)+'</div>';
+    h+=resolveControls(g,R,c,drawer);
+  }
+  h+=lawsStrip(g)+rosterStrip(g)+feedStrip(g);
+  h+='<div class="chal-foot"><button class="chal-mini ghost" onclick="chalAPI.end()">End the rite (host)</button></div>';
+  h+='</div>'; return h;
+}
+function deckBack(){ return '<div class="chal-deckback"><svg viewBox="0 0 100 100">'+emblem('eye','gain')+'</svg></div>'; }
+
+function resolveControls(g,R,c,drawer){
+  const others=g.spirits.filter(s=>s!==c.drawer);
+  // drawer input phase
+  if(g.phase==='resolve'){
+    if(!controls(c.drawer)) return '<div class="chal-turn">Waiting for <b>'+c.drawer+'</b>\u2026</div>';
+    if(R.kind==='pick2'||R.kind==='pick2self'){ return pickUI(g, R.kind==='pick2self'?'Pick two to drink':'Send two to drink (tap one twice for a double)', 2, false); }
+    if(R.kind==='bind'){ return pickUI(g,'Bind a mate',1,true); }
+    if(R.kind==='anoint'){ const present=[...new Set(g.spirits.map(tierOf))]; return '<div class="chal-pick"><div class="chal-q">Anoint a rank \u2014 all who hold it drink</div>'+present.map(ti=>'<button class="chal-chip" onclick="chalAPI.tier('+ti+')">'+tierName(ti)+'</button>').join('')+'</div>'; }
+    if(R.kind==='law'){ return '<button class="chal-btn gold" onclick="chalAPI.law()">Decree a law\u2026</button>'; }
+  }
+  // confirm phase
+  if(g.phase==='confirm'){
+    const canConf = (R.conf==='nominee') ? (g.nominee===me()||controls(g.nominee)) : controls(c.drawer);
+    if(R.kind==='loser'){
+      const picked=c.loser;
+      let h='<div class="chal-pick"><div class="chal-q">'+(canConf?'Name the one who lost':'Awaiting the nominee\u2019s judgement')+'</div>';
+      if(canConf){ h+=g.spirits.map(s=>'<button class="chal-chip'+(picked===s?' on':'')+'" onclick="chalAPI.loser(\''+s+'\')">'+s+'</button>').join(''); h+='<button class="chal-btn '+(picked?'gold':'')+'" '+(picked?'':'disabled')+' onclick="chalAPI.confirm()">Confirm (\u221210)</button>'; }
+      return h+'</div>';
+    }
+    let label='';
+    if(R.kind==='all') label='All drank';
+    else if(R.kind==='self') label=c.drawer+' drank';
+    else if(R.kind==='pick2self') label=c.drawer+' + '+(c.picks||[]).join(' & ');
+    else if(R.kind==='law') label='Law: \u201c'+c.law+'\u201d';
+    else if(R.kind==='summon') label='The lot fell on '+tierName(c.tier);
+    else if(R.kind==='anoint') label=tierName(c.tier)+' anointed';
+    else if(R.kind==='king') label=(g.kings>=3?'The fourth King':'Pour into the Chalice');
+    if(canConf) return '<div class="chal-conf"><div class="chal-q">'+label+'</div><button class="chal-btn gold" onclick="chalAPI.confirm()">Confirm</button></div>';
+    return '<div class="chal-turn">'+label+' \u2014 awaiting '+(R.conf==='nominee'?('nominee '+g.nominee):c.drawer)+'\u2026</div>';
+  }
+  return '';
+}
+function pickUI(g, q, count, single){
+  const cur=(GC().current.picks||[]);
+  let h='<div class="chal-pick"><div class="chal-q">'+q+' ('+cur.length+'/'+count+')</div>';
+  h+=g.spirits.filter(s=> single? s!==g.current.drawer : true).map(s=>{
+    const k=cur.filter(x=>x===s).length;
+    return '<button class="chal-chip'+(k?' on':'')+'" onclick="chalAPI.tap(\''+s+'\','+count+')">'+s+(k>1?' \u00d7'+k:'')+'</button>';
+  }).join('');
+  if(cur.length===count) h+='<button class="chal-btn gold" onclick="chalAPI.picksDone()">Confirm</button>';
+  return h+'</div>';
+}
+// transient pick buffer kept on the live state (current.picks) but only committed on submit
+function tap(name,count){
+  const g=GC(); if(!g||!g.current) return; const cur=(g.current.picks||[]).slice();
+  if(cur.length>=count){ return; } cur.push(name); g.current.picks=cur; // local optimistic
+  // re-render without sending until done
+  renderLocalPick();
+}
+function renderLocalPick(){ const p=document.getElementById('chalPanel'); const g=GC(); if(!p||!g)return; render(); }
+function picksDone(){ const g=GC(); if(!g||!g.current) return; submitPicks((g.current.picks||[]).slice()); }
+
+function renderEnded(g){
+  const tl=g.tally||{}; const rows=Object.keys(tl).sort((a,b)=>tl[b]-tl[a]).map(n=>'<div class="chal-row"><span>'+n+'</span><b class="'+(tl[n]>=0?'pos':'neg')+'">'+(tl[n]>=0?'+':'')+tl[n]+' \u2726</b></div>').join('') || '<p class="chal-hint">No Devotion changed hands.</p>';
+  const isNom=g.nominee===me()||controls(g.nominee);
+  return '<div class="chal-body"><div class="chal-sub">'+(g.endReason||'The rite is sealed.')+'</div><div class="chal-result">'+rows+'</div><p class="chal-hint">Each line has committed to the Chronicle as \u201cRite of the Chalice\u201d.</p>'
+    +(isNom?'<button class="chal-btn gold" onclick="chalAPI.dismiss()">Close the rite</button>':'<button class="chal-btn" onclick="closeUI()">Close</button>')+'</div>';
+}
+
+/* ---------- launcher in Trials tab ---------- */
+function injectLauncher(){
+  const el=document.getElementById('trials'); if(!el) return; if(document.getElementById('chalLaunch')) return;
+  const g=GC(); const active=g&&(g.status==='lobby'||g.status==='playing');
+  const box=document.createElement('div'); box.id='chalLaunch'; box.style.cssText='max-width:520px;margin:26px auto 0;text-align:center';
+  box.innerHTML='<div class="ritehdr" style="margin-top:0">The Rite of the Chalice</div>'
+    +'<p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">A 52-card King\u2019s Cup for the circle. Devotion rides a hidden tally and commits as one line when the rite ends.</p>'
+    +'<button class="gold" onclick="chalAPI.show()">'+(active?'\u2726 Rejoin the rite':'\u2726 Open the Rite of the Chalice')+'</button>';
+  el.appendChild(box);
+}
+const _origRT = window.renderTrials;
+if(typeof _origRT==='function'){ window.renderTrials=function(){ const r=_origRT.apply(this,arguments); try{ injectLauncher(); }catch(e){} return r; }; }
+
+/* expose handlers */
+window.chalAPI={ show:openUI, open:openLobby, join:joinGame, addSpirit:addSpirit, leave:leaveLobby, leaveAll:leaveGame, rejoin:rejoin, kick:proposeKick, agreeKick:agreeKick, start:startGame, draw:draw, tap:tap, picksDone:picksDone, tier:submitTier, law:submitLaw, loser:pickLoser, confirm:confirmCard, report:report, agree:agreeReport, end:endGame, dismiss:dismiss };
+window.closeUI=closeUI;
 })();
 </script>
 </body>

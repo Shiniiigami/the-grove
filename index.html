@@ -626,73 +626,6 @@ function offerPop(target, nominator){ try{
   setTimeout(close, 4200);
 }catch(e){} }
 
-/* ===== local (on-device) notifications — fire when the app is backgrounded ===== */
-async function localNote(title, body){ try{
-  if(typeof MODE!=='undefined' && MODE!=='remote') return;
-  if(!pushSupported() || pushIsOff()) return;
-  if(Notification.permission!=='granted') return;
-  if(document.visibilityState==='visible') return;   // they're looking — in-app UI already covers it
-  const opts={ body:body||'', icon:'icon-192.png', badge:'icon-192.png', tag:'grove-'+Date.now() };
-  let reg=null; try{ reg=await navigator.serviceWorker.ready; }catch(e){}
-  if(reg && reg.showNotification){ await reg.showNotification(title, opts); }
-  else if(typeof Notification!=='undefined'){ new Notification(title, opts); }
-}catch(e){} }
-
-/* ===== ping a spirit when THEIR OWN rite passes (deed / title / badge / offer / oath) ===== */
-let MY_RITE_APPLIED_SNAP=null;
-function myRiteAppliedIds(){ const s={}; (MEM.rites||[]).forEach(r=>{ if(r&&r.applied&&r.id) s[r.id]=1; }); return s; }
-function initMyRiteSnap(){ MY_RITE_APPLIED_SNAP=myRiteAppliedIds(); }
-function detectMyRiteApplied(){ try{
-  if(!MY_RITE_APPLIED_SNAP){ MY_RITE_APPLIED_SNAP=myRiteAppliedIds(); return; }
-  const fresh=(MEM.rites||[]).filter(r=>r&&r.applied&&r.id&&!MY_RITE_APPLIED_SNAP[r.id]);
-  MY_RITE_APPLIED_SNAP=myRiteAppliedIds();
-  const me=(typeof VOTER!=='undefined')?VOTER:null; if(!me) return;
-  fresh.forEach(r=>{
-    if(r.target!==me) return;
-    let title='', body='';
-    switch(r.kind){
-      case 'deed':  title='\ud83d\udcdc Your deed is accepted'; body=(r.label?('\u201c'+r.label+'\u201d \u2014 '):'')+((r.points>=0?'+':'')+(r.points||0))+' \u2726 to your devotion.'; break;
-      case 'title': title='\ud83c\udf96 A title is yours';      body='The grove names you \u201c'+(r.label||'')+'.\u201d'; break;
-      case 'badge': title='\ud83d\udd30 A badge is yours';      body='You are marked: '+(r.label||'a badge')+'.'; break;
-      case 'offer': title='\ud83d\udd2e You are offered to the Eye'; body='The grove has lifted you up \u2014 +150 \u2726 and the robe.'; break;
-      case 'oath':  title='\ud83d\udd6f Your oath is sealed';   body='You are sworn to the Order.'; break;
-      default: return;
-    }
-    localNote(title, body);
-  });
-}catch(e){} }
-
-/* ===== Test of Devotion: ping when the Eye is ready to weigh you again ===== */
-function testReadyAt(){ try{ const v=localStorage.getItem('grove-testReadyAt'); return v?parseFloat(v):0; }catch(e){ return 0; } }
-function scheduleTestReady(){ try{
-  const me=(typeof memByName==='function')?memByName(VOTER):null; if(!me||!me.lastSpin) return;
-  const readyAt=me.lastSpin+2*3600;
-  try{ localStorage.setItem('grove-testReadyAt', String(readyAt)); localStorage.removeItem('grove-testNotified'); }catch(e){}
-  // Android & desktop Chrome: schedule a real notification that fires even if the app is closed
-  try{
-    if(pushSupported() && !pushIsOff() && Notification.permission==='granted'
-       && typeof Notification!=='undefined' && ('showTrigger' in Notification.prototype) && (typeof TimestampTrigger!=='undefined')){
-      navigator.serviceWorker.ready.then(function(reg){
-        reg.showNotification('\ud83d\udc41 The Eye is ready', {
-          body:'You may lay your devotion before the Eye Totem again.',
-          icon:'icon-192.png', badge:'icon-192.png', tag:'grove-testready',
-          showTrigger:new TimestampTrigger(readyAt*1000)
-        }).then(function(){ try{ localStorage.setItem('grove-testNotified','1'); }catch(e){} }).catch(function(){});
-      }).catch(function(){});
-    }
-  }catch(e){}
-}catch(e){} }
-function checkTestReady(){ try{
-  if(typeof MODE!=='undefined' && MODE!=='remote') return;
-  const readyAt=testReadyAt(); if(!readyAt) return;
-  const now=Date.now()/1000;
-  if(now<readyAt) return;
-  if(localStorage.getItem('grove-testNotified')==='1') return;   // a scheduled trigger already owns this
-  try{ localStorage.setItem('grove-testNotified','1'); }catch(e){}
-  if(now-readyAt < 24*3600){ localNote('\ud83d\udc41 The Eye is ready', 'You may lay your devotion before the Eye Totem again.'); }
-  try{ localStorage.removeItem('grove-testReadyAt'); }catch(e){}
-}catch(e){} }
-
 function notifyRulesHTML(){
   if((typeof MODE!=='undefined'&&MODE!=='remote') || !pushSupported()) return '';
   let st='default'; try{ st=Notification.permission; }catch(_){}
@@ -702,7 +635,7 @@ function notifyRulesHTML(){
   else if(on){ btn='<div style="text-align:center"><button class="ghostbtn" onclick="disablePush()">\u2713 Notifications on \u00b7 tap to turn off</button></div>'; }
   else { btn='<div style="text-align:center"><button class="gold" onclick="enablePush()">\ud83d\udd14 Enable notifications</button></div>'; }
   return '<div class="ritehdr" style="margin-top:22px">Notifications</div>'
-    +'<p class="rtext" style="text-align:center;max-width:34ch;margin:0 auto 8px">Get pinged for new deeds, offerings, wagers &amp; challenges, when the grove is blessed, when your own rite passes, and when the Eye is ready to weigh you again. Installed app only \u00b7 needs signal.</p>'
+    +'<p class="rtext" style="text-align:center;max-width:34ch;margin:0 auto 8px">Get pinged for new deeds, offerings, wagers &amp; challenges, when the grove is blessed, and when an offering is accepted. Installed app only \u00b7 needs signal.</p>'
     +btn;
 }
 
@@ -743,7 +676,7 @@ async function saveData(){
     return;
   }
   if(liveStorage){ try{ await window.storage.set(KEY,JSON.stringify(MEM),true); }catch(e){} }
-  if(MODE!=="remote"){ try{ detectReactions(); }catch(e){} }
+  if(MODE!=="remote"){ try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} }
   takeSnap();
 }
 
@@ -775,7 +708,7 @@ window.rollback=async function(mins){
   ensureDefaults(); await saveData(); layoutGrove(); renderLedger(); renderRites(); closeSheet(); toast(`Rolled back ~${age} min.`);
 };
 let REACT_SUPPRESS=false;
-function rebaselineSnaps(){ try{ MOOD_SNAP=moodSnapshot(); }catch(e){} try{ OFFER_SNAP=offerIds(); APPLIED_OFFER_SNAP=appliedOfferIds(); }catch(e){} try{ const snap={}; (MEM.members||[]).forEach(m=>{ snap[m.name]=tierIndex(m.points||0); }); saveRankSnap(snap); }catch(e){} }
+function rebaselineSnaps(){ try{ MOOD_SNAP=moodSnapshot(); }catch(e){} try{ LOG_SNAP=logSnapshot(); }catch(e){} try{ OFFER_SNAP=offerIds(); APPLIED_OFFER_SNAP=appliedOfferIds(); }catch(e){} try{ const snap={}; (MEM.members||[]).forEach(m=>{ snap[m.name]=tierIndex(m.points||0); }); saveRankSnap(snap); }catch(e){} }
 async function pollRemote(){
   if(MODE!=="remote") return;
   if(scrim.classList.contains("show")) return;   // don't yank the UI mid-edit
@@ -783,8 +716,7 @@ async function pollRemote(){
     MEM=d; ensureDefaults(); cacheRemote();
     const quiet = document.hidden || REACT_SUPPRESS; REACT_SUPPRESS=false;
     if(quiet){ rebaselineSnaps(); }
-    else { try{ detectReactions(); }catch(e){} try{ detectNewOffers(); }catch(e){} }
-    try{ detectMyRiteApplied(); }catch(e){}
+    else { try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} }
     takeSnap(); layoutGrove(); renderLedger(); renderRites(); const tr=document.getElementById('trials'); if(tr && tr.style.display!=='none') renderTrials();
     if(!quiet) checkRankUps();
   } }catch(e){}
@@ -1957,7 +1889,7 @@ function renderBadgeForm(){
         ${swatchBtns(badgeColor(b), c=>`setBadgeColor(${i},'${c}')`, '')}
       </div>`).join("")
     : `<span class="sub">No badges yet.</span>`;
-  const chips=BADGE_IDEAS.map(b=>`<button onclick="pickChip('bgVal','${b}',this)">${b}</button>`).join("");
+  const chips=badgeIdeas().map(b=>`<button onclick="pickChip('bgVal','${String(b).replace(/'/g,"\\'")}',this)">${b}</button>`).join("");
   sheet.innerHTML=`
     <div class="grip"></div>
     <div class="kpanel">
@@ -3150,7 +3082,7 @@ window.approveRite=function(id){
   Snd.sfx('approve');
   voteRite(id, VOTER);
 };
-async function refreshRemote(){ try{ const d=await sbRead(); if(d){ MEM=d; ensureDefaults(); cacheRemote(); try{ detectReactions(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectOfferPassed(); }catch(e){} try{ detectMyRiteApplied(); }catch(e){} } }catch(e){} }
+async function refreshRemote(){ try{ const d=await sbRead(); if(d){ MEM=d; ensureDefaults(); cacheRemote(); try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectOfferPassed(); }catch(e){} } }catch(e){} }
 
 window.proposeRite=async function(item){
   let off=false;
@@ -3508,7 +3440,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27ca · notifications: wagers · challenges · offerings · own rite · Eye-ready</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27cb · badge tab fix · log earned pop · push: wagers·challenges·offering accepted</p>`;
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 /* ===== emotive spirits — moods + reactions (client-side, no SQL) ===== */
@@ -3537,6 +3469,18 @@ function detectReactions(){
   if(ev.length>8) return; /* bulk op (season reset / mass blessing) — no flood */
   ev.sort((a,b)=>Math.abs(b.dp)-Math.abs(a.dp));
   ev.slice(0,6).forEach(e=>{ const type = e.dp>=100?'joyful':(e.dp>0?'happy':(e.dp<=-80?'dismayed':'sad')); setMood(e.name,type,e.lbl); queueReact(e.name,type,e.lbl); });
+}
+/* ===== a spirit earns a log for the fire → in-app pop (like the points reaction) ===== */
+let LOG_SNAP=null;
+function logSnapshot(){ const s={}; (MEM.members||[]).forEach(m=>{ s[m.name]=(m.logs||0); }); return s; }
+function initLogSnap(){ LOG_SNAP=logSnapshot(); }
+function detectLogGains(){
+  if(!LOG_SNAP){ LOG_SNAP=logSnapshot(); return; }
+  const ev=[];
+  (MEM.members||[]).forEach(m=>{ const o=LOG_SNAP[m.name]; if(o===undefined) return; const d=(m.logs||0)-o; if(d>0) ev.push({name:m.name,d}); });
+  LOG_SNAP=logSnapshot();
+  if(ev.length>8) return;   /* bulk grant (Keeper "log to all") — no flood */
+  ev.slice(0,6).forEach(e=>{ const lbl='\ud83e\udeb5 '+(e.d>1?('+'+e.d+' logs'):'A log for the fire'); try{ setMood(e.name,'joyful',lbl); }catch(_){} queueReact(e.name,'joyful',lbl); });
 }
 let _reactStyled=false;
 function ensureReactStyle(){ if(_reactStyled)return; _reactStyled=true; const st=document.createElement('style'); st.id='spreactStyle'; st.textContent=`
@@ -3680,7 +3624,7 @@ async function communityAction(a){
   try{ Snd.action(a.t); }catch(e){}
   return okR;
 }
-function trialsRefresh(){ renderTrials(); layoutGrove(); renderLedger(); try{ syncOffering(); }catch(e){} try{ detectReactions(); }catch(e){} try{ detectNewOffers(); }catch(e){} }
+function trialsRefresh(){ renderTrials(); layoutGrove(); renderLedger(); try{ syncOffering(); }catch(e){} try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} }
 function syncOffering(){ try{ if(typeof Snd==='undefined'||!Snd.offering) return; const has=((MEM&&MEM.rites)||[]).some(r=>r&&r.kind==='offer' && !r.applied); Snd.offering(has); }catch(e){} }
 /* ===== shared bonfire visual (Stoke the Fire) ===== */
 let _fbRAF=0,_fbCv=null,_fbCtx=null;
@@ -3976,7 +3920,6 @@ window.spinTheWheel=async function(){
   const o=spinWheel();
   const btn=document.getElementById('spinBtn'); if(btn){ btn.disabled=true; btn.textContent='The Eye weighs you…'; }
   try{ await devotionVerdict(o); }catch(e){}
-  try{ scheduleTestReady(); }catch(e){}
   WHEEL_BUSY=false;
 };
 function wagerOpenCard(w){
@@ -4627,7 +4570,7 @@ function offeringCeremony(name){
   await loadData();
   ensureDefaults();
   try{ if(sweepRites(Date.now()/1000) && MODE!=="remote") await saveData(); }catch(e){}
-  try{ initMoodSnap(); }catch(e){} try{ initOfferSnap(); }catch(e){} try{ initMyRiteSnap(); }catch(e){}
+  try{ initMoodSnap(); }catch(e){} try{ initLogSnap(); }catch(e){} try{ initOfferSnap(); }catch(e){}
   if(SB_ON && MODE!=="remote"){ showDbBanner("Not connected to the shared grove — running LOCAL-ONLY on this device. The keeper password set in Supabase and other people's wagers/points will NOT work here. On the hosted site this usually means your Supabase project is PAUSED — open the Supabase dashboard, resume the project, then reload."); }
   document.getElementById("offNote").textContent =
     MODE==="remote" ? "◦ live ledger · synced through the Eye ◦"
@@ -4652,9 +4595,6 @@ function offeringCeremony(name){
   try{ syncBadge(); flushQueue(); }catch(e){}
   setInterval(()=>{ try{ syncOffering(); }catch(e){} }, 8000);
   setInterval(()=>{ try{ if(typeof Snd!=='undefined' && Snd.fire) Snd.fire((MEM.fire&&MEM.fire.level)||0); }catch(e){} }, 5000);
-  try{ checkTestReady(); }catch(e){}
-  setInterval(()=>{ try{ checkTestReady(); }catch(e){} }, 30000);
-  try{ document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState!=='visible'){ try{ checkTestReady(); }catch(e){} } }); }catch(e){}
   try{ syncOffering(); }catch(e){}
   addEventListener("resize",()=>{drawTrees();layoutGrove();});
 })();

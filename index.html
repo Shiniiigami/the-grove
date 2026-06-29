@@ -44,14 +44,14 @@
       radial-gradient(120% 80% at 50% -10%, #1b2a22 0%, #101a14 38%, #0a120d 66%, #070b09 100%);
   }
   #moon{position:fixed;top:2.5%;left:50%;transform:translateX(-50%);width:62px;height:62px;border-radius:50%;
-    z-index:0;background:radial-gradient(circle at 38% 38%, #fdf6e0 0%, #efe1b8 55%, #c9b88a 100%);
+    z-index:2;background:radial-gradient(circle at 38% 38%, #fdf6e0 0%, #efe1b8 55%, #c9b88a 100%);
     box-shadow:0 0 60px 18px rgba(244,230,189,.18), 0 0 140px 50px rgba(120,160,140,.10);
     opacity:.92;transition:opacity 2.4s ease;}
-  #sun{position:fixed;top:50%;left:12%;width:64px;height:64px;border-radius:50%;z-index:0;pointer-events:none;
+  #sun{position:fixed;top:50%;left:12%;width:64px;height:64px;border-radius:50%;z-index:2;pointer-events:none;
     background:radial-gradient(circle at 50% 50%, #fff7d4 0%, #ffd95a 46%, #ffae3b 100%);
     box-shadow:0 0 80px 30px rgba(255,196,80,.30), 0 0 180px 80px rgba(255,168,60,.14);opacity:0;transition:opacity 2.4s ease;}
-  #moon.blood{background:radial-gradient(circle at 42% 40%, #d23b2a 0%, #9a241a 52%, #4a0d09 100%)!important;
-    box-shadow:0 0 70px 22px rgba(200,45,32,.55), 0 0 170px 64px rgba(150,22,16,.34)!important;}
+  #moon.blood{background:radial-gradient(circle at 40% 38%, #e8512f 0%, #c52d1d 50%, #8a1812 84%, #6a1310 100%)!important;
+    opacity:1!important;box-shadow:0 0 70px 22px rgba(200,45,32,.55), 0 0 170px 64px rgba(150,22,16,.34)!important;}
   #sun.eclipse{background:#0a0705!important;
     box-shadow:0 0 0 2px rgba(255,196,96,.95), 0 0 26px 9px rgba(255,176,72,.92), 0 0 80px 30px rgba(255,120,42,.5)!important;}
   #moon .ofeye,#sun .ofeye{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
@@ -75,9 +75,26 @@
   #fog2{bottom:22%;opacity:.6;animation:drift 56s linear infinite reverse;}
   @keyframes drift{from{transform:translateX(-6%);}to{transform:translateX(6%);}}
   #trees{position:fixed;left:0;right:0;bottom:0;height:160px;z-index:2;pointer-events:none;}
+  /* ===== lake background ===== */
+  #water{position:fixed;left:0;right:0;bottom:0;height:38%;z-index:1;pointer-events:none;transition:background 1.4s ease;
+    background:linear-gradient(180deg,#0e1c24 0%,#0a151d 30%,#071017 70%,#050b10 100%);}
+  #farshore{position:fixed;left:0;right:0;bottom:38%;z-index:1;pointer-events:none;}
+  #lakeRefl{position:fixed;bottom:0;height:38%;z-index:1;pointer-events:none;mix-blend-mode:screen;width:54px;left:50%;display:none;
+    transform:translateX(-50%) scaleX(1);
+    background:linear-gradient(180deg, rgba(247,238,205,.60) 0%, rgba(238,224,180,.24) 26%, rgba(220,205,160,.11) 55%, rgba(200,188,150,0) 92%);
+    -webkit-mask:linear-gradient(180deg,#000 0%,#000 70%,transparent 100%);mask:linear-gradient(180deg,#000 0%,#000 70%,transparent 100%);
+    animation:reflWob 6s ease-in-out infinite;}
+  #lakeRefl.blood{background:linear-gradient(180deg, rgba(214,70,46,.60) 0%, rgba(150,32,22,.26) 30%, rgba(90,20,14,.11) 60%, rgba(60,12,8,0) 92%);}
+  #lakeRefl.eclipse{background:linear-gradient(180deg, rgba(255,184,74,.5) 0%, rgba(200,90,30,.2) 32%, rgba(120,40,12,0) 88%);}
+  #lakeRipples{position:fixed;left:0;right:0;bottom:0;height:38%;z-index:1;pointer-events:none;opacity:.5;
+    background:repeating-linear-gradient(180deg, rgba(255,255,255,.05) 0px, rgba(255,255,255,.05) 1px, transparent 1px, transparent 7px);
+    -webkit-mask:linear-gradient(180deg,transparent 0%,#000 18%,#000 100%);mask:linear-gradient(180deg,transparent 0%,#000 18%,#000 100%);
+    animation:lakeRipple 9s linear infinite;}
+  @keyframes reflWob{0%,100%{transform:translateX(-50%) scaleX(.92);opacity:.82}50%{transform:translateX(-50%) scaleX(1.12);opacity:1}}
+  @keyframes lakeRipple{from{background-position-y:0}to{background-position-y:14px}}
   #embers{position:fixed;inset:0;z-index:3;pointer-events:none;}
   @media (prefers-reduced-motion:reduce){
-    #fog1,#fog2{animation:none;}
+    #fog1,#fog2,#lakeRefl,#lakeRipples{animation:none;}
     .spirit canvas{animation:none !important;}
   }
   @keyframes spiritbob{0%,100%{transform:translateY(-3px);}50%{transform:translateY(3px);}}
@@ -328,6 +345,10 @@
 <div id="sun"></div>
 <div id="moon"></div>
 <canvas id="stars"></canvas>
+<div id="water"></div>
+<canvas id="farshore"></canvas>
+<div id="lakeRefl"></div>
+<div id="lakeRipples"></div>
 <canvas id="trees"></canvas>
 <div class="fog" id="fog1"></div>
 <div class="fog" id="fog2"></div>
@@ -634,10 +655,41 @@ function notifyRulesHTML(){
   if(st==='denied'){ btn='<p class="rtext" style="text-align:center;color:var(--ember)">Blocked in your phone settings for this app \u2014 turn it back on there.</p>'; }
   else if(on){ btn='<div style="text-align:center"><button class="ghostbtn" onclick="disablePush()">\u2713 Notifications on \u00b7 tap to turn off</button></div>'; }
   else { btn='<div style="text-align:center"><button class="gold" onclick="enablePush()">\ud83d\udd14 Enable notifications</button></div>'; }
+  const diag='<div id="pushStat" style="text-align:center;font-family:Silkscreen,monospace;font-size:10px;opacity:.6;margin:8px 0 6px">checking\u2026</div>'
+    +'<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:4px">'
+      +'<button class="ghostbtn" style="width:auto;padding:8px 14px" onclick="testPush()">\ud83d\udd14 Send a test ping</button>'
+      +'<button class="ghostbtn" style="width:auto;padding:8px 14px" onclick="relinkPush()">\u21ba Re-link this device</button>'
+    +'</div>'
+    +'<p class="rtext" style="text-align:center;font-size:11px;opacity:.7;max-width:34ch;margin:8px auto 0">After re-adding the app on iPhone you must <b>re-link</b> \u2014 deleting the app wipes this phone\u2019s notification link.</p>';
   return '<div class="ritehdr" style="margin-top:22px">Notifications</div>'
     +'<p class="rtext" style="text-align:center;max-width:34ch;margin:0 auto 8px">Get pinged for new deeds, offerings, wagers &amp; challenges, when the grove is blessed, and when an offering is accepted. Installed app only \u00b7 needs signal.</p>'
-    +btn;
+    +btn+diag;
 }
+async function refreshPushStatus(){
+  const el=document.getElementById('pushStat'); if(!el) return;
+  let perm='default'; try{ perm=Notification.permission; }catch(_){}
+  let linked=false; try{ if(pushSupported()){ const reg=await navigator.serviceWorker.ready; linked=!!(await reg.pushManager.getSubscription()); } }catch(_){}
+  el.innerHTML='permission: <b>'+perm+'</b> \u00b7 linked: <b style="color:'+(linked?'#9FD3B0':'#E8A88F')+'">'+(linked?'yes':'no')+'</b>'+(pushIsOff()?' \u00b7 <b>muted</b>':'');
+}
+window.testPush=async function(){ try{
+  if(!pushSupported()){ toast('Notifications need the installed app (Add to Home Screen).'); return; }
+  if(Notification.permission!=='granted'){ let p='default'; try{ p=await Notification.requestPermission(); }catch(_){} if(p!=='granted'){ toast('Allow notifications first.'); refreshPushStatus(); return; } }
+  const reg=await navigator.serviceWorker.ready;
+  await reg.showNotification('The Grove \u2014 test', {body:'If you see this, notifications work on this device.', icon:'icon-192.png', badge:'icon-192.png', tag:'grove-test'});
+  toast('Test sent \u2014 check your notification shade.');
+}catch(e){ toast('Test failed: '+((e&&e.message)||'unknown')); } };
+window.relinkPush=async function(){ try{
+  if(!pushSupported()){ toast('Notifications need the installed app (Add to Home Screen).'); return; }
+  try{ localStorage.removeItem('grove-push-off'); }catch(_){}
+  if(Notification.permission!=='granted'){ let p='default'; try{ p=await Notification.requestPermission(); }catch(_){} if(p!=='granted'){ toast('Allow notifications first.'); refreshPushStatus(); return; } }
+  const reg=await navigator.serviceWorker.ready;
+  let sub=await reg.pushManager.getSubscription();
+  if(sub){ try{ await sub.unsubscribe(); }catch(_){} }
+  sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:urlB64ToUint8(VAPID_PUBLIC)});
+  try{ await sbRpc('grove_push_save',{p_name:(typeof VOTER!=='undefined'&&VOTER)?VOTER:'soul', p_sub:sub.toJSON()}); }catch(e){ toast('Linked here, but could not reach the grove to save it.'); refreshPushStatus(); return; }
+  toast('This device re-linked for notifications.');
+  try{ renderRules(); }catch(e){}
+}catch(e){ toast('Re-link failed: '+((e&&e.message)||'unknown')); } };
 
 const EXPECTED_DB='2026-06-27h';
 function showDbBanner(msg){
@@ -3440,7 +3492,8 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27cb · badge tab fix · log earned pop · push: wagers·challenges·offering accepted</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27cd · lake background · moon reflection · blood-moon/eclipse on water · V-flocks</p>`;
+  try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 /* ===== emotive spirits — moods + reactions (client-side, no SQL) ===== */
@@ -4411,6 +4464,24 @@ function drawStars(){ const c=document.getElementById('stars'); if(!c) return; c
 function offerEffectRemain(){ try{ const now=Date.now()/1000; let newest=0; (MEM.members||[]).forEach(m=>{ if(m&&m.offered){ const at=m.offered-14400; if(at>newest) newest=at; } }); const rem=900-(now-newest); return (newest>0&&rem>0)?rem:0; }catch(e){ return 0; } }
 function offerEyeSVG(stroke,iris,pupil,glow){ return '<svg class="ofeye" viewBox="0 0 100 100"><g style="filter:drop-shadow(0 0 5px '+glow+')"><path d="M9 50 Q50 19 91 50 Q50 81 9 50 Z" fill="none" stroke="'+stroke+'" stroke-width="5" stroke-linejoin="round"/><circle cx="50" cy="50" r="16.5" fill="'+iris+'"/><circle cx="50" cy="50" r="7.2" fill="'+pupil+'"/><circle cx="44.5" cy="44.5" r="2.3" fill="rgba(255,255,255,.55)"/></g></svg>'; }
 const ECLIPSE_SKY='radial-gradient(120% 95% at 50% 13%, #3a241f 0%, #1c151a 32%, #0d0a10 64%, #06060a 100%)';
+/* ===== lake: far shore + water tint + moon/sun reflection (reads sky + offering state) ===== */
+function drawFarShore(dark){ const c=document.getElementById('farshore'); if(!c) return; const dpr=Math.min(1.5,devicePixelRatio||1); const H=70; const wW=Math.round(innerWidth*dpr), wH=Math.round(H*dpr); if(c.width!==wW||c.height!==wH){ c.width=wW; c.height=wH; c.style.width=innerWidth+'px'; c.style.height=H+'px'; } const x=c.getContext('2d'); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,innerWidth,H); const rnd=rng(19); x.fillStyle=dark?'#0b141b':'#22425c'; let px=-10; while(px<innerWidth+30){ const tw=10+rnd()*16, th=14+rnd()*26, bx=px; x.beginPath(); x.moveTo(bx,H); x.lineTo(bx+tw/2,H-th); x.lineTo(bx+tw,H); x.closePath(); x.fill(); px+=tw*0.58; } x.fillRect(0,H-10,innerWidth,10); }
+function updateLake(){ try{
+  let ph; try{ ph=skyPhase(); }catch(e){ ph={isDay:false,frac:0.5,night:true}; }
+  const isDay=!!ph.isDay, frac=(typeof ph.frac==='number')?ph.frac:0.5;
+  const moon=document.getElementById('moon'), sun=document.getElementById('sun');
+  const blood=!!(moon&&moon.classList.contains('blood'));
+  const eclipse=!!(sun&&sun.classList.contains('eclipse'));
+  const water=document.getElementById('water'), refl=document.getElementById('lakeRefl');
+  if(water){ water.style.background = eclipse ? 'linear-gradient(180deg,#2a1f1c 0%,#1c1518 34%,#120d10 72%,#0a0709 100%)' : (isDay ? 'linear-gradient(180deg,#3f6f93 0%,#2f597d 34%,#21425f 72%,#16304a 100%)' : 'linear-gradient(180deg,#0e1c24 0%,#0a151d 30%,#071017 70%,#050b10 100%)'); }
+  if(refl){ refl.classList.remove('blood','eclipse'); let show=false;
+    if(eclipse){ refl.classList.add('eclipse'); show=true; }
+    else if(!isDay){ if(blood) refl.classList.add('blood'); show=true; }
+    refl.style.display=show?'block':'none';
+    if(show){ const x=8+frac*84, low=1-Math.sin(frac*Math.PI); refl.style.left=x+'%'; refl.style.width=(46+low*30)+'px'; }
+  }
+  drawFarShore(!isDay || eclipse);
+}catch(e){} }
 function applyOfferSky(){ try{
   const moon=document.getElementById('moon'), sun=document.getElementById('sun'), sky=document.getElementById('sky'), stars=document.getElementById('stars');
   const active = offerEffectRemain()>0;
@@ -4428,6 +4499,7 @@ function applyOfferSky(){ try{
   }
   if(eclipse){ if(sky) sky.style.background=ECLIPSE_SKY; if(stars) stars.style.opacity='0.5'; }
   else { if(sky){ try{ sky.style.background=skyGradient(ph); }catch(e){} } if(stars) stars.style.opacity = ph.isDay?'0':'0.9'; }
+  try{ updateLake(); }catch(e){}
 }catch(e){} }
 function atmoUpdate(){ try{ const ph=skyPhase(); const sky=document.getElementById('sky'); if(sky) sky.style.background=skyGradient(ph); const sun=document.getElementById('sun'), moon=document.getElementById('moon'), stars=document.getElementById('stars');
   try{ document.body.classList.toggle('sky-day', !!ph.isDay); }catch(e){}
@@ -4438,7 +4510,7 @@ function atmoUpdate(){ try{ const ph=skyPhase(); const sky=document.getElementBy
 /* shooting stars (night) + bird flocks (day), drawn on the #fx canvas */
 const _shoots=[]; const _birds=[]; let _nextShoot=0, _nextFlock=0;
 function _spawnShoot(W,H){ const fromLeft=Math.random()<0.5; const ang=(20+Math.random()*26)*Math.PI/180; const sp=7+Math.random()*5; const vx=(fromLeft?1:-1)*Math.cos(ang)*sp; const vy=Math.sin(ang)*sp; const x0=fromLeft?(Math.random()*W*0.45):(W*0.55+Math.random()*W*0.45); const y0=8+Math.random()*H*0.22; _shoots.push({x:x0,y:y0,vx,vy,len:55+Math.random()*70,life:0,max:30+Math.random()*22}); if(Math.random()<0.18){ setTimeout(()=>{ try{ _shoots.push({x:x0+(Math.random()*40-20),y:y0+(Math.random()*20-10),vx,vy,len:45+Math.random()*50,life:0,max:28+Math.random()*18}); }catch(e){} }, 220+Math.random()*260); } }
-function _spawnFlock(W,H){ const fromLeft=Math.random()<0.5; const dir=fromLeft?1:-1; const n=5+Math.floor(Math.random()*5); const sp=0.7+Math.random()*0.7; const baseY=H*0.09+Math.random()*H*0.2; const startX=fromLeft?-30:(W+30); const size=4.5+Math.random()*3.5; for(let i=0;i<n;i++){ const back=i*(10+Math.random()*8); const yoff=(i%2?1:-1)*(i*1.8)+(Math.random()*6-3); _birds.push({x:startX-dir*back, y:baseY+yoff, vx:dir*sp*(0.94+Math.random()*0.14), w:size*(0.85+Math.random()*0.35), ph:Math.random()*6.28, bob:Math.random()*6.28, flap:0.16+Math.random()*0.09}); } }
+function _spawnFlock(W,H){ const fromLeft=Math.random()<0.5; const dir=fromLeft?1:-1; const n=2+Math.floor(Math.random()*14); const sp=0.5+Math.random()*0.45; const baseY=H*0.09+Math.random()*H*0.20; const startX=fromLeft?-50:(W+50); const size=5+Math.random()*3.5; const stepX=24+Math.random()*8, stepY=12+Math.random()*4; for(let i=0;i<n;i++){ const rank=Math.ceil(i/2), arm=(i%2===0)?-1:1; _birds.push({x:startX-dir*(rank*stepX)+(Math.random()*4-2), y:baseY+(rank*stepY*arm)+(Math.random()*3-1.5), vx:dir*sp*(0.98+Math.random()*0.04), w:size*(0.88+Math.random()*0.24), ph:Math.random()*6.28, bob:Math.random()*6.28, flap:0.1+Math.random()*0.05}); } }
 function skyCreatures(x, now, night){ try{
   const W=innerWidth, H=innerHeight;
   if(_nextShoot===0){ _nextShoot=now+6000+Math.random()*12000; } if(_nextFlock===0){ _nextFlock=now+25000+Math.random()*40000; }
@@ -4590,6 +4662,7 @@ function offeringCeremony(name){
   setInterval(takeSnap, 120000);
   setInterval(pollRemote, 20000);
   if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js').then(function(reg){ try{ reg.update(); }catch(e){} setTimeout(function(){ try{ ensurePushSub(); }catch(e){} }, 1200); }).catch(function(){}); }catch(e){} }
+  try{ document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible'){ try{ ensurePushSub(); }catch(e){} } }); }catch(e){}
   try{ addEventListener('online', function(){ syncBadge(); flushQueue(); }); addEventListener('offline', syncBadge); }catch(e){}
   setInterval(function(){ try{ flushQueue(); }catch(e){} }, 25000);
   try{ syncBadge(); flushQueue(); }catch(e){}

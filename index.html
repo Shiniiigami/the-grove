@@ -39,7 +39,7 @@
     overflow-x:hidden; position:relative; min-height:100%;
   }
   /* ---------- atmosphere ---------- */
-  #sky{position:fixed;inset:0;z-index:0;
+  #sky{position:fixed;inset:0;z-index:0;transition:background 1.4s ease;
     background:
       radial-gradient(120% 80% at 50% -10%, #1b2a22 0%, #101a14 38%, #0a120d 66%, #070b09 100%);
   }
@@ -50,6 +50,11 @@
   #sun{position:fixed;top:50%;left:12%;width:64px;height:64px;border-radius:50%;z-index:0;pointer-events:none;
     background:radial-gradient(circle at 50% 50%, #fff7d4 0%, #ffd95a 46%, #ffae3b 100%);
     box-shadow:0 0 80px 30px rgba(255,196,80,.30), 0 0 180px 80px rgba(255,168,60,.14);opacity:0;transition:opacity 2.4s ease;}
+  #moon.blood{background:radial-gradient(circle at 42% 40%, #d23b2a 0%, #9a241a 52%, #4a0d09 100%)!important;
+    box-shadow:0 0 70px 22px rgba(200,45,32,.55), 0 0 170px 64px rgba(150,22,16,.34)!important;}
+  #sun.eclipse{background:#0a0705!important;
+    box-shadow:0 0 0 2px rgba(255,196,96,.95), 0 0 26px 9px rgba(255,176,72,.92), 0 0 80px 30px rgba(255,120,42,.5)!important;}
+  #moon .ofeye,#sun .ofeye{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
   #stars{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0;transition:opacity 3s ease;}
   #fx{position:fixed;inset:0;z-index:3;pointer-events:none;}
   #flash{position:fixed;inset:0;z-index:35;pointer-events:none;opacity:0;
@@ -593,7 +598,7 @@ function detectOfferPassed(){ try{
   if(!APPLIED_OFFER_SNAP){ APPLIED_OFFER_SNAP=appliedOfferIds(); return; }
   const fresh=(MEM.rites||[]).filter(r=>r&&r.kind==='offer'&&r.applied&&r.id&&!APPLIED_OFFER_SNAP[r.id]);
   APPLIED_OFFER_SNAP=appliedOfferIds();
-  if(fresh.length){ try{ offeringCeremony(fresh[0].target); }catch(e){} }
+  if(fresh.length){ try{ offeringCeremony(fresh[0].target); }catch(e){} try{ applyOfferSky(); }catch(e){} }
 }catch(e){} }
 function detectNewOffers(){ try{
   if(!OFFER_SNAP){ OFFER_SNAP=offerIds(); return; }
@@ -1024,6 +1029,7 @@ function drawChibi(ctx,f,px,ox,oy,ti,nT,expr){
   const sleeve = ts!=='tank';
   const armc = robes?"#E8E4D6":(ts==='tunic'?top:(ts==='sage'?top:(ts==='ascend'?top:(ts==='luminary'?top:(sleeve?top:skin)))));
   for(let y=19;y<27;y++){P(8,y,armc);P(9,y,armc);P(21,y,armc);P(22,y,armc);}
+  if(ts==='tee'){ P(8,21,tops);P(9,21,tops);P(21,21,tops);P(22,21,tops); for(let y=22;y<27;y++){P(8,y,skin);P(9,y,skin);P(21,y,skin);P(22,y,skin);} }
   if(longsleeve){ P(8,27,top);P(9,27,top);P(21,27,top);P(22,27,top); P(8,28,skin);P(9,28,skin);P(21,28,skin);P(22,28,skin); }
   else { P(8,27,skin);P(9,27,skin);P(21,27,skin);P(22,27,skin); }
   if(!sleeve){ for(let y=19;y<21;y++){P(9,y,skin);P(10,y,skin);P(20,y,skin);P(21,y,skin);} P(11,19,top);P(19,19,top); }
@@ -1108,10 +1114,14 @@ function drawChibi(ctx,f,px,ox,oy,ti,nT,expr){
     for(let y=4;y<16;y++){P(9,y,hair);P(10,y,hair);P(19,y,hair);P(20,y,hair);}
     for(let x=11;x<19;x+=3)P(x,1,hairl);
   } else if(st==="curlylong"){
-    for(let x=8;x<22;x+=2)P(x,0,hair);
-    row(8,21,1,hair);row(8,21,2,hair);row(8,21,3,hair);
-    for(let y=4;y<17;y++){P(8,y,hair);P(9,y,hair);P(20,y,hair);P(21,y,hair);}
-    [[10,1],[13,0],[16,1],[19,0],[9,5],[20,5],[8,9],[21,9],[9,13],[20,13]].forEach(p=>P(p[0],p[1],hairl));
+    row(10,19,0,hair); P(9,0,hair); P(20,0,hair);                       // rounded full crown
+    row(9,20,1,hair); row(9,20,2,hair); row(9,20,3,hair);
+    P(8,2,hair); P(21,2,hair); P(8,3,hair); P(21,3,hair);
+    for(let y=4;y<19;y++){ P(8,y,hair); P(9,y,hair); P(20,y,hair); P(21,y,hair); }  // long sides framing the face
+    [6,10,14].forEach(y=>{ P(7,y,hair); P(22,y,hair); });               // soft curl bulges (waves)
+    [8,12,16].forEach(y=>{ P(7,y,hairs); P(22,y,hairs); });
+    P(9,18,hairs); P(20,18,hairs); P(8,17,hairs); P(21,17,hairs);       // rounded curl tips
+    [[12,0],[15,0],[18,1],[11,2],[9,6],[20,7],[8,11],[21,12],[9,15],[20,16]].forEach(p=>P(p[0],p[1],hairl));
   } else if(st==="wavy"){
     row(10,19,1,hair);row(9,20,2,hair);row(9,20,3,hair);
     for(let y=4;y<11;y++){P(9,y,hair);P(10,y,hair);P(19,y,hair);P(20,y,hair);}
@@ -1390,11 +1400,27 @@ function renderLedger(){
     rowsEl.appendChild(row);
     drawSoul(cv,soul,4,0);
   });
+  if(keeperUnlocked){
+    const _now=Date.now()/1000, _OFCD=12*3600;
+    const _onCool=(MEM.members||[]).filter(m=>m&&m.lastOffer&&(m.lastOffer+_OFCD)>_now).length;
+    const kbox=document.createElement("div");
+    kbox.style.cssText="text-align:center;margin:18px 0 2px";
+    kbox.innerHTML=`<button class="ghostbtn" style="display:inline-block;width:auto;padding:9px 18px;border-color:rgba(232,168,143,.5);color:#E8A88F" onclick="keeperResetOfferCooldowns()">\u21ba Reset offering cooldowns${_onCool?` \u00b7 ${_onCool} on cooldown`:''}</button>`;
+    rowsEl.appendChild(kbox);
+  }
   const share=document.createElement("div");
   share.style.cssText="text-align:center;margin:16px 0 4px";
   share.innerHTML=`<button class="ghostbtn" style="display:inline-block;width:auto;padding:9px 18px" onclick="shareStandings()">⤓ Share the standings</button>`;
   rowsEl.appendChild(share);
 }
+window.keeperResetOfferCooldowns=async function(){
+  if(!keeperUnlocked){ toast("Only the Keeper may reset cooldowns."); return; }
+  const _now=Date.now()/1000, _OFCD=12*3600;
+  const n=(MEM.members||[]).filter(m=>m&&m.lastOffer&&(m.lastOffer+_OFCD)>_now).length;
+  if(!confirm(n?`Clear the offering cooldown for ${n} member(s)? They can raise an offering again right away.`:"No one is on offering cooldown right now. Reset anyway?")) return;
+  (MEM.members||[]).forEach(m=>{ if(m) m.lastOffer=0; });
+  await saveData(); renderLedger(); toast("Offering cooldowns reset.");
+};
 
 /* spirits are rendered once in layoutGrove; motion is handled by CSS (cheap, GPU-composited) */
 let RAF=null;
@@ -3360,7 +3386,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27bt · no reaction chimes on lock/return (the real ding)</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27bx · Eye sleeps on cooldown, opens when ready</p>`;
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 /* ===== emotive spirits — moods + reactions (client-side, no SQL) ===== */
@@ -3659,7 +3685,7 @@ function wheelSectionHTML(me){
   }
   return `<div class="ritehdr" style="margin-top:22px">Test of Devotion</div>
     <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Lay <b style="color:var(--candle)">50 ✦</b> before the <b>Eye Totem</b> — once every <b>2 hours</b>. The Eye weighs your devotion and answers: it may bless you, ignore you, or turn from you. Its verdict lands on top of the cost.</p>
-    <div style="text-align:center;margin:6px 0"><div style="display:inline-block;width:min(64vw,240px)">${buildTotemSVG({anim:true})}</div></div>
+    <div style="text-align:center;margin:6px 0"><div style="display:inline-block;width:min(64vw,240px)">${buildTotemSVG({anim:true, closed: cd>0})}</div></div>
     ${ctrl}`;
 }
 function ensureTotemStyle(){
@@ -3703,7 +3729,28 @@ function ensureTotemStyle(){
   document.head.appendChild(st);
 }
 function buildTotemSVG(opts){ opts=opts||{};
-  const gC=opts.anim!==false?'te-glow':''; const pC=opts.anim!==false?'te-pupil':''; const sC=opts.anim!==false?'sauce-grp':'';
+  const closed=!!opts.closed;
+  const anim=opts.anim!==false && !closed;
+  const gC=anim?'te-glow':''; const pC=anim?'te-pupil':''; const sC=(opts.anim!==false)?'sauce-grp':'';
+  const auraOp=closed?' opacity=".3"':'';
+  const eye = closed ? `
+   <path d="M52,96 Q100,52 148,96 Q100,140 52,96 Z" fill="url(#te_knot)" stroke="#150c06" stroke-width="3"/>
+   <path d="M58,94 Q100,108 142,94" fill="none" stroke="#241608" stroke-width="3.4" stroke-linecap="round"/>
+   <path d="M63,99 Q100,107 137,99" fill="none" stroke="rgba(0,0,0,.3)" stroke-width="1.6" stroke-linecap="round"/>
+   <g stroke="#241608" stroke-width="2.2" stroke-linecap="round"><path d="M59,95 l-6,5"/><path d="M73,101 l-3,5"/><path d="M127,101 l3,5"/><path d="M141,95 l6,5"/></g>
+   <path d="M60,90 Q100,80 140,90" fill="none" stroke="rgba(255,232,163,.16)" stroke-width="1.4"/>
+   <path d="M52,96 Q100,52 148,96 Q100,140 52,96 Z" fill="none" stroke="#7a5230" stroke-width="2"/>` : `
+   <path d="M52,96 Q100,52 148,96 Q100,140 52,96 Z" fill="#231610" stroke="#150c06" stroke-width="3"/>
+   <g clip-path="url(#te_clip)">
+     <ellipse cx="100" cy="96" rx="30" ry="26" fill="url(#te_knot)"/>
+     <ellipse cx="100" cy="96" rx="24" ry="21" fill="none" stroke="#4a2f18" stroke-width="1.6" opacity=".85"/>
+     <ellipse cx="100" cy="96" rx="17" ry="15" fill="none" stroke="#5a3a20" stroke-width="1.4" opacity=".85"/>
+     <ellipse cx="100" cy="96" rx="22" ry="19" fill="url(#te_inner)"/>
+     <ellipse class="${pC}" cx="100" cy="96" rx="6" ry="15" fill="#0c0805"/>
+     <circle cx="92" cy="89" r="3" fill="#FFE9C0" opacity=".7"/>
+   </g>
+   <path d="M52,96 Q100,52 148,96 Q100,140 52,96 Z" fill="none" stroke="#7a5230" stroke-width="2"/>
+   <path d="M52,96 Q100,52 148,96" fill="none" stroke="rgba(255,232,163,.22)" stroke-width="1.4"/>`;
   return `<svg viewBox="0 0 200 268" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
    <defs>
     <linearGradient id="te_wood" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#2c1c0f"/><stop offset="22%" stop-color="#5a3a20"/><stop offset="50%" stop-color="#714a28"/><stop offset="78%" stop-color="#492f18"/><stop offset="100%" stop-color="#26180c"/></linearGradient>
@@ -3713,7 +3760,7 @@ function buildTotemSVG(opts){ opts=opts||{};
     <linearGradient id="te_sauce" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#E5381F"/><stop offset="55%" stop-color="#B71E10"/><stop offset="100%" stop-color="#7E140A"/></linearGradient>
     <clipPath id="te_clip"><path d="M52,96 Q100,52 148,96 Q100,140 52,96 Z"/></clipPath>
    </defs>
-   <circle class="${gC}" cx="100" cy="96" r="72" fill="url(#te_aura)"/>
+   <circle class="${gC}" cx="100" cy="96" r="72" fill="url(#te_aura)"${auraOp}/>
    <rect x="54" y="242" width="92" height="16" rx="4" fill="url(#te_wood)" stroke="#1a1008" stroke-width="2.5"/>
    <path d="M60,244 L68,130 L132,130 L140,244 Z" fill="url(#te_wood)" stroke="#1a1008" stroke-width="2.5"/>
    <rect x="56" y="118" width="88" height="14" rx="3" fill="url(#te_wood)" stroke="#1a1008" stroke-width="2.5"/>
@@ -3727,17 +3774,7 @@ function buildTotemSVG(opts){ opts=opts||{};
      <path d="M72,150 C71,186 71,214 72,240"/><path d="M128,150 C129,186 129,214 128,240"/>
    </g>
    <g stroke="#3d2814" stroke-width="2" fill="none" opacity=".5"><path d="M70,210 L100,218 L130,210"/></g>
-   <path d="M52,96 Q100,52 148,96 Q100,140 52,96 Z" fill="#231610" stroke="#150c06" stroke-width="3"/>
-   <g clip-path="url(#te_clip)">
-     <ellipse cx="100" cy="96" rx="30" ry="26" fill="url(#te_knot)"/>
-     <ellipse cx="100" cy="96" rx="24" ry="21" fill="none" stroke="#4a2f18" stroke-width="1.6" opacity=".85"/>
-     <ellipse cx="100" cy="96" rx="17" ry="15" fill="none" stroke="#5a3a20" stroke-width="1.4" opacity=".85"/>
-     <ellipse cx="100" cy="96" rx="22" ry="19" fill="url(#te_inner)"/>
-     <ellipse class="${pC}" cx="100" cy="96" rx="6" ry="15" fill="#0c0805"/>
-     <circle cx="92" cy="89" r="3" fill="#FFE9C0" opacity=".7"/>
-   </g>
-   <path d="M52,96 Q100,52 148,96 Q100,140 52,96 Z" fill="none" stroke="#7a5230" stroke-width="2"/>
-   <path d="M52,96 Q100,52 148,96" fill="none" stroke="rgba(255,232,163,.22)" stroke-width="1.4"/>
+   ${eye}
    <g class="${sC}">
      <ellipse class="sauce-pool" cx="100" cy="258" rx="30" ry="6.5" fill="url(#te_sauce)"/>
      <ellipse cx="90" cy="256" rx="9" ry="2" fill="#F4795C" opacity=".4"/>
@@ -4287,10 +4324,44 @@ function skyGradient(ph){
 }
 function placeBody(el,frac){ if(!el) return; const x=8+frac*84; const y=80-Math.sin(frac*Math.PI)*66; el.style.left=x+'%'; el.style.top=y+'%'; el.style.transform='translate(-50%,-50%)'; }
 function drawStars(){ const c=document.getElementById('stars'); if(!c) return; const dpr=Math.min(1.5,devicePixelRatio||1); c.width=innerWidth*dpr; c.height=innerHeight*dpr; c.style.width=innerWidth+'px'; c.style.height=innerHeight+'px'; const x=c.getContext('2d'); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,innerWidth,innerHeight); const rnd=rng(42); const N=innerWidth<480?70:120; for(let i=0;i<N;i++){ const sx=rnd()*innerWidth, sy=rnd()*innerHeight*0.62, r=rnd()*1.2+0.3, a=0.35+rnd()*0.6; x.fillStyle='rgba(255,250,235,'+a.toFixed(2)+')'; x.beginPath(); x.arc(sx,sy,r,0,7); x.fill(); } }
+function offerEffectRemain(){ try{ const now=Date.now()/1000; let newest=0; (MEM.members||[]).forEach(m=>{ if(m&&m.offered){ const at=m.offered-14400; if(at>newest) newest=at; } }); const rem=900-(now-newest); return (newest>0&&rem>0)?rem:0; }catch(e){ return 0; } }
+function offerEyeSVG(stroke,iris,pupil,glow){ return '<svg class="ofeye" viewBox="0 0 100 100"><g style="filter:drop-shadow(0 0 5px '+glow+')"><path d="M9 50 Q50 19 91 50 Q50 81 9 50 Z" fill="none" stroke="'+stroke+'" stroke-width="5" stroke-linejoin="round"/><circle cx="50" cy="50" r="16.5" fill="'+iris+'"/><circle cx="50" cy="50" r="7.2" fill="'+pupil+'"/><circle cx="44.5" cy="44.5" r="2.3" fill="rgba(255,255,255,.55)"/></g></svg>'; }
+const ECLIPSE_SKY='radial-gradient(120% 95% at 50% 13%, #3a241f 0%, #1c151a 32%, #0d0a10 64%, #06060a 100%)';
+function applyOfferSky(){ try{
+  const moon=document.getElementById('moon'), sun=document.getElementById('sun'), sky=document.getElementById('sky'), stars=document.getElementById('stars');
+  const active = offerEffectRemain()>0;
+  let ph; try{ ph=skyPhase(); }catch(e){ ph={night:true,isDay:false}; }
+  const night=ph.night, eclipse=(active && !night);
+  if(active && night){
+    if(moon){ moon.classList.add('blood'); if(!moon.querySelector('.ofeye')) moon.innerHTML=offerEyeSVG('#3a0a08','#7a1712','#080202','rgba(225,70,46,.7)'); }
+    if(sun){ sun.classList.remove('eclipse'); if(sun.querySelector('.ofeye')) sun.innerHTML=''; }
+  } else if(eclipse){
+    if(sun){ sun.classList.add('eclipse'); if(!sun.querySelector('.ofeye')) sun.innerHTML=offerEyeSVG('#F2C45A','#E8A030','#0a0a0a','rgba(255,184,74,.82)'); }
+    if(moon){ moon.classList.remove('blood'); if(moon.querySelector('.ofeye')) moon.innerHTML=''; }
+  } else {
+    if(moon){ moon.classList.remove('blood'); if(moon.querySelector('.ofeye')) moon.innerHTML=''; }
+    if(sun){ sun.classList.remove('eclipse'); if(sun.querySelector('.ofeye')) sun.innerHTML=''; }
+  }
+  if(eclipse){ if(sky) sky.style.background=ECLIPSE_SKY; if(stars) stars.style.opacity='0.5'; }
+  else { if(sky){ try{ sky.style.background=skyGradient(ph); }catch(e){} } if(stars) stars.style.opacity = ph.isDay?'0':'0.9'; }
+}catch(e){} }
 function atmoUpdate(){ try{ const ph=skyPhase(); const sky=document.getElementById('sky'); if(sky) sky.style.background=skyGradient(ph); const sun=document.getElementById('sun'), moon=document.getElementById('moon'), stars=document.getElementById('stars');
   try{ document.body.classList.toggle('sky-day', !!ph.isDay); }catch(e){}
   if(ph.isDay){ placeBody(sun,ph.frac); if(sun)sun.style.opacity='1'; if(moon)moon.style.opacity='0'; if(stars)stars.style.opacity='0'; }
   else { placeBody(moon,ph.frac); if(moon)moon.style.opacity='0.95'; if(sun)sun.style.opacity='0'; if(stars)stars.style.opacity='0.9'; }
+  try{ applyOfferSky(); }catch(e){}
+}catch(e){} }
+/* shooting stars (night) + bird flocks (day), drawn on the #fx canvas */
+const _shoots=[]; const _birds=[]; let _nextShoot=0, _nextFlock=0;
+function _spawnShoot(W,H){ const fromLeft=Math.random()<0.5; const ang=(20+Math.random()*26)*Math.PI/180; const sp=7+Math.random()*5; const vx=(fromLeft?1:-1)*Math.cos(ang)*sp; const vy=Math.sin(ang)*sp; const x0=fromLeft?(Math.random()*W*0.45):(W*0.55+Math.random()*W*0.45); const y0=8+Math.random()*H*0.22; _shoots.push({x:x0,y:y0,vx,vy,len:55+Math.random()*70,life:0,max:30+Math.random()*22}); if(Math.random()<0.18){ setTimeout(()=>{ try{ _shoots.push({x:x0+(Math.random()*40-20),y:y0+(Math.random()*20-10),vx,vy,len:45+Math.random()*50,life:0,max:28+Math.random()*18}); }catch(e){} }, 220+Math.random()*260); } }
+function _spawnFlock(W,H){ const fromLeft=Math.random()<0.5; const dir=fromLeft?1:-1; const n=5+Math.floor(Math.random()*5); const sp=0.7+Math.random()*0.7; const baseY=H*0.09+Math.random()*H*0.2; const startX=fromLeft?-30:(W+30); const size=4.5+Math.random()*3.5; for(let i=0;i<n;i++){ const back=i*(10+Math.random()*8); const yoff=(i%2?1:-1)*(i*1.8)+(Math.random()*6-3); _birds.push({x:startX-dir*back, y:baseY+yoff, vx:dir*sp*(0.94+Math.random()*0.14), w:size*(0.85+Math.random()*0.35), ph:Math.random()*6.28, bob:Math.random()*6.28, flap:0.16+Math.random()*0.09}); } }
+function skyCreatures(x, now, night){ try{
+  const W=innerWidth, H=innerHeight;
+  if(_nextShoot===0){ _nextShoot=now+6000+Math.random()*12000; } if(_nextFlock===0){ _nextFlock=now+25000+Math.random()*40000; }
+  if(night){ if(now>_nextShoot){ _spawnShoot(W,H); _nextShoot=now+9000+Math.random()*22000; } }
+  else { if(now>_nextFlock && _birds.length===0){ _spawnFlock(W,H); _nextFlock=now+50000+Math.random()*75000; } }
+  for(let i=_shoots.length-1;i>=0;i--){ const s=_shoots[i]; s.x+=s.vx; s.y+=s.vy; s.life++; const k=s.life/s.max; if(k>=1||s.y>H+40){ _shoots.splice(i,1); continue; } const a=Math.sin(Math.min(1,k)*Math.PI); const sp=Math.hypot(s.vx,s.vy)||1, ux=s.vx/sp, uy=s.vy/sp, tx=s.x-ux*s.len, ty=s.y-uy*s.len; const g=x.createLinearGradient(s.x,s.y,tx,ty); g.addColorStop(0,'rgba(255,250,235,'+(a*0.9).toFixed(3)+')'); g.addColorStop(1,'rgba(255,250,235,0)'); x.strokeStyle=g; x.lineWidth=2; x.lineCap='round'; x.beginPath(); x.moveTo(s.x,s.y); x.lineTo(tx,ty); x.stroke(); x.fillStyle='rgba(255,255,250,'+a.toFixed(3)+')'; x.beginPath(); x.arc(s.x,s.y,1.7,0,7); x.fill(); }
+  for(let i=_birds.length-1;i>=0;i--){ const b=_birds[i]; b.x+=b.vx; b.ph+=b.flap; b.bob+=0.03; if((b.vx>0&&b.x>W+44)||(b.vx<0&&b.x<-44)){ _birds.splice(i,1); continue; } const by=b.y+Math.sin(b.bob)*2; const rise=Math.sin(b.ph)*b.w*0.55, w=b.w, drop=w*0.15; x.strokeStyle='rgba(38,40,52,0.6)'; x.lineWidth=1.7; x.lineCap='round'; x.lineJoin='round'; x.beginPath(); x.moveTo(b.x-w, by+drop-rise*0.4); x.quadraticCurveTo(b.x-w*0.4, by-rise, b.x, by); x.quadraticCurveTo(b.x+w*0.4, by-rise, b.x+w, by+drop-rise*0.4); x.stroke(); }
 }catch(e){} }
 function initSmoke(){
   const c=document.getElementById('fx'); if(!c) return;
@@ -4302,12 +4373,14 @@ function initSmoke(){
   function spawn(){ return {x:innerWidth*0.5+(Math.random()*64-32), y:innerHeight-104+Math.random()*18, r:8+Math.random()*10, vy:0.3+Math.random()*0.55, vx:Math.random()*0.4-0.2, life:Math.random()*120, max:200+Math.random()*170, drift:Math.random()*6}; }
   const P=Array.from({length:N},spawn); let last=0;
   function loop(now){ requestAnimationFrame(loop); if(document.hidden) return; if(now-last<50) return; last=now; x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,innerWidth,innerHeight); const night=isNight();
-    for(let i=0;i<P.length;i++){ const p=P[i]; p.life++; p.y-=p.vy; p.drift+=0.02; p.x+=p.vx+Math.sin(p.drift)*0.3; p.r+=0.12; const k=p.life/p.max; if(k>=1){ P[i]=spawn(); continue; } const a=(1-k)*(night?0.16:0.11); x.beginPath(); x.fillStyle=(night?'rgba(74,78,84,':'rgba(150,150,156,')+a.toFixed(3)+')'; x.arc(p.x,p.y,p.r,0,7); x.fill(); } }
+    for(let i=0;i<P.length;i++){ const p=P[i]; p.life++; p.y-=p.vy; p.drift+=0.02; p.x+=p.vx+Math.sin(p.drift)*0.3; p.r+=0.12; const k=p.life/p.max; if(k>=1){ P[i]=spawn(); continue; } const a=(1-k)*(night?0.16:0.11); x.beginPath(); x.fillStyle=(night?'rgba(74,78,84,':'rgba(150,150,156,')+a.toFixed(3)+')'; x.arc(p.x,p.y,p.r,0,7); x.fill(); }
+    skyCreatures(x, now, night);
+  }
   if(N) requestAnimationFrame(loop); addEventListener('resize',size);
 }
 function doFlash(){ const f=document.getElementById('flash'); if(!f) return; const seq=[0,0.55,0.06,0.42,0.0]; let i=0; const iv=setInterval(()=>{ f.style.opacity=seq[i]; i++; if(i>=seq.length){ clearInterval(iv); f.style.opacity=0; } },75); setTimeout(()=>{ try{ Snd.sfx('thunder'); }catch(e){} }, 260+Math.random()*520); }
 function lightningLoop(){ const delay=18000+Math.random()*42000; setTimeout(()=>{ if(isNight() && !document.hidden && Math.random()<0.6) doFlash(); lightningLoop(); }, delay); }
-function initAtmosphere(){ try{ drawStars(); initSmoke(); atmoUpdate(); setInterval(atmoUpdate,60000); lightningLoop(); addEventListener('resize',()=>{ drawStars(); atmoUpdate(); }); }catch(e){} }
+function initAtmosphere(){ try{ drawStars(); initSmoke(); atmoUpdate(); applyOfferSky(); setInterval(applyOfferSky,7000); setInterval(atmoUpdate,60000); lightningLoop(); addEventListener('resize',()=>{ drawStars(); atmoUpdate(); }); }catch(e){} }
 window.geoForm=function(){ const g=geo(); const st=sunTimes(); sheet.innerHTML=`
   <div class="grip"></div>
   <div class="kpanel">

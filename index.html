@@ -626,6 +626,73 @@ function offerPop(target, nominator){ try{
   setTimeout(close, 4200);
 }catch(e){} }
 
+/* ===== local (on-device) notifications — fire when the app is backgrounded ===== */
+async function localNote(title, body){ try{
+  if(typeof MODE!=='undefined' && MODE!=='remote') return;
+  if(!pushSupported() || pushIsOff()) return;
+  if(Notification.permission!=='granted') return;
+  if(document.visibilityState==='visible') return;   // they're looking — in-app UI already covers it
+  const opts={ body:body||'', icon:'icon-192.png', badge:'icon-192.png', tag:'grove-'+Date.now() };
+  let reg=null; try{ reg=await navigator.serviceWorker.ready; }catch(e){}
+  if(reg && reg.showNotification){ await reg.showNotification(title, opts); }
+  else if(typeof Notification!=='undefined'){ new Notification(title, opts); }
+}catch(e){} }
+
+/* ===== ping a spirit when THEIR OWN rite passes (deed / title / badge / offer / oath) ===== */
+let MY_RITE_APPLIED_SNAP=null;
+function myRiteAppliedIds(){ const s={}; (MEM.rites||[]).forEach(r=>{ if(r&&r.applied&&r.id) s[r.id]=1; }); return s; }
+function initMyRiteSnap(){ MY_RITE_APPLIED_SNAP=myRiteAppliedIds(); }
+function detectMyRiteApplied(){ try{
+  if(!MY_RITE_APPLIED_SNAP){ MY_RITE_APPLIED_SNAP=myRiteAppliedIds(); return; }
+  const fresh=(MEM.rites||[]).filter(r=>r&&r.applied&&r.id&&!MY_RITE_APPLIED_SNAP[r.id]);
+  MY_RITE_APPLIED_SNAP=myRiteAppliedIds();
+  const me=(typeof VOTER!=='undefined')?VOTER:null; if(!me) return;
+  fresh.forEach(r=>{
+    if(r.target!==me) return;
+    let title='', body='';
+    switch(r.kind){
+      case 'deed':  title='\ud83d\udcdc Your deed is accepted'; body=(r.label?('\u201c'+r.label+'\u201d \u2014 '):'')+((r.points>=0?'+':'')+(r.points||0))+' \u2726 to your devotion.'; break;
+      case 'title': title='\ud83c\udf96 A title is yours';      body='The grove names you \u201c'+(r.label||'')+'.\u201d'; break;
+      case 'badge': title='\ud83d\udd30 A badge is yours';      body='You are marked: '+(r.label||'a badge')+'.'; break;
+      case 'offer': title='\ud83d\udd2e You are offered to the Eye'; body='The grove has lifted you up \u2014 +150 \u2726 and the robe.'; break;
+      case 'oath':  title='\ud83d\udd6f Your oath is sealed';   body='You are sworn to the Order.'; break;
+      default: return;
+    }
+    localNote(title, body);
+  });
+}catch(e){} }
+
+/* ===== Test of Devotion: ping when the Eye is ready to weigh you again ===== */
+function testReadyAt(){ try{ const v=localStorage.getItem('grove-testReadyAt'); return v?parseFloat(v):0; }catch(e){ return 0; } }
+function scheduleTestReady(){ try{
+  const me=(typeof memByName==='function')?memByName(VOTER):null; if(!me||!me.lastSpin) return;
+  const readyAt=me.lastSpin+2*3600;
+  try{ localStorage.setItem('grove-testReadyAt', String(readyAt)); localStorage.removeItem('grove-testNotified'); }catch(e){}
+  // Android & desktop Chrome: schedule a real notification that fires even if the app is closed
+  try{
+    if(pushSupported() && !pushIsOff() && Notification.permission==='granted'
+       && typeof Notification!=='undefined' && ('showTrigger' in Notification.prototype) && (typeof TimestampTrigger!=='undefined')){
+      navigator.serviceWorker.ready.then(function(reg){
+        reg.showNotification('\ud83d\udc41 The Eye is ready', {
+          body:'You may lay your devotion before the Eye Totem again.',
+          icon:'icon-192.png', badge:'icon-192.png', tag:'grove-testready',
+          showTrigger:new TimestampTrigger(readyAt*1000)
+        }).then(function(){ try{ localStorage.setItem('grove-testNotified','1'); }catch(e){} }).catch(function(){});
+      }).catch(function(){});
+    }
+  }catch(e){}
+}catch(e){} }
+function checkTestReady(){ try{
+  if(typeof MODE!=='undefined' && MODE!=='remote') return;
+  const readyAt=testReadyAt(); if(!readyAt) return;
+  const now=Date.now()/1000;
+  if(now<readyAt) return;
+  if(localStorage.getItem('grove-testNotified')==='1') return;   // a scheduled trigger already owns this
+  try{ localStorage.setItem('grove-testNotified','1'); }catch(e){}
+  if(now-readyAt < 24*3600){ localNote('\ud83d\udc41 The Eye is ready', 'You may lay your devotion before the Eye Totem again.'); }
+  try{ localStorage.removeItem('grove-testReadyAt'); }catch(e){}
+}catch(e){} }
+
 function notifyRulesHTML(){
   if((typeof MODE!=='undefined'&&MODE!=='remote') || !pushSupported()) return '';
   let st='default'; try{ st=Notification.permission; }catch(_){}
@@ -635,7 +702,7 @@ function notifyRulesHTML(){
   else if(on){ btn='<div style="text-align:center"><button class="ghostbtn" onclick="disablePush()">\u2713 Notifications on \u00b7 tap to turn off</button></div>'; }
   else { btn='<div style="text-align:center"><button class="gold" onclick="enablePush()">\ud83d\udd14 Enable notifications</button></div>'; }
   return '<div class="ritehdr" style="margin-top:22px">Notifications</div>'
-    +'<p class="rtext" style="text-align:center;max-width:34ch;margin:0 auto 8px">Get pinged when a new deed needs a vote or the grove is blessed. Installed app only \u00b7 needs signal.</p>'
+    +'<p class="rtext" style="text-align:center;max-width:34ch;margin:0 auto 8px">Get pinged for new deeds, offerings, wagers &amp; challenges, when the grove is blessed, when your own rite passes, and when the Eye is ready to weigh you again. Installed app only \u00b7 needs signal.</p>'
     +btn;
 }
 
@@ -717,6 +784,7 @@ async function pollRemote(){
     const quiet = document.hidden || REACT_SUPPRESS; REACT_SUPPRESS=false;
     if(quiet){ rebaselineSnaps(); }
     else { try{ detectReactions(); }catch(e){} try{ detectNewOffers(); }catch(e){} }
+    try{ detectMyRiteApplied(); }catch(e){}
     takeSnap(); layoutGrove(); renderLedger(); renderRites(); const tr=document.getElementById('trials'); if(tr && tr.style.display!=='none') renderTrials();
     if(!quiet) checkRankUps();
   } }catch(e){}
@@ -1460,7 +1528,7 @@ window.keeperResetOfferCooldowns=async function(){
   const _pub=publicOfferCool();
   if(!confirm(_pub>0?"Clear the public offering cooldown? One more offering can be chosen right away.":"The public offering cooldown is already clear. Reset anyway?")) return;
   MEM.offerGateClearedAt=Date.now()/1000;
-  await saveData(); renderLedger(); toast("An offering may be chosen now.");
+  await saveData(); renderLedger(); try{ if(typeof scrim!=='undefined' && scrim && scrim.classList.contains('show') && keeperUnlocked) keeperPanel(); }catch(e){} toast("An offering may be chosen now.");
 };
 
 /* spirits are rendered once in layoutGrove; motion is handled by CSS (cheap, GPU-composited) */
@@ -1650,6 +1718,7 @@ function keeperPanel(){
       <button class="ghostbtn" onclick="creatorForm()">✦ Create / edit a chibi</button>
       <button class="ghostbtn" onclick="summonsRobes()">✶ Summons — robe all by rank</button>
       <button class="ghostbtn" onclick="keeperOfferForm()">▲ Offer / release a spirit</button>
+      <button class="ghostbtn" style="border-color:rgba(232,168,143,.5);color:#E8A88F" onclick="keeperResetOfferCooldowns()">\u21ba Allow one more offering${(function(){var _p=publicOfferCool();return _p>0?(' \u00b7 public '+Math.floor(_p/3600)+'h '+Math.floor((_p%3600)/60)+'m'):' \u00b7 clear';})()}</button>
       <button class="ghostbtn" onclick="deedsForm()">✎ Manage deeds & Devotion Points</button>
       <button class="ghostbtn" onclick="ranksForm()">✎ Manage ranks</button>
       <button class="ghostbtn" onclick="itemLocksForm()">🔒 Item rank-locks</button>
@@ -3081,7 +3150,7 @@ window.approveRite=function(id){
   Snd.sfx('approve');
   voteRite(id, VOTER);
 };
-async function refreshRemote(){ try{ const d=await sbRead(); if(d){ MEM=d; ensureDefaults(); cacheRemote(); try{ detectReactions(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectOfferPassed(); }catch(e){} } }catch(e){} }
+async function refreshRemote(){ try{ const d=await sbRead(); if(d){ MEM=d; ensureDefaults(); cacheRemote(); try{ detectReactions(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectOfferPassed(); }catch(e){} try{ detectMyRiteApplied(); }catch(e){} } }catch(e){} }
 
 window.proposeRite=async function(item){
   let off=false;
@@ -3097,6 +3166,7 @@ window.proposeRite=async function(item){
   else { Snd.sfx('note'); toast("The rite is raised."); }
 };
 window.voteRite=async function(id, voter){
+  const _r0=(MEM.rites||[]).find(x=>x.id===id); const _wasApplied=!!(_r0&&_r0.applied);
   if(MODE==="remote"){
     try{ await sbRpc("grove_vote",{p_id:id,p_voter:voter}); await refreshRemote(); }
     catch(e){ if(isNetErr(e)){ applyVoteLocal(id,voter); cacheRemote(); enqueueOp("grove_vote",{p_id:id,p_voter:voter}); toast("No signal — your approval is saved."); } else { toast("Vote failed."); return; } }
@@ -3108,6 +3178,10 @@ window.voteRite=async function(id, voter){
   try{ detectOfferPassed(); }catch(e){}
   const r=(MEM.rites||[]).find(x=>x.id===id);
   if(r && r.applied) toast("The grove has spoken — it is done.");
+  // an offering just passed → tell the grove (the offered spirit gets their own ping on their device)
+  if(r && r.applied && !_wasApplied && r.kind==='offer'){
+    try{ grovePush({targets:'all', exclude:(r.target||''), title:'\ud83d\udd2e An offering is accepted', body:((r.target||'A soul')+' has been offered to the Eye.'), url:'./'}); }catch(e){}
+  }
 };
 window.withdrawRite=async function(id){
   const r=(MEM.rites||[]).find(x=>x.id===id); if(!r) return;
@@ -3434,7 +3508,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27bz · fire cooldown fix · reaction fix · curly-long opt 3</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27ca · notifications: wagers · challenges · offerings · own rite · Eye-ready</p>`;
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 /* ===== emotive spirits — moods + reactions (client-side, no SQL) ===== */
@@ -3592,7 +3666,13 @@ async function communityAction(a){
     let online=true; try{ online=navigator.onLine; }catch(_){}
     if(online){
       const _bb=(MEM.fire&&MEM.fire.lastBlessed)||0;
-      try{ await sbRpc("grove_action",{p_action:a}); await refreshRemote(); okR=true; if(a&&a.t==='stoke'){ const _nb=(MEM.fire&&MEM.fire.lastBlessed)||0; if(_nb>_bb){ grovePush({targets:'all', title:'\ud83d\udd25 The grove is blessed', body:'The sixth log caught \u2014 every tender is blessed.', url:'./'}); } } }
+      try{ await sbRpc("grove_action",{p_action:a}); await refreshRemote(); okR=true; if(a&&a.t==='stoke'){ const _nb=(MEM.fire&&MEM.fire.lastBlessed)||0; if(_nb>_bb){ grovePush({targets:'all', title:'\ud83d\udd25 The grove is blessed', body:'The sixth log caught \u2014 every tender is blessed.', url:'./'}); } }
+        try{
+          if(a&&a.t==='wager_new'){ grovePush({targets:'all', exclude:(a.proposer||''), title:'\ud83c\udfb2 A wager is raised', body:((a.proposer||'A spirit')+' stakes '+(a.amount||0)+' \u2726'+(a.title?(' \u2014 \u201c'+a.title+'\u201d'):'')+'. Match it in the Ring.'), url:'./'}); }
+          else if(a&&a.t==='group_new'){ grovePush({targets:'all', exclude:(a.starter||''), title:'\ud83c\udfb2 A group wager opens', body:((a.starter||'A spirit')+' opened'+(a.title?(' \u201c'+a.title+'\u201d'):' a wager')+' \u2014 pick a side.'), url:'./'}); }
+          else if(a&&a.t==='chal_new'){ grovePush({targets:'all', exclude:(a.owner||''), title:'\u2694 A challenge is set', body:((a.owner||'A spirit')+' offers '+(a.reward||0)+' \u2726'+(a.title?(' \u2014 \u201c'+a.title+'\u201d'):'')+'. Take it up.'), url:'./'}); }
+        }catch(e){}
+      }
       catch(e){ if(isNetErr(e)){ applyAction(a); cacheRemote(); enqueueOp("grove_action",{p_action:a}); toast("No signal — saved. It'll sync when you're back."); okR=true; } else { toast("The Eye did not answer — is grove_trials.sql installed?"); return false; } }
     } else { applyAction(a); cacheRemote(); enqueueOp("grove_action",{p_action:a}); toast("Offline — saved. It'll sync when you're back."); okR=true; }
   }
@@ -3896,6 +3976,7 @@ window.spinTheWheel=async function(){
   const o=spinWheel();
   const btn=document.getElementById('spinBtn'); if(btn){ btn.disabled=true; btn.textContent='The Eye weighs you…'; }
   try{ await devotionVerdict(o); }catch(e){}
+  try{ scheduleTestReady(); }catch(e){}
   WHEEL_BUSY=false;
 };
 function wagerOpenCard(w){
@@ -4546,7 +4627,7 @@ function offeringCeremony(name){
   await loadData();
   ensureDefaults();
   try{ if(sweepRites(Date.now()/1000) && MODE!=="remote") await saveData(); }catch(e){}
-  try{ initMoodSnap(); }catch(e){} try{ initOfferSnap(); }catch(e){}
+  try{ initMoodSnap(); }catch(e){} try{ initOfferSnap(); }catch(e){} try{ initMyRiteSnap(); }catch(e){}
   if(SB_ON && MODE!=="remote"){ showDbBanner("Not connected to the shared grove — running LOCAL-ONLY on this device. The keeper password set in Supabase and other people's wagers/points will NOT work here. On the hosted site this usually means your Supabase project is PAUSED — open the Supabase dashboard, resume the project, then reload."); }
   document.getElementById("offNote").textContent =
     MODE==="remote" ? "◦ live ledger · synced through the Eye ◦"
@@ -4571,6 +4652,9 @@ function offeringCeremony(name){
   try{ syncBadge(); flushQueue(); }catch(e){}
   setInterval(()=>{ try{ syncOffering(); }catch(e){} }, 8000);
   setInterval(()=>{ try{ if(typeof Snd!=='undefined' && Snd.fire) Snd.fire((MEM.fire&&MEM.fire.level)||0); }catch(e){} }, 5000);
+  try{ checkTestReady(); }catch(e){}
+  setInterval(()=>{ try{ checkTestReady(); }catch(e){} }, 30000);
+  try{ document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState!=='visible'){ try{ checkTestReady(); }catch(e){} } }); }catch(e){}
   try{ syncOffering(); }catch(e){}
   addEventListener("resize",()=>{drawTrees();layoutGrove();});
 })();

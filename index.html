@@ -2691,13 +2691,13 @@ const Snd=(function(){
     try{ musicTickStop(); }catch(e){}
     try{ if(cmDeckA&&cmDeckA.tmr){ clearTimeout(cmDeckA.tmr); cmDeckA.tmr=null; } }catch(e){}
     try{ if(cmDeckB&&cmDeckB.tmr){ clearTimeout(cmDeckB.tmr); cmDeckB.tmr=null; } }catch(e){}
-    try{ if(ctx){ var t=ctx.currentTime; var b=cmBusGet(); b.gain.cancelScheduledValues(t); b.gain.setValueAtTime(Math.max(0.0001,b.gain.value),t); b.gain.linearRampToValueAtTime(0.0001,t+0.08); } }catch(e){}
-    setTimeout(function(){ try{ if(ctx&&ctx.state==='running') ctx.suspend(); }catch(e){} }, 100);
+    try{ if(ctx&&master){ var t=ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(Math.max(0.0001,master.gain.value),t); master.gain.linearRampToValueAtTime(0.0001,t+0.07); } }catch(e){}
+    setTimeout(function(){ try{ if(ctx&&ctx.state==='running') ctx.suspend(); }catch(e){} }, 130);
   }
   function _audShow(){
     if(!on) return;
     try{ if(ctx&&ctx.state==='suspended') ctx.resume(); }catch(e){}
-    try{ var t=ctx?ctx.currentTime:0; if(cmBus){ cmBus.gain.cancelScheduledValues(t); cmBus.gain.setValueAtTime(cmBus.gain.value,t); cmBus.gain.linearRampToValueAtTime(1.0,t+0.3); } }catch(e){}
+    try{ if(ctx&&master){ var t=ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value,t); master.gain.linearRampToValueAtTime(0.45,t+0.35); } }catch(e){}
     try{ if(chantActive){ if(typeof cmOfferStart==='function') cmOfferStart(); } else { if(mPlaying){ musicTickStart(); } else { startMusic(); } } }catch(e){}
   }
   try{ document.addEventListener('visibilitychange', function(){ if(document.hidden) _audHide(); else _audShow(); }); }catch(e){}
@@ -3344,7 +3344,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27bo · music via web-audio buffers (no media widget)</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27bp · fade master before suspend (kills the ding)</p>`;
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 /* ===== emotive spirits — moods + reactions (client-side, no SQL) ===== */

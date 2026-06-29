@@ -175,6 +175,8 @@
   .rapprove{flex-shrink:0;font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.06em;padding:9px 13px;border-radius:8px;
     background:linear-gradient(180deg,var(--candle),#d9a93f);color:#1a1206;border:none;cursor:pointer;text-transform:uppercase;}
   .rapprove.voted{background:rgba(38,53,44,.55);color:var(--sage);border:1px solid var(--moss);cursor:default;}
+  .ritecard .rbtns{display:flex;flex-direction:column;gap:5px;flex-shrink:0;}
+  .rwithdraw{font-family:'Silkscreen',monospace;font-size:8.5px;letter-spacing:.05em;padding:7px 10px;border-radius:8px;background:rgba(120,60,50,.16);border:1px solid rgba(199,90,51,.5);color:#E8A88F;cursor:pointer;text-transform:uppercase;}
   .ritehdr{font-family:'Cinzel',serif;font-size:13px;color:var(--sage);text-align:center;letter-spacing:.08em;margin:18px 0 8px;text-transform:uppercase;}
   #rules{max-width:520px;margin:8px auto 0;padding:0 6px;}
   .rtext{color:var(--parch);font-size:13.5px;line-height:1.5;margin:4px 0 6px;}
@@ -433,7 +435,7 @@ const DEFAULT_DEEDS = [
 ];
 function tiers(){ return (MEM && MEM.tiers && MEM.tiers.length)?MEM.tiers:DEFAULT_TIERS; }
 function deeds(){ return (MEM && MEM.deeds && MEM.deeds.length)?MEM.deeds:DEFAULT_DEEDS; }
-function ensureDefaults(){ if(!MEM)return; if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); if(MEM._tierMig!==1){ MEM.tiers=structuredClone(DEFAULT_TIERS); MEM._tierMig=1; } if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); if(MEM._deedMig!==3){ MEM.deeds=structuredClone(DEFAULT_DEEDS); MEM._deedMig=3; } if(!MEM.rites)MEM.rites=[]; if(!MEM.challenges)MEM.challenges=[]; if(!MEM.seasonHistory)MEM.seasonHistory=[]; if(!MEM.wagers)MEM.wagers=[]; if(!MEM.itemLocks)MEM.itemLocks={}; if(!MEM.badgeColors)MEM.badgeColors={}; if(MEM.seasonStart===undefined)MEM.seasonStart=0;
+function ensureDefaults(){ if(!MEM)return; if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); if(MEM._tierMig!==1){ MEM.tiers=structuredClone(DEFAULT_TIERS); MEM._tierMig=1; } if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); if(MEM._deedMig!==3){ MEM.deeds=structuredClone(DEFAULT_DEEDS); MEM._deedMig=3; } if(!MEM.rites)MEM.rites=[]; if(!MEM.challenges)MEM.challenges=[]; if(!MEM.seasonHistory)MEM.seasonHistory=[]; if(!MEM.wagers)MEM.wagers=[]; if(!MEM.itemLocks)MEM.itemLocks={}; if(!MEM.badgeColors)MEM.badgeColors={}; if(!MEM.badgeColors["Of the Eye"])MEM.badgeColors["Of the Eye"]="#E0B466"; if(MEM.seasonStart===undefined)MEM.seasonStart=0;
   if(MEM._hatMig!==3){ const _hm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && ['crown','laurel','halo'].includes(c.hat)){ c.hat='none'; _hm.push(m); } }); MEM._hatMig=3; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _hm.length && !localStorage.getItem('grove-crownpurge3')){ _hm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-crownpurge3','1'); } }catch(e){} } if(!MEM.fire)MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[]}; if(!MEM.fire.stokers)MEM.fire.stokers=[]; if(MEM.fire.lastDecay===undefined)MEM.fire.lastDecay=Date.now()/1000; if(MEM.fire.streak===undefined)MEM.fire.streak=0; if(MEM._fireTune!==2){ MEM.fire.goal=6; MEM._fireTune=2; } (MEM.members||[]).forEach(m=>{ if(m.season===undefined) m.season=0; if(m.chalBudget===undefined) m.chalBudget=150; if(m.oath===undefined) m.oath=true; if(m.lastStoke===undefined) m.lastStoke=0; if(m.logs===undefined) m.logs=0; if(m.fireLogs===undefined) m.fireLogs=0; if(!(m.points>0)) m.points=Math.max(0,m.points||0); if(!(m.season>0)) m.season=Math.max(0,m.season||0); if(m._preTop!==undefined && !(m.offered&&m.offered>Date.now()/1000)){ const c=m.sprite&&m.sprite.chibi; if(c&&c.top_style==='robes'){ const cc=structuredClone(c); cc.top_style=m._preTop||(cc.sleeves===false?'tank':'tee'); m.sprite={chibi:cc}; } delete m._preTop; } }); }
 function tierOf(p){const T=tiers();let t=T[0];for(const x of T)if(p>=x.min)t=x;return t;}
 function tierIndex(p){const T=tiers();let i=0;T.forEach((x,k)=>{if(p>=x.min)i=k;});return i;}
@@ -1607,7 +1609,8 @@ window.keeperSetOffer=async function(on){
     m.unlocks=m.unlocks||[]; if(!m.unlocks.includes('robes')) m.unlocks.push('robes');
     const c=cloneChibi(m); if(!(m.offered&&m.offered>now)) m._preTop=c.top_style; c.top_style='robes'; m.sprite={chibi:c};
     m.offered=now+4*3600;
-    if(!wasOffered){ m.points=(m.points||0)+100; m.season=(m.season||0)+100; m.history=m.history||[]; m.history.push({l:"Offered to the Eye",d:100,t:Date.now()/1000}); }
+    m.badges=m.badges||[]; if(!m.badges.includes("Of the Eye")) m.badges.push("Of the Eye");
+    if(!wasOffered){ m.points=(m.points||0)+150; m.season=(m.season||0)+150; m.history=m.history||[]; m.history.push({l:"Offered to the Eye",d:150,t:Date.now()/1000}); }
   } else { m.offered=0; if(m.sprite&&m.sprite.chibi&&m.sprite.chibi.top_style==='robes'){ const c=cloneChibi(m); c.top_style=(m._preTop||(c.sleeves===false?'tank':'tee')); delete m._preTop; m.sprite={chibi:c}; } }
   await saveData(); layoutGrove(); renderLedger(); keeperOfferForm();
   toast(on?`${name} is offered to the Eye.`:`${name} is released.`);
@@ -2888,24 +2891,19 @@ let NOSIGN = 1, PDSIGN = 1;
 let NOM_TARGETS = new Set();
 function votesForPoints(p){ p=Math.abs(p); if(p<=20)return 3; if(p<=49)return 4; if(p<=69)return 5; if(p<=100)return 6; if(p<=150)return 7; return 8; }
 window.toggleNomTarget=function(name,btn){ if(NOM_TARGETS.has(name)){NOM_TARGETS.delete(name);btn.classList.remove('on');} else {NOM_TARGETS.add(name);btn.classList.add('on');} };
+function proposeLocal(it){ MEM.rites=MEM.rites||[]; it.id=it.id||("r"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36)); it.approvers=[it.nominator]; it.applied=false; it.created=Date.now()/1000; MEM.rites.push(it); if(it.approvers.length>=it.threshold){ applyRiteEffect(it); it.applied=true; } }
+function withdrawLocal(id){ MEM.rites=(MEM.rites||[]).filter(x=>x.id!==id); }
 window.proposeRiteBatch=async function(items){
   if(!items.length) return;
+  let note=null;
   if(MODE==="remote"){
-    try{ for(const it of items){ await sbRpc("grove_propose",{p_item:it}); } await refreshRemote(); if(items[0]){ ritePush(items[0]); } }
-    catch(e){ toast("Could not raise the rite."); return; }
+    try{ for(const it of items){ await sbRpc("grove_propose",{p_item:it}); } await refreshRemote(); if(items[0]){ ritePush(items[0]); } note=items.length>1?`${items.length} rites raised.`:"The rite is raised."; }
+    catch(e){ if(isNetErr(e)){ items.forEach(it=>{ proposeLocal(it); enqueueOp("grove_propose",{p_item:it}); }); cacheRemote(); note="No signal — saved. It'll sync when you're back."; } else { toast("Could not raise the rite."); return; } }
   } else {
-    MEM.rites=MEM.rites||[];
-    items.forEach(it=>{
-      it.id="r"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36);
-      it.approvers=[it.nominator]; it.applied=false; it.created=Date.now()/1000;
-      MEM.rites.push(it);
-      if(it.approvers.length>=it.threshold){ applyRiteEffect(it); it.applied=true; }
-    });
-    await saveData();
+    items.forEach(it=>proposeLocal(it)); await saveData(); note=items.length>1?`${items.length} rites raised.`:"The rite is raised.";
   }
   closeSheet(); renderRites(); layoutGrove(); renderLedger();
-  Snd.sfx('note');
-  toast(items.length>1?`${items.length} rites raised.`:"The rite is raised.");
+  Snd.sfx('note'); if(note) toast(note);
 };
 let VOTED_RITES = new Set();
 try{ VOTED_RITES = new Set(JSON.parse(localStorage.getItem('grove-voted-rites')||'[]')); }catch(e){}
@@ -2952,10 +2950,14 @@ function riteCard(r){
   const isOath=r.kind==="oath";
   const countLbl = isOath ? `${Math.max(0,n-1)} / 3 witnesses` : `${n} / ${thr} ✦`;
   const voted = hasVotedHere(r.id) || (VOTER && (r.approvers||[]).includes(VOTER));
+  const canWithdraw = VOTER && r.nominator===VOTER && !r.applied && (n*2 < thr) && ['deed','title','badge','offer'].includes(r.kind);
+  const approveBtn = `<button class="rapprove ${voted?"voted":""}" ${voted?"disabled":""} onclick="approveRite('${r.id}')">${voted?(isOath?"✓ Witnessed":"✓ Approved"):(isOath?"Witness":"Approve")}</button>`;
+  const withdrawBtn = canWithdraw ? `<button class="rwithdraw" onclick="withdrawRite('${r.id}')">Withdraw</button>` : "";
+  const keeperRmBtn = keeperUnlocked ? `<button class="rwithdraw" style="background:rgba(150,40,40,.18);border-color:rgba(210,80,70,.6);color:#F0A090" onclick="keeperRemoveRite('${r.id}')">✕ Remove</button>` : "";
   return `<div class="ritecard">
     <div class="rbody"><div class="rdesc">${desc}</div>
       <div class="rmeta">${countLbl} &nbsp; <span class="rby">by ${r.nominator} · ${left}</span></div></div>
-    <button class="rapprove ${voted?"voted":""}" ${voted?"disabled":""} onclick="approveRite('${r.id}')">${voted?(isOath?"✓ Witnessed":"✓ Approved"):(isOath?"Witness":"Approve")}</button>
+    <div class="rbtns">${approveBtn}${withdrawBtn}${keeperRmBtn}</div>
   </div>`;
 }
 window.approveRite=function(id){
@@ -2966,25 +2968,22 @@ window.approveRite=function(id){
 async function refreshRemote(){ try{ const d=await sbRead(); if(d){ MEM=d; ensureDefaults(); cacheRemote(); try{ detectReactions(); }catch(e){} try{ detectNewOffers(); }catch(e){} } }catch(e){} }
 
 window.proposeRite=async function(item){
+  let off=false;
   if(MODE==="remote"){
     try{ await sbRpc("grove_propose",{p_item:item}); await refreshRemote(); if(item){ ritePush(item); } }
-    catch(e){ let msg="Could not raise the rite."; try{ const j=JSON.parse(e.message); if(j&&j.message) msg=j.message; }catch(_){ if(e&&e.message&&/offering|Eye|supplicant|wait/i.test(e.message)) msg=e.message; } toast(msg); return; }
+    catch(e){ if(isNetErr(e)){ proposeLocal(item); enqueueOp("grove_propose",{p_item:item}); cacheRemote(); off=true; } else { let msg="Could not raise the rite."; try{ const j=JSON.parse(e.message); if(j&&j.message) msg=j.message; }catch(_){ if(e&&e.message&&/offering|Eye|supplicant|wait/i.test(e.message)) msg=e.message; } toast(msg); return; } }
   } else {
-    MEM.rites=MEM.rites||[];
-    item.id="r"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);
-    item.approvers=[item.nominator]; item.applied=false; item.created=Date.now()/1000;
-    MEM.rites.push(item);
-    if(item.approvers.length>=item.threshold){ applyRiteEffect(item); item.applied=true; }
-    await saveData();
+    proposeLocal(item); await saveData();
   }
   closeSheet(); renderRites(); layoutGrove(); renderLedger(); try{ syncOffering(); }catch(e){}
-  if(item.kind==='offer'){ try{ offeringCeremony(item.target); }catch(e){} }
+  if(off){ toast("No signal — saved. It'll sync when you're back."); }
+  else if(item.kind==='offer'){ try{ offeringCeremony(item.target); }catch(e){} }
   else { Snd.sfx('note'); toast("The rite is raised."); }
 };
 window.voteRite=async function(id, voter){
   if(MODE==="remote"){
     try{ await sbRpc("grove_vote",{p_id:id,p_voter:voter}); await refreshRemote(); }
-    catch(e){ toast("Vote failed."); return; }
+    catch(e){ if(isNetErr(e)){ applyVoteLocal(id,voter); cacheRemote(); enqueueOp("grove_vote",{p_id:id,p_voter:voter}); toast("No signal — your approval is saved."); } else { toast("Vote failed."); return; } }
   } else {
     applyVoteLocal(id, voter); await saveData();
   }
@@ -2992,6 +2991,31 @@ window.voteRite=async function(id, voter){
   renderRites(); layoutGrove(); renderLedger(); try{ syncOffering(); }catch(e){}
   const r=(MEM.rites||[]).find(x=>x.id===id);
   if(r && r.applied) toast("The grove has spoken — it is done.");
+};
+window.withdrawRite=async function(id){
+  const r=(MEM.rites||[]).find(x=>x.id===id); if(!r) return;
+  if(r.nominator!==VOTER){ toast("Only the one who raised it can withdraw it."); return; }
+  const n=(r.approvers||[]).length, thr=r.threshold||5;
+  if(r.applied){ toast("It has already passed."); return; }
+  if(n*2>=thr){ toast("Too many have approved — it can no longer be withdrawn."); return; }
+  if(!confirm("Withdraw this rite? It will be taken back before the Eye.")) return;
+  if(MODE==="remote"){
+    try{ await sbRpc("grove_withdraw",{p_id:id,p_who:VOTER}); await refreshRemote(); }
+    catch(e){ if(isNetErr(e)){ withdrawLocal(id); cacheRemote(); enqueueOp("grove_withdraw",{p_id:id,p_who:VOTER}); toast("No signal — withdrawal saved."); } else { let msg="Could not withdraw."; try{ const j=JSON.parse(e.message); if(j&&j.message) msg=j.message; }catch(_){ if(e&&e.message) msg=e.message; } toast(msg); return; } }
+  } else { withdrawLocal(id); await saveData(); }
+  renderRites(); layoutGrove(); renderLedger(); try{ syncOffering(); }catch(e){}
+  toast("The rite is withdrawn.");
+};
+window.keeperRemoveRite=async function(id){
+  if(!keeperUnlocked){ toast("Only the Keeper may remove rites."); return; }
+  const r=(MEM.rites||[]).find(x=>x.id===id); if(!r) return;
+  if(!confirm("Remove this rite entirely? This cannot be undone.")) return;
+  if(MODE==="remote"){
+    try{ await sbRpc("grove_remove_rite",{p_id:id,p_pass:SESSION_PASS||""}); await refreshRemote(); }
+    catch(e){ if(isNetErr(e)){ withdrawLocal(id); cacheRemote(); enqueueOp("grove_remove_rite",{p_id:id,p_pass:SESSION_PASS||""}); toast("No signal — removal saved."); } else { let msg="Could not remove the rite."; try{ const j=JSON.parse(e.message); if(j&&j.message) msg=j.message; }catch(_){ if(e&&e.message) msg=e.message; } toast(msg); return; } }
+  } else { withdrawLocal(id); await saveData(); }
+  renderRites(); layoutGrove(); renderLedger(); try{ syncOffering(); }catch(e){}
+  toast("The rite is struck from the grove.");
 };
 function applyVoteLocal(id, voter){
   const r=(MEM.rites||[]).find(x=>x.id===id); if(!r||r.applied) return;
@@ -3017,7 +3041,8 @@ function applyRiteEffect(r){
     m.unlocks=m.unlocks||[]; if(!m.unlocks.includes('robes')) m.unlocks.push('robes');
     const c=cloneChibi(m); c.top_style='robes'; m.sprite={chibi:c};
     m.offered=Date.now()/1000 + 4*3600;
-    if(!wasOffered){ m.points=(m.points||0)+100; m.season=(m.season||0)+100; m.history=m.history||[]; m.history.push({l:"Offered to the Eye",d:100,t:Date.now()/1000}); }
+    m.badges=m.badges||[]; if(!m.badges.includes("Of the Eye")) m.badges.push("Of the Eye");
+    if(!wasOffered){ m.points=(m.points||0)+150; m.season=(m.season||0)+150; m.history=m.history||[]; m.history.push({l:"Offered to the Eye",d:150,t:Date.now()/1000}); const _nom=(r&&r.nominator&&r.nominator!==m.name)?memByName(r.nominator):null; if(_nom){ _nom.points=(_nom.points||0)+25; _nom.season=(_nom.season||0)+25; _nom.history=_nom.history||[]; _nom.history.push({l:"Named the offering",d:25,t:Date.now()/1000}); } }
   }
   else if(r.kind==="oath"){
     m.oath=true; m.badges=m.badges||[]; if(!m.badges.includes('Initiated')) m.badges.push('Initiated');
@@ -3093,6 +3118,9 @@ window.submitNomDeed=function(){
   mag=Math.min(200,Math.abs(mag));
   const pts=mag*NOSIGN;
   const thr=votesForPoints(pts);
+  const _n=Date.now()/1000, _ttl=3*3600;
+  const _dupes=targets.filter(name=>(MEM.rites||[]).some(r=>r.kind==='deed' && !r.applied && (_n-(r.created||_n)<_ttl) && r.target===name && deedBase(r.label)===deedBase(label)));
+  if(_dupes.length){ document.getElementById("kerr").textContent=`Already open for “${label}”: ${_dupes.join(', ')} — no one may be nominated for the same deed twice while it stands.`; return; }
   const items=targets.map(name=>({kind:"deed",target:name,label,points:pts,threshold:thr,nominator:VOTER}));
   proposeRiteBatch(items);
 };
@@ -3201,10 +3229,18 @@ window.submitNomBadge=function(){
 };
 window.nominateOfferForm=function(){
   if(!VOTER){ toast("Pick your name first."); return; }
-  const opts=sortedMembers().map(m=>`<option>${m.name}</option>`).join("");
+  const _now2=Date.now()/1000;
+  const _pend={}; (MEM.rites||[]).forEach(r=>{ if(r&&r.kind==='offer'&&!r.applied&&(_now2-(r.created||_now2)<3*3600)&&r.target) _pend[r.target]=1; });
+  const opts=sortedMembers().map(m=>{ const _o=m.offered&&m.offered>_now2; const _p=_pend[m.name]; const _d=(_o||_p); return `<option ${_d?'disabled':''}>${m.name}${_o?' \u00b7 offered':(_p?' \u00b7 pending':'')}</option>`; }).join("");
   const _meM=memByName(VOTER), _OC=12*3600, _nw=Date.now()/1000;
   const _cd=(_meM&&_meM.lastOffer&&(_meM.lastOffer+_OC)>_nw)?(_meM.lastOffer+_OC-_nw):0;
-  const _cdNote=_cd>0?`<div style="margin:0 0 4px;padding:9px 12px;border-radius:10px;background:rgba(120,150,165,.12);border:1px solid rgba(160,190,200,.45);color:#A9C3CC;font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.05em;text-align:center">⟳ You may raise another offering in ${Math.floor(_cd/3600)}h ${Math.floor((_cd%3600)/60)}m</div>`:"";
+  const _hm=(x)=>`${Math.floor(x/3600)}h ${Math.floor((x%3600)/60)}m`;
+  const _cdTxt=_cd>0?`You may offer again in ${_hm(_cd)}.`:`You may raise an offering now.`;
+  const _act=(MEM.members||[]).filter(x=>x.offered&&x.offered>_nw).sort((a,b)=>a.offered-b.offered);
+  let _grove;
+  if(_act.length>=3){ _grove=`The Eye is full \u2014 3/3 robed \u00b7 next slot frees in ${_hm(_act[0].offered-_nw)}.`; }
+  else { _grove=`${_act.length}/3 robed \u00b7 ${3-_act.length} slot${(3-_act.length)===1?'':'s'} open${_act.length?` \u00b7 next frees in ${_hm(_act[0].offered-_nw)}`:''}.`; }
+  const _timer=`<p style="text-align:center;margin:2px 0 10px;font-family:'Silkscreen',monospace;font-size:10px;line-height:1.75;letter-spacing:.04em;color:var(--sage)">\u27F3 ${_cdTxt}<br>\u25B2 ${_grove}</p>`;
   const _btn=_cd>0?`<button class="gold" style="margin-top:6px;opacity:.45;cursor:not-allowed" disabled>⟳ On cooldown</button>`:`<button class="gold" style="margin-top:6px" onclick="submitNomOffer()">Raise the offering</button>`;
   sheet.innerHTML=`
     <div class="grip"></div>
@@ -3212,7 +3248,7 @@ window.nominateOfferForm=function(){
       <h3>The Offering</h3>
       <p class="sub">Offer a spirit to the Eye. With 7 approvals the grove robes them in the Offering Robe — chosen by communal vote, not by rank. What the offering must do is for the fireside to decide.</p>
       <div class="field"><label>Who is offered?</label><select id="ofTarget">${opts}</select></div>
-      ${_cdNote}
+      ${_timer}
       ${_btn}
       <button class="ghostbtn" onclick="closeSheet()">Cancel</button>
       <div class="err" id="kerr"></div>
@@ -3223,6 +3259,9 @@ window.submitNomOffer=function(){
   const target=document.getElementById("ofTarget").value;
   if(!target){ document.getElementById("kerr").textContent="Choose who is offered."; return; }
   const now=Date.now()/1000;
+  const _tm=memByName(target);
+  if(_tm && _tm.offered && _tm.offered>now){ document.getElementById("kerr").textContent=`${target} already stands offered to the Eye — none may be offered twice.`; return; }
+  if((MEM.rites||[]).some(r=>r.kind==='offer' && !r.applied && (now-(r.created||now)<3*3600) && r.target===target)){ document.getElementById("kerr").textContent=`${target} is already before the Eye — wait for that offering to be judged.`; return; }
   const active=(MEM.members||[]).filter(x=>x.offered&&x.offered>now&&x.name!==target).length;
   if(active>=3){ document.getElementById("kerr").textContent="Three spirits are already offered — the Eye is full. Wait for one to fade."; return; }
   const pending=(MEM.rites||[]).filter(r=>r.kind==='offer' && !r.applied && (now-(r.created||now) < 3*3600));
@@ -3251,7 +3290,7 @@ function renderRules(){
     <div class="ritehdr">Deeds</div>
     <p class="rtext">Devotion is awarded for deeds at the fire. The Keeper can multiply them (×II, ×III…) — e.g. "Night swim ×III". ${deedCount} deeds sit on the ledger; the Keeper tends the list.</p>
     <div class="ritehdr">Stoke the Fire</div>
-    <p class="rtext">The Order feeds one shared fire. You <b>earn logs by doing</b> — every deed and finished challenge rolls for a log, and the bigger the reward the better the odds (a ~100-Devotion reward is all but certain). Add a log every <b>3 hours</b>; the flame <b>loses one every 2 hours</b> if neglected. When <b>6 logs</b> burn together, everyone who fed it is blessed — starting at <b>+25</b> and climbing <b>+25</b> with each blessing (no daily limit), resetting to +25 if a full day passes with no fire. Whoever lands the final log earns a <b>+20</b> spark, and the season's top tender wears <b>Keeper of the Flame</b>.</p>
+    <p class="rtext">The Order feeds one shared fire. You <b>earn logs by doing</b> — every deed and finished challenge rolls for a log, and the bigger the reward the better the odds (a ~100-Devotion reward is all but certain). Add a log every <b>3 hours</b>; the flame <b>loses one every 2 hours</b> if neglected. When <b>6 logs</b> burn together, everyone who fed it is blessed — starting at <b>+50</b> and climbing <b>+25</b> with each blessing (no daily limit), resetting to +50 if a full day passes with no fire. Whoever lands the final log earns a <b>+20</b> spark, and the season's top tender wears <b>Keeper of the Flame</b>.</p>
     <div class="ritehdr">Challenges</div>
     <p class="rtext">Stake a bounty from your challenge budget; one spirit may take it on. You or the Keeper approve it within 24h and the stake passes to them. Want out of an accepted challenge? Asking to withdraw lets the doer <b>agree to drop it</b>, or <b>stick it out</b> with one hour to finish before it lapses.</p>
     <div class="ritehdr">The Wager Ring</div>
@@ -3273,7 +3312,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27bd · custom music · day/night sets</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27bi · offer badge + 4h robe · Devotion first · keeper rite-remove</p>`;
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 /* ===== emotive spirits — moods + reactions (client-side, no SQL) ===== */
@@ -3393,7 +3432,7 @@ function sweepGroups(now){ let ch=false; (MEM.groups||[]).forEach(g=>{
 function sweepRites(now){ const b=(MEM.rites||[]).length; MEM.rites=(MEM.rites||[]).filter(r=> r.applied || (now-(r.created||now) < 3*3600)); return (MEM.rites||[]).length!==b; }
 function applyAction(a){
   const now=Date.now()/1000; sweepChallenges(now); sweepWagers(now); sweepFire(now); sweepGroups(now); sweepRites(now);
-  if(a.t==='stoke'){ const m=memByName(a.name); if(!m)return; if(now-(m.lastStoke||0)<3*3600)return; if((m.logs||0)<1)return; m.logs=(m.logs||0)-1; m.fireLogs=(m.fireLogs||0)+1; m.lastStoke=now; MEM.fire=MEM.fire||{level:0,goal:6,lastBlessed:0,stokers:[],lastDecay:now,streak:0}; MEM.fire.stokers=MEM.fire.stokers||[]; if(!MEM.fire.stokers.includes(a.name))MEM.fire.stokers.push(a.name); MEM.fire.level=(MEM.fire.level||0)+1; MEM.fire.lastDecay=now; if(MEM.fire.level>=(MEM.fire.goal||6)){ if(MEM.fire.lastBlessed && now-MEM.fire.lastBlessed>=24*3600) MEM.fire.streak=0; const bless=Math.min(200,25+25*(MEM.fire.streak||0)); MEM.fire.stokers.forEach(nm=>{const x=memByName(nm); if(x)adjPts(x,bless);}); adjPts(m,20); MEM.fire.lastSpark=a.name; MEM.fire.lastBless=bless; MEM.fire.streak=(MEM.fire.streak||0)+1; MEM.fire.level=0; MEM.fire.stokers=[]; MEM.fire.lastBlessed=now; fireKeeperBadge(); } }
+  if(a.t==='stoke'){ const m=memByName(a.name); if(!m)return; if(now-(m.lastStoke||0)<3*3600)return; if((m.logs||0)<1)return; m.logs=(m.logs||0)-1; m.fireLogs=(m.fireLogs||0)+1; m.lastStoke=now; MEM.fire=MEM.fire||{level:0,goal:6,lastBlessed:0,stokers:[],lastDecay:now,streak:0}; MEM.fire.stokers=MEM.fire.stokers||[]; if(!MEM.fire.stokers.includes(a.name))MEM.fire.stokers.push(a.name); MEM.fire.level=(MEM.fire.level||0)+1; MEM.fire.lastDecay=now; if(MEM.fire.level>=(MEM.fire.goal||6)){ if(MEM.fire.lastBlessed && now-MEM.fire.lastBlessed>=24*3600) MEM.fire.streak=0; const bless=Math.min(200,50+25*(MEM.fire.streak||0)); MEM.fire.stokers.forEach(nm=>{const x=memByName(nm); if(x)adjPts(x,bless);}); adjPts(m,20); MEM.fire.lastSpark=a.name; MEM.fire.lastBless=bless; MEM.fire.streak=(MEM.fire.streak||0)+1; MEM.fire.level=0; MEM.fire.stokers=[]; MEM.fire.lastBlessed=now; fireKeeperBadge(); } }
   else if(a.t==='chal_new'){ const m=memByName(a.owner); if(!m)return; const r=Math.max(1,Math.min(150,a.reward|0)); if((m.chalBudget||0)<r)return; m.chalBudget-=r; MEM.challenges=MEM.challenges||[]; MEM.challenges.push({id:'c'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),owner:a.owner,title:a.title,reward:r,accepter:null,created:now,status:'open'}); }
   else if(a.t==='chal_accept'){ const c=chalById(a.id); if(!c||c.status!=='open')return; if(a.name===c.owner)return; if(activeCommitments(a.name)>=3)return; c.accepter=a.name; c.status='accepted'; }
   else if(a.t==='chal_remove'){ const c=chalById(a.id); if(!c)return; if(a.by!==c.owner && !a.keeper)return; if(c.status==='open' || a.keeper){ const o=memByName(c.owner); if(o)o.chalBudget=(o.chalBudget||0)+(c.reward||0); MEM.challenges=(MEM.challenges||[]).filter(x=>x.id!==a.id); } else if(c.status==='accepted' && !c.removeReq){ c.removeReq=now; } }
@@ -3498,7 +3537,7 @@ function renderTrials(){
   const me=VOTER?memByName(VOTER):null;
   const fire=MEM.fire||{level:0,goal:6}; const lvl=fire.level||0, goal=fire.goal||6;
   try{ Snd.fire(lvl); }catch(e){}
-  const streak=(fire.lastBlessed && now-fire.lastBlessed>=24*3600) ? 0 : (fire.streak||0); const nextBless=Math.min(200,25+25*streak);
+  const streak=(fire.lastBlessed && now-fire.lastBlessed>=24*3600) ? 0 : (fire.streak||0); const nextBless=Math.min(200,50+25*streak);
   const cd = me? (3*3600-(now-(me.lastStoke||0))) : 0;
   const myLogs = me?(me.logs||0):0;
   const canStoke = me && cd<=0 && myLogs>=1;
@@ -3512,7 +3551,7 @@ function renderTrials(){
   const fireHTML=`
     <div class="ritehdr">Stoke the Fire</div>
     <div style="position:relative;height:168px;margin:6px auto 2px;max-width:420px"><canvas id="fireCanvas" style="width:100%;height:100%;display:block"></canvas></div>
-    <p class="rtext" style="text-align:center;margin:0 auto 6px;max-width:36ch">The Order feeds one fire. You don't just have logs — you <b>earn</b> them by doing deeds and finishing challenges (the bigger the reward, the better the odds). Add a log every <b>3h</b>; the flame <b>loses one every 2h</b> if neglected. When ${goal} logs burn together, every tender is blessed <b style="color:var(--candle)">+${nextBless}</b> — it starts at +25 and climbs +25 with each blessing (no daily limit), resetting to +25 if a full day passes with no fire. Whoever lands the final log gets a <b style="color:var(--candle)">+20</b> spark.</p>
+    <p class="rtext" style="text-align:center;margin:0 auto 6px;max-width:36ch">The Order feeds one fire. You don't just have logs — you <b>earn</b> them by doing deeds and finishing challenges (the bigger the reward, the better the odds). Add a log every <b>3h</b>; the flame <b>loses one every 2h</b> if neglected. When ${goal} logs burn together, every tender is blessed <b style="color:var(--candle)">+${nextBless}</b> — it starts at +50 and climbs +25 with each blessing (no daily limit), resetting to +50 if a full day passes with no fire. Whoever lands the final log gets a <b style="color:var(--candle)">+20</b> spark.</p>
     <div style="text-align:center;margin:6px 0">${logs}</div>
     <div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage);margin-bottom:4px">${lvl} / ${goal} logs · streak ${streak} · next blessing +${nextBless}${me?` · <b style="color:var(--candle)">${myLogs}</b> log${myLogs===1?'':'s'} in hand`:''}</div>
     <div style="text-align:center;margin:0 auto 8px;font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage)">${VOTER?`acting as <b style="color:var(--candle)">${VOTER}</b> · <button class="idswitch" onclick="switchIdentity()">switch</button>`:`<button class="idswitch" onclick="switchIdentity()">choose your spirit to act</button>`}</div>
@@ -3536,7 +3575,7 @@ function renderTrials(){
     ${ me? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage);margin-bottom:8px">staking as <b style="color:var(--candle)">${VOTER}</b></div>`:""}
     <div id="wagerList">${wagerCards}</div>
     <div style="text-align:center;margin-top:10px">${ me? ((me.points||0)>=1 ? `<button class="gold" onclick="newWagerForm()">🎲 Raise a wager</button>` : `<button class="ghostbtn" disabled>Earn points before you can wager</button>`) : `<p class="hint">Pick your spirit to wager.</p>` }</div>`;
-  el.innerHTML=`<p class="hint" style="margin:6px 0 10px">Trials of the Order — feed the fire, set your challenges, test your luck.</p>${fireHTML}${chalHTML}${wagerHTML}${groupSectionHTML(me)}${wheelSectionHTML(me)}
+  el.innerHTML=`<p class="hint" style="margin:6px 0 10px">Trials of the Order — feed the fire, set your challenges, test your luck.</p>${wheelSectionHTML(me)}${fireHTML}${chalHTML}${wagerHTML}${groupSectionHTML(me)}
     <p class="hint" style="margin:16px 0 2px;font-size:11px;opacity:.7">${MODE==='remote'?"Honour system — actions are trusted across the grove.":"Local preview — syncs once hosted."}</p>`;
   try{ mountFire(); }catch(e){}
 }
@@ -3921,7 +3960,7 @@ function challengeCard(c,now){
       <div class="rmeta">${sub}</div></div>
     ${foot}</div>`;
 }
-window.stokeFire=async function(){ if(!VOTER){ toast("Pick your name first."); return; } const before=(MEM.fire&&MEM.fire.level)||0; const ok=await communityAction({t:'stoke',name:VOTER}); if(!ok)return; trialsRefresh(); const f=MEM.fire||{}; if(f.lastBlessed && Date.now()/1000-f.lastBlessed<6){ Snd.sfx('gong'); toast(`The fire roars — blessed +${f.lastBless||45} each${f.lastSpark===VOTER?', and +20 spark for your final log!':'!'}`); } else { Snd.sfx('whoosh'); toast("You feed the fire."); } };
+window.stokeFire=async function(){ if(!VOTER){ toast("Pick your name first."); return; } const before=(MEM.fire&&MEM.fire.level)||0; const ok=await communityAction({t:'stoke',name:VOTER}); if(!ok)return; trialsRefresh(); const f=MEM.fire||{}; if(f.lastBlessed && Date.now()/1000-f.lastBlessed<6){ Snd.sfx('gong'); toast(`The fire roars — blessed +${f.lastBless||50} each${f.lastSpark===VOTER?', and +20 spark for your final log!':'!'}`); } else { Snd.sfx('whoosh'); toast("You feed the fire."); } };
 window.trialsKeeperForm=function(){ if(!keeperUnlocked){ toast("Only the Keeper may override trials."); return; } renderTrialsKeeper(); };
 function trialRow(head,btns){ return `<div style="padding:8px 2px;border-bottom:1px solid rgba(60,80,68,.25)">${head}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${btns}</div></div>`; }
 function kbtn(fn,label,danger){ return `<button class="ghostbtn" style="width:auto;padding:5px 10px;font-size:11px${danger?';color:var(--ember)':''}" onclick="${fn}">${label}</button>`; }

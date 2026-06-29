@@ -2691,14 +2691,21 @@ const Snd=(function(){
     try{ musicTickStop(); }catch(e){}
     try{ if(cmDeckA&&cmDeckA.tmr){ clearTimeout(cmDeckA.tmr); cmDeckA.tmr=null; } }catch(e){}
     try{ if(cmDeckB&&cmDeckB.tmr){ clearTimeout(cmDeckB.tmr); cmDeckB.tmr=null; } }catch(e){}
-    try{ if(ctx&&master){ var t=ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(Math.max(0.0001,master.gain.value),t); master.gain.linearRampToValueAtTime(0.0001,t+0.07); } }catch(e){}
-    setTimeout(function(){ try{ if(ctx&&ctx.state==='running') ctx.suspend(); }catch(e){} }, 130);
+    try{ if(ctx&&master){ var t=ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(Math.max(0.0001,master.gain.value),t); master.gain.linearRampToValueAtTime(0.0001,t+0.012); } }catch(e){}
+    /* no explicit ctx.suspend(): the master is already silent, and suspending the
+       context is what triggers iOS's audio-session deactivation pop. iOS will
+       suspend a backgrounded PWA on its own; we just go quiet and let it. */
+  }
+  function _audRestore(){
+    try{ if(ctx&&master){ var t=ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(Math.max(0.0001,master.gain.value),t); master.gain.linearRampToValueAtTime(0.45,t+0.4); } }catch(e){}
+    try{ if(chantActive){ if(typeof cmOfferStart==='function') cmOfferStart(); } else if(mPlaying){ musicTickStart(); } else { startMusic(); } }catch(e){}
   }
   function _audShow(){
     if(!on) return;
-    try{ if(ctx&&ctx.state==='suspended') ctx.resume(); }catch(e){}
-    try{ if(ctx&&master){ var t=ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value,t); master.gain.linearRampToValueAtTime(0.45,t+0.35); } }catch(e){}
-    try{ if(chantActive){ if(typeof cmOfferStart==='function') cmOfferStart(); } else { if(mPlaying){ musicTickStart(); } else { startMusic(); } } }catch(e){}
+    try{
+      if(ctx&&ctx.state==='suspended'){ var p=ctx.resume(); if(p&&p.then){ p.then(_audRestore).catch(_audRestore); } else { _audRestore(); } }
+      else { _audRestore(); }
+    }catch(e){ try{ _audRestore(); }catch(e2){} }
   }
   try{ document.addEventListener('visibilitychange', function(){ if(document.hidden) _audHide(); else _audShow(); }); }catch(e){}
   return { setOn, isOn:()=>on, sfx, action, playTrack, wheel, fire, offering };
@@ -3344,7 +3351,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27bp · fade master before suspend (kills the ding)</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27bs · no self-suspend (avoid iOS session-deactivation pop)</p>`;
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 /* ===== emotive spirits — moods + reactions (client-side, no SQL) ===== */

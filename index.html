@@ -591,6 +591,9 @@ function ritePush(item){ try{ if(!item) return; const m=riteMsg(item); grovePush
 /* ===== in-app pop-up when an offering is raised (seen by everyone but the nominator) ===== */
 let OFFER_SNAP=null;
 function offerIds(){ const s={}; (MEM.rites||[]).forEach(r=>{ if(r&&r.kind==='offer'&&!r.applied&&r.id) s[r.id]=1; }); return s; }
+const PUB_OFFER_COOL=3*3600;
+function lastOfferRaise(){ let t=0; (MEM.rites||[]).forEach(r=>{ if(r&&r.kind==='offer'&&r.created&&r.created>t) t=r.created; }); return t; }
+function publicOfferCool(){ const now=Date.now()/1000; const base=lastOfferRaise(); const cleared=(typeof MEM!=='undefined'&&MEM&&MEM.offerGateClearedAt)||0; if(cleared>=base) return 0; const cd=PUB_OFFER_COOL-(now-base); return cd>0?cd:0; }
 function initOfferSnap(){ OFFER_SNAP=offerIds(); APPLIED_OFFER_SNAP=appliedOfferIds(); }
 let APPLIED_OFFER_SNAP=null;
 function appliedOfferIds(){ const s={}; (MEM.rites||[]).forEach(r=>{ if(r&&r.kind==='offer'&&r.applied&&r.id) s[r.id]=1; }); return s; }
@@ -945,6 +948,8 @@ function drawChibi(ctx,f,px,ox,oy,ti,nT,expr){
   const pants=f.pants, pantd=shade(f.pants,-0.25);
   const boot=f.boots, bootd=shade(f.boots,-0.3);
   let ts=f.top_style; if(!ts) ts=(f.sleeves===false?'tank':'tee');
+  const _lumT=(h=>{const n=parseInt(String(h||'#888').slice(1),16);return (((n>>16)&255)*0.299+((n>>8)&255)*0.587+(n&255)*0.114)/255;})(f.top);
+  const teeUnder = _lumT>0.5 ? "#2A2620" : "#D8D2C2";
   const dress = ts==='dress', robes = ts==='robes';
   const shorts = f.bottom==='shorts' && !dress;
   if(ts==='mantle'){ const capeC=f.jacket||"#2E4A3A", capeS=shade(f.jacket||"#2E4A3A",-0.22);
@@ -1018,6 +1023,37 @@ function drawChibi(ctx,f,px,ox,oy,ti,nT,expr){
     [[12,21],[18,21],[11,28],[19,29],[13,30],[17,31],[12,24]].forEach(p=>P(p[0],p[1],lite));
     // soft shoulder aura
     P(9,19,g1);P(21,19,g1);P(8,20,g2);P(22,20,g2);
+  } else if(ts==='discipleeye'){
+    const tn=top, tns=shade(top,-0.2);
+    for(let y=19;y<31;y++) row(10,20,y,tn);
+    row(10,20,30,tns); row(10,20,26,"#3A2A1C"); P(15,26,"#C9A24B");
+    P(15,19,skin);P(15,20,skin);P(14,21,skin);
+    const _g='#E8C45A',_gi='#A9802E',_gp='#1a1208';
+    const _ec=(cx,cy)=>{ P(cx-3,cy,_g);P(cx+3,cy,_g);P(cx-2,cy-1,_g);P(cx-1,cy-2,_g);P(cx,cy-2,_g);P(cx+1,cy-2,_g);P(cx+2,cy-1,_g);P(cx-2,cy+1,_g);P(cx-1,cy+2,_g);P(cx,cy+2,_g);P(cx+1,cy+2,_g);P(cx+2,cy+1,_g);P(cx-1,cy,_gi);P(cx,cy-1,_gi);P(cx,cy,_gp);P(cx,cy+1,_gi);P(cx+1,cy,_gi); };
+    _ec(15,23);
+  } else if(ts==='flannel'){
+    const fb=top, fd=shade(top,-0.5), fl=shade(top,0.3);
+    const _flL=(h=>{const n=parseInt(String(h||'#888').slice(1),16);return (((n>>16)&255)*0.299+((n>>8)&255)*0.587+(n&255)*0.114)/255;})(top);
+    const ftee=_flL>0.5?"#2A2620":"#E6E2D6";
+    for(let y=19;y<29;y++){P(13,y,ftee);P(14,y,ftee);P(15,y,ftee);P(16,y,ftee);P(17,y,ftee);}
+    P(14,19,skin);P(15,19,skin);P(16,19,skin);P(15,20,ftee);
+    for(let y=20;y<29;y++){P(10,y,fb);P(11,y,fb);P(12,y,fb);P(18,y,fb);P(19,y,fb);P(20,y,fb);}
+    for(let y=20;y<29;y++){P(11,y,fd);P(19,y,fd);}
+    [22,25,28].forEach(y=>{P(10,y,fd);P(11,y,fd);P(12,y,fd);P(18,y,fd);P(19,y,fd);P(20,y,fd);});
+    [11,19].forEach(x=>[22,25,28].forEach(y=>P(x,y,fl)));
+    [10,12,18,20].forEach(x=>{for(let y=21;y<28;y+=3)P(x,y,fl);});
+    P(12,19,fb);P(12,20,fd);P(13,20,fb);P(18,19,fb);P(18,20,fd);P(17,20,fb);P(13,19,fl);P(17,19,fl);
+    [22,25,28].forEach(y=>P(13,y,"#D9D3C2"));
+  } else if(ts==='puffer'){
+    const vc=top, vs=shade(top,-0.18), vd=shade(top,-0.4);
+    P(14,19,skin);P(15,19,skin);P(16,19,skin);P(15,20,teeUnder);
+    for(let y=20;y<30;y++) row(10,20,y,vc);
+    row(11,19,19,vc);
+    for(let y=20;y<30;y++){P(10,y,vs);P(20,y,vs);}
+    for(let y=22;y<30;y+=2) row(10,20,y,vd);
+    row(11,19,19,vs); P(13,19,vc);P(17,19,vc);
+    for(let y=19;y<30;y++)P(15,y,"#1A1A1A"); P(15,19,"#D8DCE0");
+    P(13,20,teeUnder);P(17,20,teeUnder);
   } else if(dress){
     for(let y=19;y<29;y++) row(10,20,y,top);
     const wid=[[10,20],[10,20],[9,21],[9,21],[8,22],[8,22],[8,22]]; wid.forEach((w,i)=>row(w[0],w[1],28+i,top)); row(8,22,34,tops);
@@ -1027,7 +1063,7 @@ function drawChibi(ctx,f,px,ox,oy,ti,nT,expr){
   }
   const longsleeve = ts==='longsleeve';
   const sleeve = ts!=='tank';
-  const armc = robes?"#E8E4D6":(ts==='tunic'?top:(ts==='sage'?top:(ts==='ascend'?top:(ts==='luminary'?top:(sleeve?top:skin)))));
+  const armc = robes?"#E8E4D6":((ts==='tunic'||ts==='discipleeye')?top:(ts==='sage'?top:(ts==='ascend'?top:(ts==='luminary'?top:(ts==='flannel'?top:(ts==='puffer'?teeUnder:(sleeve?top:skin)))))));
   for(let y=19;y<27;y++){P(8,y,armc);P(9,y,armc);P(21,y,armc);P(22,y,armc);}
   if(ts==='tee'){ P(8,21,tops);P(9,21,tops);P(21,21,tops);P(22,21,tops); for(let y=22;y<27;y++){P(8,y,skin);P(9,y,skin);P(21,y,skin);P(22,y,skin);} }
   if(longsleeve){ P(8,27,top);P(9,27,top);P(21,27,top);P(22,27,top); P(8,28,skin);P(9,28,skin);P(21,28,skin);P(22,28,skin); }
@@ -1045,8 +1081,10 @@ function drawChibi(ctx,f,px,ox,oy,ti,nT,expr){
     [[22,19],[20,18],[21,20],[19,19],[22,21]].forEach(p=>P(p[0],p[1],furs)); [[21,18],[19,20],[20,21]].forEach(p=>P(p[0],p[1],furd));
     P(11,19,furs);P(18,19,furs);
     P(15,18,gold);P(15,19,gold); }
+  if(ts==='puffer'){ const teeS=shade(teeUnder,-0.2); P(8,21,teeS);P(9,21,teeS);P(21,21,teeS);P(22,21,teeS); for(let y=22;y<27;y++){P(8,y,skin);P(9,y,skin);P(21,y,skin);P(22,y,skin);} }
+  if(ts==='flannel'){ const fd=shade(top,-0.5),fl=shade(top,0.3); for(let y=19;y<28;y++){P(9,y,fd);P(21,y,fd);} [22,25].forEach(y=>{P(8,y,fd);P(9,y,fd);P(21,y,fd);P(22,y,fd);}); P(8,27,top);P(9,27,top);P(21,27,top);P(22,27,top); P(8,27,fl);P(9,27,fl);P(21,27,fl);P(22,27,fl); P(8,28,skin);P(9,28,skin);P(21,28,skin);P(22,28,skin); }
   if(f.watch){ P(8,26,"#28282A");P(9,26,"#C9CDD2"); }
-  if(f.jacket && !['mantle','sage','robes','ascend','luminary'].includes(ts)){
+  if(f.jacket && !['mantle','sage','robes','ascend','luminary','discipleeye','flannel','puffer'].includes(ts)){
     const jc=f.jacket, jcs=shade(f.jacket,-0.22);
     for(let y=19;y<28;y++){P(10,y,jc);P(11,y,jc);P(19,y,jc);P(20,y,jc);}
     row(10,20,19,jcs);P(12,19,jc);P(18,19,jc);
@@ -1160,9 +1198,14 @@ function drawChibi(ctx,f,px,ox,oy,ti,nT,expr){
     row(10,19,1,hair);row(10,19,2,hair);row(10,19,3,hair);
     [9,11,18,20].forEach(cx=>{ for(let y=4;y<13;y++) P(cx,y, ((y>>1)&1)?hairs:hair); });
   } else if(st==="pigtails"){
-    row(11,18,1,hair);row(10,19,2,hair);row(10,19,3,hair);P(10,4,hair);P(19,4,hair);
-    for(let y=5;y<10;y++){P(8,y,hair);P(9,y,hairs);P(20,y,hair);P(21,y,hairs);}
-    P(8,4,hair);P(21,4,hair);
+    const _tie="#E8C45A";
+    row(10,19,0,hair);P(9,0,hair);P(20,0,hair);
+    row(9,20,1,hair);row(9,20,2,hair);row(9,20,3,hair);
+    P(8,2,hair);P(21,2,hair);P(8,3,hair);P(21,3,hair);
+    P(10,4,hair);P(19,4,hair);P(9,4,hair);P(20,4,hair);P(9,5,hairs);P(20,5,hairs);
+    P(14,0,hairs);P(15,0,hairs);P(14,1,hairl);P(15,1,hairl);
+    const _plait=(cL)=>{ for(let y=2;y<=18;y++){ const a=(y%2===0); P(cL,y,a?hair:hairs); P(cL+1,y,a?hairs:hair); if(y%3===0)P(cL,y,hairl); } for(let y=4;y<18;y+=3){ P(cL-1,y,hairs); P(cL+2,y,hairs); } P(cL,17,_tie); P(cL+1,17,_tie); P(cL,19,hairs); P(cL+1,19,hair); P(cL,20,hairs); };
+    _plait(7); _plait(21);
   } else if(st==="bald"){
     row(12,17,2,skin);row(11,18,3,skin);row(11,18,4,skin);
     P(13,2,shade(f.skin,0.13));P(14,2,shade(f.skin,0.13));
@@ -1401,11 +1444,10 @@ function renderLedger(){
     drawSoul(cv,soul,4,0);
   });
   if(keeperUnlocked){
-    const _now=Date.now()/1000, _OFCD=12*3600;
-    const _onCool=(MEM.members||[]).filter(m=>m&&m.lastOffer&&(m.lastOffer+_OFCD)>_now).length;
+    const _pub=publicOfferCool(); const _hm2=(x)=>`${Math.floor(x/3600)}h ${Math.floor((x%3600)/60)}m`;
     const kbox=document.createElement("div");
     kbox.style.cssText="text-align:center;margin:18px 0 2px";
-    kbox.innerHTML=`<button class="ghostbtn" style="display:inline-block;width:auto;padding:9px 18px;border-color:rgba(232,168,143,.5);color:#E8A88F" onclick="keeperResetOfferCooldowns()">\u21ba Reset offering cooldowns${_onCool?` \u00b7 ${_onCool} on cooldown`:''}</button>`;
+    kbox.innerHTML=`<button class="ghostbtn" style="display:inline-block;width:auto;padding:9px 18px;border-color:rgba(232,168,143,.5);color:#E8A88F" onclick="keeperResetOfferCooldowns()">\u21ba ${_pub>0?`Allow one more offering \u00b7 public ${_hm2(_pub)}`:'Public offering cooldown is clear'}</button>`;
     rowsEl.appendChild(kbox);
   }
   const share=document.createElement("div");
@@ -1415,11 +1457,10 @@ function renderLedger(){
 }
 window.keeperResetOfferCooldowns=async function(){
   if(!keeperUnlocked){ toast("Only the Keeper may reset cooldowns."); return; }
-  const _now=Date.now()/1000, _OFCD=12*3600;
-  const n=(MEM.members||[]).filter(m=>m&&m.lastOffer&&(m.lastOffer+_OFCD)>_now).length;
-  if(!confirm(n?`Clear the offering cooldown for ${n} member(s)? They can raise an offering again right away.`:"No one is on offering cooldown right now. Reset anyway?")) return;
-  (MEM.members||[]).forEach(m=>{ if(m) m.lastOffer=0; });
-  await saveData(); renderLedger(); toast("Offering cooldowns reset.");
+  const _pub=publicOfferCool();
+  if(!confirm(_pub>0?"Clear the public offering cooldown? One more offering can be chosen right away.":"The public offering cooldown is already clear. Reset anyway?")) return;
+  MEM.offerGateClearedAt=Date.now()/1000;
+  await saveData(); renderLedger(); toast("An offering may be chosen now.");
 };
 
 /* spirits are rendered once in layoutGrove; motion is handled by CSS (cheap, GPU-composited) */
@@ -1482,7 +1523,7 @@ function openSoul(name){
   const _now=Date.now()/1000; const _off=(m.offered&&m.offered>_now)?(m.offered-_now):0;
   const offMark = _off>0 ? `<div style="display:inline-block;margin:4px 0 2px;padding:3px 9px;border-radius:8px;background:rgba(232,168,143,.14);border:1px solid rgba(232,168,143,.55);color:#E8A88F;font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.06em">▲ THE OFFERED · ${Math.floor(_off/3600)}h ${Math.floor((_off%3600)/60)}m left</div>` : "";
   const _OFCOOL=12*3600; const _ocd=(m.lastOffer && (m.lastOffer+_OFCOOL)>_now)?(m.lastOffer+_OFCOOL-_now):0;
-  const cdMark = _ocd>0 ? `<div style="display:inline-block;margin:4px 0 2px 6px;padding:3px 9px;border-radius:8px;background:rgba(120,150,165,.12);border:1px solid rgba(160,190,200,.45);color:#A9C3CC;font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.06em">⟳ MAY OFFER IN ${Math.floor(_ocd/3600)}h ${Math.floor((_ocd%3600)/60)}m</div>` : "";
+  const cdMark = "";
   const myChArr=(MEM.challenges||[]).filter(c=>c.accepter===name && c.status!=='expired').sort((a,b)=>(b.created||0)-(a.created||0));
   const chRows = myChArr.map(c=>{
     const self=VOTER&&VOTER===name; const who=self?'you':name;
@@ -2093,6 +2134,7 @@ const PAL={
   hat:["#46707A","#6B2E2E","#2E4A3A","#3A3A40","#B5854F","#C9A24B","#5A2E2E","#1C1C20"]
 };
 let CHIBI_EDIT=null, CHIBI_MEMBER=null, CHIBI_SELF=false;
+const EYE_TUNIC_COLS=["#2E4A3A","#5A2A2E","#34435A","#2E2E34"];
 function defChibi(){return {skin:"#E2AC80",hair:"#5A4030",hair_style:"short",facial:"none",beard:"#3A2A1C",eyeCol:"#2A2018",glasses:"none",glassCol:"#1C1C20",ears:"none",earCol:"#E8C45A",hat:"none",hatCol:"#46707A",top:"#3A5A6B",top_style:"tee",watch:false,jacket:null,pants:"#2A2620",bottom:"pants",boots:"#3A2A22",belt:"#3A2A1C",accent:"none",accentCol:"#E8C45A",held:"none"};}
 function cloneChibi(m){
   const c=(m && m.sprite && m.sprite.chibi)?structuredClone(m.sprite.chibi):defChibi();
@@ -2146,7 +2188,7 @@ function isUnlocked(name,val){
   return !!(m && Array.isArray(m.unlocks) && m.unlocks.includes(val));
 }
 const GATED_ITEMS={
-  top_style:[['Tank','tank',0],['Tee','tee',0],['Shirt','shirt',0],['Hoodie','hoodie',0],['Long-sleeve','longsleeve',0],['Dress','dress',0],['Acolyte sash','sash',100],['Disciple tunic','tunic',300],['Warden mantle','mantle',600],['Sage robe','sage',1000],['Offering robe','robes',1500],['Starlit robe','luminary',2000],['Radiant cloak','ascend',2500]],
+  top_style:[['Tank','tank',0],['Tee','tee',0],['Shirt','shirt',0],['Hoodie','hoodie',0],['Long-sleeve','longsleeve',0],['Flannel','flannel',0],['Puffer vest','puffer',0],['Dress','dress',0],['Acolyte sash','sash',100],['Disciple tunic','tunic',300],['Disciple · Eye','discipleeye',300],['Warden mantle','mantle',600],['Sage robe','sage',1000],['Offering robe','robes',1500],['Starlit robe','luminary',2000],['Radiant cloak','ascend',2500]],
   hat:[['None','none',0],['Beanie','beanie',0],['Cap','cap',0],['Bandana','bandana',0],['Headband','headband',0],['Antlers','antlers',100],['Ram horns','horns',300],['Witch hat','witch',300],['Animal skull','skull',600],['Laurel','laurel',600],['Crown','crown',1500],['Halo','halo',2500],['Third eye','thirdeye',2500]],
   held:[['None','none',0],['Beer','beer',0],['Coffee','mug',0],['Bottle','bottle',0],['Frisbee','frisbee',0],['Joint','joint',0],['Kebab','kebab',0],['Flashlight','flashlight',0],['Binoculars','binoculars',100],['Boombox','boombox',300],['Guitar','guitar',300],['Marshmallow','marsh',100],['Fishing rod','rod',300],['Axe','axe',300],['Cult tome','book',600],['Paddle','paddle',600],['Staff','staff',1000],['Lantern','lantern',1000]],
   accent:[['None','none',0],['Necklace','necklace',0],['Tie','tie',0],['Scarf','scarf',0],['Bolo tie','bolo',100],['Cult badge · bronze','cultbronze',300],['Cult badge · silver','cultsilver',600],['Cult badge · gold','cultgold',1000],['Ankh','ankh',600],['Bone charm','bonecharm',1000]]
@@ -2173,13 +2215,14 @@ function renderCreator(){
   const memTier=tierOf(memPts).name;
   const offeredNow = _cm.offered && _cm.offered>Date.now()/1000;
   if(offeredNow) CHIBI_EDIT.top_style='robes';
+  if(CHIBI_EDIT.top_style==='discipleeye' && !EYE_TUNIC_COLS.includes(CHIBI_EDIT.top)) CHIBI_EDIT.top=EYE_TUNIC_COLS[0];
   const topControl = offeredNow
     ? `<div class="crlabel">Top <span style="color:#E8A88F;font-size:10px">· locked — you are The Offered</span></div>
        <div class="seg"><button class="on" disabled>▲ Offering Robe</button></div>
        <p class="sub" style="font-size:11px;color:#E8A88F;margin-top:4px">You wear the robes until the offering fades.</p>`
     : `<div class="crlabel">Top <span style="color:var(--sage);font-size:10px">· ${memTier}</span></div>${segHTMLg('top_style',gatedList('top_style'),memPts)}
-       <div class="crlabel">Top colour</div>${swHTML('top',PAL.top)}`;
-  const jacketCtl = CHIBI_EDIT.top_style==='mantle'?`<div class="crlabel">Cape colour</div>${swHTML('jacket',PAL.jacket,true)}`:(['sage','robes','ascend','luminary'].includes(CHIBI_EDIT.top_style)?`<div class="crlabel">Jacket / vest <span style="color:var(--sage);font-size:10px">· not worn over this garment</span></div>`:`<div class="crlabel">Jacket / vest</div>${swHTML('jacket',PAL.jacket,true)}`);
+       <div class="crlabel">Top colour${CHIBI_EDIT.top_style==='discipleeye'?' <span style="color:var(--sage);font-size:10px">· kept simple to honour the Eye</span>':''}</div>${swHTML('top',CHIBI_EDIT.top_style==='discipleeye'?EYE_TUNIC_COLS:PAL.top)}`;
+  const jacketCtl = CHIBI_EDIT.top_style==='mantle'?`<div class="crlabel">Cape colour</div>${swHTML('jacket',PAL.jacket,true)}`:(['sage','robes','ascend','luminary','discipleeye','flannel','puffer'].includes(CHIBI_EDIT.top_style)?`<div class="crlabel">Jacket / vest <span style="color:var(--sage);font-size:10px">· not worn over this garment</span></div>`:`<div class="crlabel">Jacket / vest</div>${swHTML('jacket',PAL.jacket,true)}`);
   const legsCtl = CHIBI_EDIT.top_style==='sage'
     ? `<div class="crlabel">Legs <span style="color:var(--sage);font-size:10px">· hidden beneath the sage robe</span></div>`
     : `<div class="crlabel">${CHIBI_EDIT.top_style==='dress'?'Tights':'Legs'}</div>${segHTML('bottom',[['Pants','pants'],['Shorts','shorts']])}
@@ -2195,7 +2238,7 @@ function renderCreator(){
       <div class="crlabel">Eyewear</div>${segHTML('glasses',[['None','none'],['Specs','specs'],['Shades','shades']])}${CHIBI_EDIT.glasses!=='none'?swHTML('glassCol',PAL.lens):''}
       <div class="crlabel">Earrings</div>${segHTML('ears',[['None','none'],['Stud','stud'],['Dangle','dangle']])}${CHIBI_EDIT.ears==='dangle'?swHTML('earCol',PAL.metal):''}`;
   const secBody = `<div class="crlabel">Skin</div>${swHTML('skin',PAL.skin)}
-      <div class="crlabel">Hair style</div>${segHTML('hair_style',[['Short','short'],['Fade','fade'],['Curly','curly'],['Long','long'],['Curly-long','curlylong'],['Wavy','wavy'],['Ponytail','ponytail'],['Afro','afro'],['Pixie','pixie'],['Bun','bun'],['Buzz','buzz'],['Bald','bald'],['Mohawk','mohawk'],['Mullet','mullet'],['Spiky','spiky'],['Dreads','dreads'],['Pigtails','pigtails']])}
+      <div class="crlabel">Hair style</div>${segHTML('hair_style',[['Short','short'],['Fade','fade'],['Curly','curly'],['Long','long'],['Curly-long','curlylong'],['Wavy','wavy'],['Ponytail','ponytail'],['Afro','afro'],['Pixie','pixie'],['Bun','bun'],['Buzz','buzz'],['Bald','bald'],['Mohawk','mohawk'],['Mullet','mullet'],['Spiky','spiky'],['Dreads','dreads'],['Braids','pigtails']])}
       <div class="crlabel">Hair colour</div>${swHTML('hair',PAL.hair)}
       <div class="crlabel">Facial hair</div>${segHTML('facial',[['None','none'],['Mustache','mustache'],['Goatee','goatee'],['Full','full'],['Overgrown','overgrown']])}${CHIBI_EDIT.facial!=='none'?swHTML('beard',PAL.hair):''}
       <div class="crlabel">Eye colour</div>${swHTML('eyeCol',PAL.eye)}`;
@@ -3309,13 +3352,17 @@ window.nominateOfferForm=function(){
   const _meM=memByName(VOTER), _OC=12*3600, _nw=Date.now()/1000;
   const _cd=(_meM&&_meM.lastOffer&&(_meM.lastOffer+_OC)>_nw)?(_meM.lastOffer+_OC-_nw):0;
   const _hm=(x)=>`${Math.floor(x/3600)}h ${Math.floor((x%3600)/60)}m`;
-  const _cdTxt=_cd>0?`You may offer again in ${_hm(_cd)}.`:`You may raise an offering now.`;
+  const _cdTxt=_cd>0?`You · next offering in ${_hm(_cd)}.`:`You may raise an offering now.`;
+  const _pub=publicOfferCool();
+  const _pubTxt=_pub>0?`Grove · next offering can be chosen in ${_hm(_pub)}.`:`Grove · an offering may be chosen now.`;
   const _act=(MEM.members||[]).filter(x=>x.offered&&x.offered>_nw).sort((a,b)=>a.offered-b.offered);
   let _grove;
   if(_act.length>=3){ _grove=`The Eye is full \u2014 3/3 robed \u00b7 next slot frees in ${_hm(_act[0].offered-_nw)}.`; }
   else { _grove=`${_act.length}/3 robed \u00b7 ${3-_act.length} slot${(3-_act.length)===1?'':'s'} open${_act.length?` \u00b7 next frees in ${_hm(_act[0].offered-_nw)}`:''}.`; }
-  const _timer=`<p style="text-align:center;margin:2px 0 10px;font-family:'Silkscreen',monospace;font-size:10px;line-height:1.75;letter-spacing:.04em;color:var(--sage)">\u27F3 ${_cdTxt}<br>\u25B2 ${_grove}</p>`;
-  const _btn=_cd>0?`<button class="gold" style="margin-top:6px;opacity:.45;cursor:not-allowed" disabled>⟳ On cooldown</button>`:`<button class="gold" style="margin-top:6px" onclick="submitNomOffer()">Raise the offering</button>`;
+  const _timer=`<p style="text-align:center;margin:2px 0 10px;font-family:'Silkscreen',monospace;font-size:10px;line-height:1.75;letter-spacing:.04em;color:var(--sage)">\u27F3 ${_cdTxt}<br>\u25A3 ${_pubTxt}<br>\u25B2 ${_grove}</p>`;
+  const _blocked=(_cd>0||_pub>0);
+  const _blbl=_cd>0?'You are on cooldown':'Grove on cooldown';
+  const _btn=_blocked?`<button class="gold" style="margin-top:6px;opacity:.45;cursor:not-allowed" disabled>⟳ ${_blbl}</button>`:`<button class="gold" style="margin-top:6px" onclick="submitNomOffer()">Raise the offering</button>`;
   sheet.innerHTML=`
     <div class="grip"></div>
     <div class="kpanel">
@@ -3341,6 +3388,7 @@ window.submitNomOffer=function(){
   const pending=(MEM.rites||[]).filter(r=>r.kind==='offer' && !r.applied && (now-(r.created||now) < 3*3600));
   if(pending.length>=3){ document.getElementById("kerr").textContent="Three offerings already stand before the Eye. Wait for one to be judged."; return; }
   if(pending.some(r=>r.nominator===VOTER)){ document.getElementById("kerr").textContent="You have already named an offering — one per supplicant. Wait for it to be judged."; return; }
+  if(publicOfferCool()>0){ document.getElementById("kerr").textContent=`The grove must wait — the next offering can be chosen in ${Math.ceil(publicOfferCool()/3600)}h.`; return; }
   const _me=memByName(VOTER), OFFER_COOL=12*3600;
   if(_me && _me.lastOffer && now-_me.lastOffer < OFFER_COOL){ const left=Math.ceil((OFFER_COOL-(now-_me.lastOffer))/3600); document.getElementById("kerr").textContent=`You raised an offering recently — wait about ${left}h before raising another.`; return; }
   if(_me && MODE!=="remote") _me.lastOffer=now;
@@ -3386,7 +3434,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27bx · Eye sleeps on cooldown, opens when ready</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27by · braids + Eye tunic + flannel + puffer · wager fix · offering cooldowns</p>`;
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
 /* ===== emotive spirits — moods + reactions (client-side, no SQL) ===== */
@@ -3400,7 +3448,12 @@ function moodExpr(name){
   return 'neutral';
 }
 let MOOD_SNAP=null;
-function moodSnapshot(){ const s={}; (MEM.members||[]).forEach(m=>{ s[m.name]={p:m.points||0,h:(m.history||[]).length}; }); return s; }
+function lockedStake(name){ let s=0;
+  (MEM.wagers||[]).forEach(w=>{ if(!w)return; const live=(w.status==='open'||w.status==='matched'||w.status==='disputed'); if(!live)return; if(w.proposer===name)s+=(w.amount||0); if(w.status!=='open'&&w.taker===name)s+=(w.amount||0); });
+  (MEM.groups||[]).forEach(g=>{ if(!g)return; const live=(g.status==='pending'||g.status==='active'||g.status==='disputed'); if(!live)return; if([...(g.sideA||[]),...(g.sideB||[])].includes(name))s+=(g.stake||0); });
+  return s;
+}
+function moodSnapshot(){ const s={}; (MEM.members||[]).forEach(m=>{ s[m.name]={p:(m.points||0)+lockedStake(m.name),h:(m.history||[]).length}; }); return s; }
 function initMoodSnap(){ MOOD_SNAP=moodSnapshot(); }
 function detectReactions(){
   if(!MOOD_SNAP){ MOOD_SNAP=moodSnapshot(); return; }

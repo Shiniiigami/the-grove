@@ -618,7 +618,7 @@ async function sbRead(){
 }
 async function sbRpc(fn,args){
   const r=await fetch(`${SUPABASE.url}/rest/v1/rpc/${fn}`,{method:"POST",headers:sbHeaders(),body:JSON.stringify(args)});
-  if(!r.ok) throw new Error(await r.text());
+  if(!r.ok){ const e=new Error(await r.text()); e.status=r.status; throw e; }
   const t=await r.text(); return t?JSON.parse(t):null;
 }
 
@@ -630,11 +630,16 @@ const OQKEY='grove-queue';
 function oqLoad(){ try{ return JSON.parse(localStorage.getItem(OQKEY)||'[]'); }catch(e){ return []; } }
 function oqSave(q){ try{ localStorage.setItem(OQKEY, JSON.stringify(q)); }catch(e){} }
 function oqCount(){ return oqLoad().length; }
-function enqueueOp(fn,args){ const q=oqLoad(); q.push({id:Date.now()+'-'+Math.random().toString(36).slice(2,7), fn:fn, args:args, t:Date.now()}); oqSave(q); syncBadge(); }
+const OQ_MAX=200, OQ_TTL_MS=24*3600*1000, OQ_MAX_TRIES=8;
+function enqueueOp(fn,args){ const q=oqLoad(); q.push({id:Date.now()+'-'+Math.random().toString(36).slice(2,7), fn:fn, args:args, t:Date.now(), tries:0}); while(q.length>OQ_MAX) q.shift(); oqSave(q); syncBadge(); }
+// transient = worth retrying later (offline / timeout / rate-limit / 5xx). A 4xx is a real rejection → drop it.
+function oqTransient(e){ const s=e&&e.status; return isNetErr(e) || s===408 || s===429 || (s>=500&&s<=599); }
 let _flushing=false;
 async function flushQueue(){
   if(_flushing) return; if(typeof MODE==='undefined'||MODE!=='remote') return;
   try{ if(typeof navigator!=='undefined' && !navigator.onLine) return; }catch(_){}
+  // prune stale ops so we never replay an action into a world that has long moved on
+  { const q=oqLoad(); const cut=Date.now()-OQ_TTL_MS; const fresh=q.filter(it=>!(it&&it.t&&it.t<cut)); if(fresh.length!==q.length){ oqSave(fresh); syncBadge(); } }
   if(!oqCount()) return; _flushing=true;
   try{
     while(true){
@@ -642,9 +647,16 @@ async function flushQueue(){
       const q=oqLoad(); if(!q.length) break; const item=q[0];
       let drop=true;
       try{ await sbRpc(item.fn, item.args); }
-      catch(e){ if(isNetErr(e)){ drop=false; } /* else: server rejected the replay -> drop it */ }
+      catch(e){
+        if(oqTransient(e)){
+          drop=false;
+          // count the attempt; a permanently-stuck op must not block the whole queue forever
+          const q3=oqLoad();
+          if(q3[0]&&q3[0].id===item.id){ q3[0].tries=(q3[0].tries||0)+1; if(q3[0].tries>=OQ_MAX_TRIES){ q3.shift(); oqSave(q3); syncBadge(); continue; } oqSave(q3); }
+        } /* else 4xx: the server rejected the replay (stale/invalid) — drop it; refreshRemote below reconciles local state */
+      }
       if(!drop) break;
-      const q2=oqLoad(); q2.shift(); oqSave(q2); syncBadge();
+      const q2=oqLoad(); if(q2[0]&&q2[0].id===item.id){ q2.shift(); oqSave(q2); syncBadge(); } else { oqSave(q2); }
     }
   } finally { _flushing=false; }
   try{ await refreshRemote(); if(typeof trialsRefresh==='function') trialsRefresh(); if(typeof renderRites==='function') renderRites(); if(typeof layoutGrove==='function') layoutGrove(); }catch(e){}
@@ -788,7 +800,7 @@ window.relinkPush=async function(){ try{
   try{ renderRules(); }catch(e){}
 }catch(e){ toast('Re-link failed: '+((e&&e.message)||'unknown')); } };
 
-const EXPECTED_DB='2026-06-27h';
+const EXPECTED_DB='2026-06-30a';
 function showDbBanner(msg){
   let b=document.getElementById('dbBanner');
   if(!b){ b=document.createElement('div'); b.id='dbBanner'; b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:300;background:#7A2E2E;color:#FFE8C8;font-family:Silkscreen,monospace;font-size:11px;line-height:1.4;text-align:center;padding:9px 14px;box-shadow:0 2px 12px rgba(0,0,0,.55)'; document.body.appendChild(b); }
@@ -857,7 +869,7 @@ window.rollback=async function(mins){
   ensureDefaults(); await saveData(); layoutGrove(); renderLedger(); renderRites(); closeSheet(); toast(`Rolled back ~${age} min.`);
 };
 let REACT_SUPPRESS=false;
-function rebaselineSnaps(){ try{ MOOD_SNAP=moodSnapshot(); }catch(e){} try{ LOG_SNAP=logSnapshot(); }catch(e){} try{ OFFER_SNAP=offerIds(); APPLIED_OFFER_SNAP=appliedOfferIds(); }catch(e){} try{ const snap={}; (MEM.members||[]).forEach(m=>{ snap[m.name]=tierIndex(m.points||0); }); saveRankSnap(snap); }catch(e){} }
+function rebaselineSnaps(){ try{ MOOD_SNAP=moodSnapshot(); }catch(e){} try{ LOG_SNAP=logSnapshot(); }catch(e){} try{ OFFER_SNAP=offerIds(); APPLIED_OFFER_SNAP=appliedOfferIds(); }catch(e){} try{ BET_SNAP=betSnapshot(); }catch(e){} try{ const snap={}; (MEM.members||[]).forEach(m=>{ snap[m.name]=tierIndex(m.points||0); }); saveRankSnap(snap); }catch(e){} }
 async function pollRemote(){
   if(MODE!=="remote") return;
   if(scrim.classList.contains("show")) return;   // don't yank the UI mid-edit
@@ -865,7 +877,7 @@ async function pollRemote(){
     MEM=d; ensureDefaults(); cacheRemote();
     const quiet = document.hidden || REACT_SUPPRESS; REACT_SUPPRESS=false;
     if(quiet){ rebaselineSnaps(); }
-    else { try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} }
+    else { try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectBetEndings(); }catch(e){} }
     takeSnap(); layoutGrove(); renderLedger(); renderRites(); const tr=document.getElementById('trials'); if(tr && tr.style.display!=='none') renderTrials();
     if(!quiet) checkRankUps();
   } }catch(e){}
@@ -3268,6 +3280,28 @@ function renderIdentityBar(){
 let NOSIGN = 1, PDSIGN = 1;
 let NOM_TARGETS = new Set();
 function votesForPoints(p){ p=Math.abs(p); if(p<=20)return 3; if(p<=49)return 4; if(p<=69)return 5; if(p<=100)return 6; if(p<=150)return 7; return 8; }
+/* ---- the Eye keeps a clean tongue: reject profanity / slurs in anything the grove inscribes ---- */
+// Whole-word list (matched as standalone tokens, with common suffixes). Word-boundary matching keeps
+// "class", "bass", "cockpit", "specific" etc. safe (the "Scunthorpe problem").
+const PROFANITY=['fuck','shit','bitch','cunt','dick','cock','pussy','asshole','ass','arse','bastard','slut','whore','fag','faggot','nigger','nigga','retard','retarded','rape','rapist','spic','chink','kike','wetback','tranny','jizz','wank','wanker','twat','prick','bollocks','douche','dildo','gook','paki','beaner'];
+// Anchored spaced-evasion list — catches "f u c k", "f.u.c.k" without matching inside real words.
+const PROFANITY_SPACED=['fuck','shit','cunt','bitch','faggot','nigger','nigga','rapist','kike','tranny','whore','asshole'];
+// Substring list — roots that never occur inside ordinary English, so safe to catch when glued
+// ("fuckface", "motherfucker"). Deliberately excludes shit/cunt/rapist/etc. (therapist, Scunthorpe…).
+const PROFANITY_SUBSTR=['fuck','faggot','nigger','nigga','kike','wetback','tranny','beaner'];
+function deLeet(s){ return String(s==null?'':s).toLowerCase().replace(/[@4]/g,'a').replace(/0/g,'o').replace(/[1!|]/g,'i').replace(/3/g,'e').replace(/[5$]/g,'s').replace(/7/g,'t').replace(/8/g,'b'); }
+function profanityHit(text){
+  const t=deLeet(text);
+  const tokens=t.split(/[^a-z]+/).filter(Boolean);
+  for(const w of PROFANITY){ const re=new RegExp('^'+w+'(s|es|ed|er|ers|ing|in|y|z|a|hole|head|wad|ish)?$'); if(tokens.some(tok=>re.test(tok))) return w; }
+  const spacey=t.replace(/[^a-z]+/g,' ').trim();
+  for(const w of PROFANITY_SPACED){ const sep=w.split('').join('[ ]?'); if(new RegExp('(^| )'+sep+'( |$)').test(spacey)) return w; }
+  const glued=t.replace(/[^a-z]/g,'');
+  for(const w of PROFANITY_SUBSTR){ if(glued.includes(w)) return w; }
+  return null;
+}
+// returns "" if clean, else an error message naming the offence
+function profanityError(text){ const hit=profanityHit(text); return hit ? 'The Eye keeps a civil tongue — drop the language and try again.' : ''; }
 window.toggleNomTarget=function(name,btn){ if(NOM_TARGETS.has(name)){NOM_TARGETS.delete(name);btn.classList.remove('on');} else {NOM_TARGETS.add(name);btn.classList.add('on');} };
 function proposeLocal(it){ MEM.rites=MEM.rites||[]; it.id=it.id||("r"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36)); it.approvers=[it.nominator]; it.applied=false; it.created=Date.now()/1000; MEM.rites.push(it); if(it.approvers.length>=it.threshold){ applyRiteEffect(it); it.applied=true; } }
 function withdrawLocal(id){ MEM.rites=(MEM.rites||[]).filter(x=>x.id!==id); }
@@ -3328,7 +3362,8 @@ function riteCard(r){
   const isOath=r.kind==="oath";
   const countLbl = isOath ? `${Math.max(0,n-1)} / 3 witnesses` : `${n} / ${thr} ✦`;
   const voted = hasVotedHere(r.id) || (VOTER && (r.approvers||[]).includes(VOTER));
-  const canWithdraw = VOTER && r.nominator===VOTER && !r.applied && (n*2 < thr) && ['deed','title','badge','offer'].includes(r.kind);
+  const fresh = (Date.now()/1000 - (r.created||0)) < 60;   // 60s grace: the nominator can always pull a misfire
+  const canWithdraw = VOTER && r.nominator===VOTER && !r.applied && (fresh || (n*2 < thr)) && ['deed','title','badge','offer'].includes(r.kind);
   const approveBtn = `<button class="rapprove ${voted?"voted":""}" ${voted?"disabled":""} onclick="approveRite('${r.id}')">${voted?(isOath?"✓ Witnessed":"✓ Approved"):(isOath?"Witness":"Approve")}</button>`;
   const withdrawBtn = canWithdraw ? `<button class="rwithdraw" onclick="withdrawRite('${r.id}')">Withdraw</button>` : "";
   const keeperRmBtn = keeperUnlocked ? `<button class="rwithdraw" style="background:rgba(150,40,40,.18);border-color:rgba(210,80,70,.6);color:#F0A090" onclick="keeperRemoveRite('${r.id}')">✕ Remove</button>` : "";
@@ -3343,7 +3378,7 @@ window.approveRite=function(id){
   Snd.sfx('approve');
   voteRite(id, VOTER);
 };
-async function refreshRemote(){ try{ const d=await sbRead(); if(d){ MEM=d; ensureDefaults(); cacheRemote(); try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectOfferPassed(); }catch(e){} } }catch(e){} }
+async function refreshRemote(){ try{ const d=await sbRead(); if(d){ MEM=d; ensureDefaults(); cacheRemote(); try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectOfferPassed(); }catch(e){} try{ detectBetEndings(); }catch(e){} } }catch(e){} }
 
 window.proposeRite=async function(item){
   let off=false;
@@ -3380,9 +3415,10 @@ window.withdrawRite=async function(id){
   const r=(MEM.rites||[]).find(x=>x.id===id); if(!r) return;
   if(r.nominator!==VOTER){ toast("Only the one who raised it can withdraw it."); return; }
   const n=(r.approvers||[]).length, thr=r.threshold||5;
+  const fresh = (Date.now()/1000 - (r.created||0)) < 60;   // 60s grace window for misfires
   if(r.applied){ toast("It has already passed."); return; }
-  if(n*2>=thr){ toast("Too many have approved — it can no longer be withdrawn."); return; }
-  if(!confirm("Withdraw this rite? It will be taken back before the Eye.")) return;
+  if(!fresh && n*2>=thr){ toast("Too many have approved — it can no longer be withdrawn."); return; }
+  if(!confirm(fresh ? "Pull this nomination back? (within the 60-second grace)" : "Withdraw this rite? It will be taken back before the Eye.")) return;
   if(MODE==="remote"){
     try{ await sbRpc("grove_withdraw",{p_id:id,p_who:VOTER}); await refreshRemote(); }
     catch(e){ if(isNetErr(e)){ withdrawLocal(id); cacheRemote(); enqueueOp("grove_withdraw",{p_id:id,p_who:VOTER}); toast("No signal — withdrawal saved."); } else { let msg="Could not withdraw."; try{ const j=JSON.parse(e.message); if(j&&j.message) msg=j.message; }catch(_){ if(e&&e.message) msg=e.message; } toast(msg); return; } }
@@ -3466,6 +3502,7 @@ window.nominateDeedForm=function(){
     <div class="kpanel">
       <h3>Nominate a Deed</h3>
       <p class="sub">Name the deed, pick one or more members, and set the Devotion Points. A reason is required. Bigger awards need more approvals — max ±200.</p>
+      <p class="sub" style="font-style:italic;color:var(--candle)">The Eye rewards the worthy and remembers the rest — name the deed plainly, for embellishment offends it.</p>
       <div class="crlabel">Members · tap to include</div>
       <div class="seg" style="flex-wrap:wrap">${memBtns}</div>
       <div class="field" style="margin-top:10px"><label>Reason · required</label><input id="noReason" oninput="clearPresetHL()" placeholder="e.g. Saved the campfire"></div>
@@ -3497,6 +3534,7 @@ window.submitNomDeed=function(){
   if(!targets.length){ document.getElementById("kerr").textContent="Pick at least one member."; return; }
   const label=document.getElementById("noReason").value.trim();
   if(!label){ document.getElementById("kerr").textContent="A deed needs a reason."; return; }
+  { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
   let mag=parseInt(document.getElementById("noPts").value,10);
   if(isNaN(mag)||mag===0){ document.getElementById("kerr").textContent="Enter a Devotion Points value."; return; }
   mag=Math.min(200,Math.abs(mag));
@@ -3532,6 +3570,7 @@ window.submitPropDeed=function(){
   const label=document.getElementById("pdName").value.trim();
   let mag=parseInt(document.getElementById("pdPts").value,10);
   if(!label){ document.getElementById("kerr").textContent="Name the deed."; return; }
+  { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
   if(isNaN(mag)||mag===0){ document.getElementById("kerr").textContent="Enter a Devotion Points value."; return; }
   let pts=Math.abs(mag)*PDSIGN;
   pts=Math.max(-50,Math.min(100,pts));
@@ -3545,6 +3584,7 @@ window.nominateTitleForm=function(){
     <div class="kpanel">
       <h3>Nominate a Title</h3>
       <p class="sub">Bestow an epithet — ✦ Returned, The Pathfinder, Keeper of the Flame. Needs 10 approvals.</p>
+      <p class="sub" style="font-style:italic;color:var(--candle)">An epithet outlives the night it was earned. Make it sing, not sting — the Eye favours wit over venom.</p>
       <div class="field"><label>Member</label><select id="ntTarget">${opts}</select></div>
       <div class="field"><label>Title</label><input id="ntTitle" placeholder="e.g. The Pathfinder"></div>
       <button class="gold" onclick="submitNomTitle()">Raise nomination</button>
@@ -3557,6 +3597,7 @@ window.submitNomTitle=function(){
   const target=document.getElementById("ntTarget").value;
   const label=document.getElementById("ntTitle").value.trim();
   if(!label){ document.getElementById("kerr").textContent="Enter a title."; return; }
+  { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
   proposeRite({kind:"title",target,label,threshold:10,nominator:VOTER});
 };
 const DEFAULT_BADGE_IDEAS=["The Unburnt","Pathfinder","Iron Liver","Keeper of the Flame","The Shepherd","The Wraith","The Phoenix","Owl of the Eye","Beast of Burden","Jam Boy","The Anointed","Last of the Faithful"];
@@ -3593,6 +3634,7 @@ window.nominateBadgeForm=function(){
     <div class="kpanel">
       <h3>Nominate a Badge</h3>
       <p class="sub">A collectible mark of honour — members can hold many. Needs 7 approvals.</p>
+      <p class="sub" style="font-style:italic;color:var(--candle)">A badge is a small legend pinned to a soul. Earn the Eye's nod — clever travels further than cruel.</p>
       <div class="field"><label>Member</label><select id="nbTarget">${opts}</select></div>
       <div class="field"><label>Badge</label><input id="nbBadge" oninput="clearChipsHL('nbChips')" placeholder="e.g. Polar Bear"></div>
       <div class="quick" id="nbChips">${chips}</div>
@@ -3607,6 +3649,7 @@ window.submitNomBadge=function(){
   const target=document.getElementById("nbTarget").value;
   const label=document.getElementById("nbBadge").value.trim();
   if(!label){ document.getElementById("kerr").textContent="Name the badge."; return; }
+  { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
   const color=NOM_BADGE_COL;
   if(color){ setLocalBadgeColor(label,color); }
   proposeRite({kind:"badge",target,label,color,threshold:7,nominator:VOTER});
@@ -3708,7 +3751,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27de · Trials blurbs trimmed (no rules-pointers) + Rules now covers Group Wagers, the Chalice & the Offering</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30a · Chalice no longer stalls (any player advances a timed-out turn + server cron) · 60s undo on nominations · profanity filter · stake-bet janitor · server-authoritative wheel + rite/chalice hardening</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -3750,6 +3793,30 @@ function detectLogGains(){
   LOG_SNAP=logSnapshot();
   if(ev.length>8) return;   /* bulk grant (Keeper "log to all") — no flood */
   ev.slice(0,6).forEach(e=>{ const lbl='\ud83e\udeb5 '+(e.d>1?('+'+e.d+' logs'):'A log for the fire'); try{ setMood(e.name,'joyful',lbl); }catch(_){} queueReact(e.name,'joyful',lbl); });
+}
+/* ---- stake-bet janitor: surface silent sweep endings so refunds never feel like they vanished ---- */
+let BET_SNAP=null;
+function betSnapshot(){ const s={w:{},g:{}}; (MEM.wagers||[]).forEach(w=>{ if(w&&w.id) s.w[w.id]=w.status; }); (MEM.groups||[]).forEach(g=>{ if(g&&g.id) s.g[g.id]=g.status; }); return s; }
+function initBetSnap(){ BET_SNAP=betSnapshot(); }
+function detectBetEndings(){
+  if(!BET_SNAP){ BET_SNAP=betSnapshot(); return; }
+  const me=(typeof VOTER!=='undefined')?VOTER:'';
+  const ev=[];
+  if(me){
+    (MEM.wagers||[]).forEach(w=>{ if(!w||!w.id) return; const was=BET_SNAP.w[w.id]; if(was===undefined||was===w.status) return;
+      if(w.proposer!==me && w.taker!==me) return;
+      if(w.status==='expired' && w.proposer===me) ev.push('⌛ Your wager'+(w.title?(' “'+w.title+'”'):'')+' expired unmatched — '+(w.amount||0)+'✦ returned.');
+      else if(w.status==='forfeit') ev.push('⚖ Your wager'+(w.title?(' “'+w.title+'”'):'')+' went unresolved — both forfeited '+(w.amount||0)+'✦.');
+    });
+    (MEM.groups||[]).forEach(g=>{ if(!g||!g.id) return; const was=BET_SNAP.g[g.id]; if(was===undefined||was===g.status) return;
+      if(!groupParts(g).includes(me)) return;
+      if(g.status==='expired') ev.push('⌛ “'+(g.title||'Group wager')+'” never locked — your '+(g.stake||0)+'✦ stake returned.');
+      else if(g.status==='void') ev.push('⚖ “'+(g.title||'Group wager')+'” went unsettled — your '+(g.stake||0)+'✦ stake refunded.');
+    });
+  }
+  BET_SNAP=betSnapshot();
+  if(ev.length>3){ try{ toast(ev.length+' of your stakes were settled — the points are back in your pouch.'); }catch(_){} }
+  else ev.forEach(m=>{ try{ toast(m); }catch(_){} });
 }
 let _reactStyled=false;
 function ensureReactStyle(){ if(_reactStyled)return; _reactStyled=true; const st=document.createElement('style'); st.id='spreactStyle'; st.textContent=`
@@ -3834,7 +3901,7 @@ function sweepWagers(now){ let changed=false; (MEM.wagers||[]).forEach(w=>{
   else if(w.status==='disputed' && now-(w.disputeAt||now)>=1*3600){ w.status='forfeit'; w.winner='forfeit'; changed=true; }
 }); return changed; }
 /* ---------- multi-person GROUP WAGERS ---------- */
-const GROUP_CAP=100, GROUP_SIDE_MAX=6, GROUP_LOCK_SEC=3600, GROUP_ACTIVE_SEC=86400, GROUP_DISPUTE_VOTES=5;
+const GROUP_CAP=100, GROUP_SIDE_MAX=6, GROUP_LOCK_SEC=3600, GROUP_ACTIVE_SEC=86400, GROUP_DISPUTE_VOTES=5, GROUP_DISPUTE_SEC=3600;
 function groupById(id){ return (MEM.groups||[]).find(g=>g.id===id); }
 function groupParts(g){ return [...(g.sideA||[]),...(g.sideB||[])]; }
 function groupPot(g){ return (g.stake||0)*groupParts(g).length; }
@@ -3842,6 +3909,7 @@ function groupPayout(g,side){ const all=groupParts(g); const pot=(g.stake||0)*al
 function sweepGroups(now){ let ch=false; (MEM.groups||[]).forEach(g=>{
   if(g.status==='pending' && now-(g.created||now)>=GROUP_LOCK_SEC){ groupParts(g).forEach(nm=>{const m=memByName(nm); if(m)adjPts(m,g.stake||0);}); g.status='expired'; ch=true; }
   else if(g.status==='active' && now-(g.lockedAt||now)>=GROUP_ACTIVE_SEC){ g.status='disputed'; g.disputeAt=now; ch=true; }
+  else if(g.status==='disputed' && now-(g.disputeAt||now)>=GROUP_DISPUTE_SEC){ groupParts(g).forEach(nm=>{const m=memByName(nm); if(m)adjPts(m,g.stake||0);}); g.status='void'; g.winner='void'; ch=true; }
 }); return ch; }
 function sweepRites(now){ const b=(MEM.rites||[]).length; MEM.rites=(MEM.rites||[]).filter(r=> r.applied || (now-(r.created||now) < 3*3600)); return (MEM.rites||[]).length!==b; }
 function applyAction(a){
@@ -3849,7 +3917,7 @@ function applyAction(a){
   if(a.t==='stoke'){ const m=memByName(a.name); if(!m)return; if(now-(m.lastStoke||0)<3*3600)return; if((m.logs||0)<1)return; m.logs=(m.logs||0)-1; m.fireLogs=(m.fireLogs||0)+1; m.lastStoke=now; MEM.fire=MEM.fire||{level:0,goal:6,lastBlessed:0,stokers:[],lastDecay:now,streak:0}; MEM.fire.stokers=MEM.fire.stokers||[]; if(!MEM.fire.stokers.includes(a.name))MEM.fire.stokers.push(a.name); MEM.fire.level=(MEM.fire.level||0)+1; MEM.fire.lastDecay=now; if(MEM.fire.level>=(MEM.fire.goal||6)){ if(MEM.fire.lastBlessed && now-MEM.fire.lastBlessed>=24*3600) MEM.fire.streak=0; const bless=Math.min(200,50+25*(MEM.fire.streak||0)); MEM.fire.stokers.forEach(nm=>{const x=memByName(nm); if(x)adjPts(x,bless);}); adjPts(m,20); MEM.fire.lastSpark=a.name; MEM.fire.lastBless=bless; MEM.fire.streak=(MEM.fire.streak||0)+1; MEM.fire.level=0; MEM.fire.stokers=[]; MEM.fire.lastBlessed=now; fireKeeperBadge(); } }
   else if(a.t==='chal_new'){ const m=memByName(a.owner); if(!m)return; const r=Math.max(1,Math.min(150,a.reward|0)); if((m.chalBudget||0)<r)return; m.chalBudget-=r; MEM.challenges=MEM.challenges||[]; MEM.challenges.push({id:'c'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),owner:a.owner,title:a.title,reward:r,accepter:null,created:now,status:'open'}); }
   else if(a.t==='chal_accept'){ const c=chalById(a.id); if(!c||c.status!=='open')return; if(a.name===c.owner)return; if(activeCommitments(a.name)>=3)return; c.accepter=a.name; c.status='accepted'; }
-  else if(a.t==='chal_remove'){ const c=chalById(a.id); if(!c)return; if(a.by!==c.owner && !a.keeper)return; if(c.status==='open' || a.keeper){ const o=memByName(c.owner); if(o)o.chalBudget=(o.chalBudget||0)+(c.reward||0); MEM.challenges=(MEM.challenges||[]).filter(x=>x.id!==a.id); } else if(c.status==='accepted' && !c.removeReq){ c.removeReq=now; } }
+  else if(a.t==='chal_remove'){ const c=chalById(a.id); if(!c)return; if(a.by!==c.owner && !a.keeper)return; if(c.status==='open' || (a.keeper && c.status==='accepted')){ const o=memByName(c.owner); if(o)o.chalBudget=(o.chalBudget||0)+(c.reward||0); MEM.challenges=(MEM.challenges||[]).filter(x=>x.id!==a.id); } else if(a.keeper){ /* done/expired: the reward is already settled (paid out or already refunded by the sweep) — remove the record without refunding again, else Devotion inflates */ MEM.challenges=(MEM.challenges||[]).filter(x=>x.id!==a.id); } else if(c.status==='accepted' && !c.removeReq){ c.removeReq=now; } }
   else if(a.t==='chal_remove_resolve'){ const c=chalById(a.id); if(!c||c.status!=='accepted'||!c.removeReq)return; if(a.name!==c.accepter)return; if(a.choice==='accept'){ const o=memByName(c.owner); if(o)o.chalBudget=(o.chalBudget||0)+(c.reward||0); MEM.challenges=(MEM.challenges||[]).filter(x=>x.id!==a.id); } else { c.deadline=now+3600; delete c.removeReq; } }
   else if(a.t==='chal_approve'){ const c=chalById(a.id); if(!c||c.status!=='accepted')return; if(a.approver!==c.owner && !a.keeper)return; const w=memByName(c.accepter); if(w){ const mult=consumeMult(w); adjPts(w,(c.reward||0)*mult); maybeEarnLog(w,(c.reward||0)*mult); } c.status='done'; }
   else if(a.t==='oath'){ const m=memByName(a.name); if(!m)return; m.oath=true; m.badges=m.badges||[]; if(!m.badges.includes('Initiated'))m.badges.push('Initiated'); }
@@ -3894,7 +3962,7 @@ async function communityAction(a){
   try{ Snd.action(a.t); }catch(e){}
   return okR;
 }
-function trialsRefresh(){ renderTrials(); layoutGrove(); renderLedger(); try{ syncOffering(); }catch(e){} try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} }
+function trialsRefresh(){ renderTrials(); layoutGrove(); renderLedger(); try{ syncOffering(); }catch(e){} try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectBetEndings(); }catch(e){} }
 function thoughtLive(t){ return !!(t && t.text && (Date.now()/1000 - (t.at||0)) < 12*3600); }
 async function setThought(text){
   const me=(typeof VOTER!=='undefined')?VOTER:''; if(!me) return;
@@ -4202,7 +4270,7 @@ function devotionVerdict(o){
       }; raf=requestAnimationFrame(frame);
       try{ if(Snd.isOn&&Snd.isOn()) Snd.sfx('shimmer'); }catch(e){}
       const end=()=>{ cleanup(); if(ov){ ov.classList.add('out'); const x=ov; setTimeout(()=>{ try{x.remove();}catch(e){} finish(); },650);} else finish(); };
-      setTimeout(async ()=>{ if(ov) ov.classList.add('reveal'); try{ if(Snd.isOn&&Snd.isOn()){ if(v.tone==='bad') Snd.sfx('thunder'); else Snd.sfx('gong'); } }catch(e){} if(!applied){ applied=true; try{ await communityAction({t:'wheel_spin',name:VOTER,outcome:o}); }catch(e){} } revealed=true; }, 2200);
+      setTimeout(async ()=>{ if(ov) ov.classList.add('reveal'); try{ if(Snd.isOn&&Snd.isOn()){ if(v.tone==='bad') Snd.sfx('thunder'); else Snd.sfx('gong'); } }catch(e){} revealed=true; }, 2200);
       const autoT=setTimeout(end, 5400);
       ov.addEventListener('pointerdown',()=>{ if(revealed){ clearTimeout(autoT); end(); } });
       window.addEventListener('resize',size);
@@ -4215,11 +4283,26 @@ window.spinTheWheel=async function(){
   const now=Date.now()/1000;
   if(now-(me.lastSpin||0)<2*3600){ trialsRefresh(); return; }
   if((me.points||0)<50){ toast("You need 50 ✦ to be tested."); return; }
+  // The Eye decides — the outcome is computed server-side so it can't be willed by the supplicant.
+  let online=true; try{ online=navigator.onLine; }catch(_){}
+  if(typeof MODE!=='undefined' && MODE==='remote' && !online){ toast('The Eye needs a connection to weigh you.'); return; }
   WHEEL_BUSY=true;
-  const o=spinWheel();
   const btn=document.getElementById('spinBtn'); if(btn){ btn.disabled=true; btn.textContent='The Eye weighs you…'; }
-  try{ await devotionVerdict(o); }catch(e){}
+  let o=null;
+  try{
+    if(typeof MODE!=='undefined' && MODE==='remote'){
+      o=await sbRpc('grove_wheel',{p_name:VOTER});               // authoritative spin + apply
+      if(o && o.denied){
+        if(o.reason==='cooldown'){} else if(o.reason==='funds'){ toast('You need 50 ✦ to be tested.'); }
+        o=null;
+      } else { try{ await refreshRemote(); }catch(e){} }
+    } else {
+      o=spinWheel(); applyAction({t:'wheel_spin',name:VOTER,outcome:o}); if(typeof saveData==='function') await saveData();
+    }
+  }catch(e){ try{ if(typeof isNetErr==='function'&&isNetErr(e)){ toast('The Eye needs a connection to weigh you.'); } else { toast('The Eye did not answer — run the wheel update in Supabase.'); } }catch(_){}; o=null; }
+  if(o){ try{ await devotionVerdict(o); }catch(e){} }
   WHEEL_BUSY=false;
+  try{ trialsRefresh(); }catch(e){}
 };
 function wagerOpenCard(w){
   const mine=VOTER&&VOTER===w.proposer; const meM=VOTER?memByName(VOTER):null;
@@ -4301,7 +4384,7 @@ window.concedeWager=async function(id){ const w=wagerById(id); if(!w)return; con
 window.resolveWager=async function(id,winner){ if(!keeperUnlocked)return; if(!confirm(`Award the ${2*(wagerById(id)?.amount||0)} pot to ${winner}?`))return; applyAction({t:'wager_resolve',id,winner,keeper:true}); await saveData(); trialsRefresh(); toast(`${winner} takes the pot.`); };
 window.voidWager=async function(id){ if(!keeperUnlocked)return; if(!confirm("Void this wager and refund both stakes?"))return; applyAction({t:'wager_void',id,keeper:true}); await saveData(); trialsRefresh(); toast("Wager voided — stakes refunded."); };
 window.voteWager=async function(id,side){ if(!VOTER){ toast("Choose your spirit first."); return; } const w=wagerById(id); if(!w)return; const ok=await communityAction({t:'wager_vote',id,voter:VOTER,side}); if(!ok)return; trialsRefresh(); toast("Your vote is cast."); };
-window.disputeWager=async function(id){ if(!VOTER)return; if(!confirm("Raise a dispute? The grove will vote (5 settles it). If no verdict in 3 hours, BOTH of you forfeit the pot."))return; const ok=await communityAction({t:'wager_dispute',id,by:VOTER}); if(!ok)return; trialsRefresh(); toast("Dispute raised — the grove decides."); };
+window.disputeWager=async function(id){ if(!VOTER)return; if(!confirm("Raise a dispute? The grove will vote (5 settles it). If no verdict in 1 hour, BOTH of you forfeit the pot."))return; const ok=await communityAction({t:'wager_dispute',id,by:VOTER}); if(!ok)return; trialsRefresh(); toast("Dispute raised — the grove decides."); };
 /* ---------- GROUP WAGER UI ---------- */
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 const GROUP_STATUS={pending:'forming',active:'live',disputed:'disputed',settled:'settled',expired:'expired',void:'void'};
@@ -4337,8 +4420,9 @@ function groupCard(g){
                    : `<button class="rapprove" onclick="voteGroup('${g.id}','A')">Side A</button><button class="rapprove" onclick="voteGroup('${g.id}','B')">Side B</button>`;
     } else acts=`<span class="rmeta">players can't vote their own dispute</span>`;
     let av=0,bv=0; const vv=g.votes||{}; for(const k in vv){ if(vv[k]==='A')av++; else if(vv[k]==='B')bv++; }
-    body+=`<div class="rmeta" style="color:#E8A88F">⚖ disputed — grove votes (A ${av} · B ${bv}, ${GROUP_DISPUTE_VOTES} settles it)</div>`;
+    body+=`<div class="rmeta" style="color:#E8A88F">⚖ disputed — grove votes (A ${av} · B ${bv}, ${GROUP_DISPUTE_VOTES} settles it) · unsettled in 1h → voided & refunded</div>`;
   } else if(g.status==='settled'){ body+=`<div class="rmeta" style="color:var(--candle)">Side ${g.winner} split the pot of ${pot} ✦</div>`; }
+  else if(g.status==='void'){ body+=`<div class="rmeta" style="color:var(--sage)">No verdict in time — the dispute was voided and every stake refunded.</div>`; }
   if(keeperUnlocked && g.status!=='settled' && g.status!=='expired'){ acts+=`<div style="width:100%;margin-top:6px;text-align:center;font-size:11px">Keeper · <a onclick="keeperGroup('${g.id}','A')" style="cursor:pointer;color:var(--sage)">A wins</a> · <a onclick="keeperGroup('${g.id}','B')" style="cursor:pointer;color:var(--sage)">B wins</a> · <a onclick="keeperGroup('${g.id}','void')" style="cursor:pointer;color:#E8A88F">void</a></div>`; }
   return `<div class="ritecard" style="flex-direction:column;align-items:stretch"><div class="rbody">${head}${body}</div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:6px">${acts}</div></div>`;
 }
@@ -4888,7 +4972,7 @@ function offeringCeremony(name){
   await loadData();
   ensureDefaults();
   try{ if(sweepRites(Date.now()/1000) && MODE!=="remote") await saveData(); }catch(e){}
-  try{ initMoodSnap(); }catch(e){} try{ initLogSnap(); }catch(e){} try{ initOfferSnap(); }catch(e){}
+  try{ initMoodSnap(); }catch(e){} try{ initLogSnap(); }catch(e){} try{ initOfferSnap(); }catch(e){} try{ initBetSnap(); }catch(e){}
   if(SB_ON && MODE!=="remote"){ showDbBanner("Not connected to the shared grove — running LOCAL-ONLY on this device. The keeper password set in Supabase and other people's wagers/points will NOT work here. On the hosted site this usually means your Supabase project is PAUSED — open the Supabase dashboard, resume the project, then reload."); }
   document.getElementById("offNote").textContent =
     MODE==="remote" ? "◦ live ledger · synced through the Eye ◦"
@@ -5039,8 +5123,9 @@ async function send(state, commit){
     if(typeof MODE!=='undefined' && MODE==='remote'){
       let online=true; try{ online=navigator.onLine; }catch(_){}
       if(online){
-        try{ await sbRpc('grove_chalice',{p_action:a}); await refreshRemote(); }
-        catch(e){ if(typeof isNetErr==='function'&&isNetErr(e)){ window.applyAction(a); try{cacheRemote();}catch(_){} try{enqueueOp('grove_chalice',{p_action:a});}catch(_){} } else { try{ toast('Run grove_chalice.sql in Supabase to enable the Trial.'); }catch(_){}}}
+        let wrote=false;
+        try{ await sbRpc('grove_chalice',{p_action:a}); wrote=true; await refreshRemote(); }
+        catch(e){ if(wrote){ /* the write landed; only the refresh failed — apply the state we just sent, but DON'T re-enqueue (that would replay and double-commit Devotion) */ try{ window.applyAction(a); }catch(_){} try{cacheRemote();}catch(_){} } else if(typeof isNetErr==='function'&&isNetErr(e)){ window.applyAction(a); try{cacheRemote();}catch(_){} try{enqueueOp('grove_chalice',{p_action:a});}catch(_){} } else { try{ toast('Run grove_chalice.sql in Supabase to enable the Trial.'); }catch(_){}}}
       } else { window.applyAction(a); try{cacheRemote();}catch(_){} try{enqueueOp('grove_chalice',{p_action:a});}catch(_){} }
     } else { window.applyAction(a); if(typeof saveData==='function') await saveData(); }
   }catch(e){}
@@ -5144,6 +5229,7 @@ function submitLaw(){
 function pickLoser(nm){
   const g=GC(); if(!g||g.phase!=='confirm'||!g.current) return;
   if(g.nominee!==me()&&!controls(g.nominee)){ toast('The nominee names the loser.'); return; }
+  if(!nm || (g.spirits||[]).indexOf(nm)<0 || isAway(g,nm)){ toast('Name a spirit still in the circle.'); return; }
   const n=clone(g); n.current.loser=nm; send(n);
 }
 
@@ -5361,16 +5447,29 @@ function startPoll(){ if(POLL) return; POLL=setInterval(async()=>{
     try{ toast('The circle dissolved \u2014 no trial began within 15 minutes.'); }catch(e){}
     return;
   }
-  if(g&&g.status==='playing'&&(g.nominee===me()||controls(g.nominee))){
-    if(g.phase==='dare' && g.dare && g.deadline && nowS()>g.deadline){ resolveDareFail(clone(g), g.dare.who+'\u2019s ritual time ran out \u2014 the Chalice curses them (\u221250).'); return; }
-    const drawerAway=(g.phase==='draw') && isAway(g, g.spirits[g.turn]);
-    const cardSlow=!!(g.current && CR[g.current.ri] && CR[g.current.ri].slow);
-    const playPhase=(g.phase==='draw'||g.phase==='resolve'||g.phase==='confirm');
-    const timedOut=playPhase && !!g.deadline && nowS()>g.deadline && !cardSlow;
-    if(drawerAway||timedOut){
-      const n=clone(g); feedPush(n, drawerAway?'An absent spirit\u2019s turn is skipped.':(n.spirits[n.turn]+'\u2019s turn ran out \u2014 skipped.')); n.current=null;
-      if(advanceTurn(n)){ n.phase='draw'; setDeadline(n); send(n); return; }
-      else { endGameState(n,'No spirits remain in the circle.'); return; }
+  // ----- auto-advance / timeout janitor -----
+  // The old code let ONLY the nominee's device advance a timed-out turn, so if the host
+  // wasn't watching the trial stalled for hours. Now any present participant may advance a
+  // commit-free turn skip (concurrent skips are idempotent \u2014 same base state -> same next turn).
+  // Commit-bearing transitions (a failed dare, or ending when nobody is left) stay with a single
+  // deterministic actor \u2014 the device controlling the first present spirit \u2014 so a Devotion commit
+  // can never be applied twice by two devices racing.
+  if(g&&g.status==='playing'){
+    const live0=(g.spirits||[]).find(s=>!isAway(g,s));
+    const iAmJanitor=!!live0 && controls(live0);
+    const iCanAdvance=(g.nominee===me()||controls(g.nominee)) || (g.spirits||[]).some(s=>!isAway(g,s)&&controls(s));
+    if(g.phase==='dare' && g.dare && g.deadline && nowS()>g.deadline){
+      if(iAmJanitor){ resolveDareFail(clone(g), g.dare.who+'\u2019s ritual time ran out \u2014 the Chalice curses them (\u221250).'); return; }
+    } else if(iCanAdvance){
+      const drawerAway=(g.phase==='draw') && isAway(g, g.spirits[g.turn]);
+      const cardSlow=!!(g.current && CR[g.current.ri] && CR[g.current.ri].slow);
+      const playPhase=(g.phase==='draw'||g.phase==='resolve'||g.phase==='confirm');
+      const timedOut=playPhase && !!g.deadline && nowS()>g.deadline && !cardSlow;
+      if(drawerAway||timedOut){
+        const n=clone(g); feedPush(n, drawerAway?'An absent spirit\u2019s turn is skipped.':(n.spirits[n.turn]+'\u2019s turn ran out \u2014 skipped.')); n.current=null;
+        if(advanceTurn(n)){ n.phase='draw'; setDeadline(n); send(n); return; }
+        else if(iAmJanitor){ endGameState(n,'No spirits remain in the circle.'); return; }
+      }
     }
   }
   render();
@@ -5501,7 +5600,7 @@ function resolveControls(g,R,c,drawer){
     if(R.kind==='loser'){
       const picked=c.loser;
       let h='<div class="chal-pick"><div class="chal-q">'+(canConf?'Name the one who lost':'Awaiting the nominee\u2019s judgement')+'</div>';
-      if(canConf){ h+=g.spirits.map(s=>'<button class="chal-chip'+(picked===s?' on':'')+'" onclick="chalAPI.loser(\''+s+'\')">'+s+'</button>').join(''); h+='<button class="chal-btn '+(picked?'gold':'')+'" '+(picked?'':'disabled')+' onclick="chalAPI.confirm()">Confirm (\u221210)</button>'; }
+      if(canConf){ h+=g.spirits.filter(s=>!isAway(g,s)).map(s=>'<button class="chal-chip'+(picked===s?' on':'')+'" onclick="chalAPI.loser(\''+s+'\')">'+s+'</button>').join(''); h+='<button class="chal-btn '+(picked?'gold':'')+'" '+(picked?'':'disabled')+' onclick="chalAPI.confirm()">Confirm (\u221210)</button>'; }
       return h+'</div>';
     }
     let label='';

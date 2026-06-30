@@ -3684,16 +3684,23 @@ function renderRules(){
     <p class="rtext">Stake a bounty from your challenge budget; one spirit may take it on. You or the Keeper approve it within 24h and the stake passes to them. Want out of an accepted challenge? Asking to withdraw lets the doer <b>agree to drop it</b>, or <b>stick it out</b> with one hour to finish before it lapses.</p>
     <div class="ritehdr">The Wager Ring</div>
     <p class="rtext">Stake your <b>own</b> Devotion head-to-head, up to <b>100</b> a wager — another spirit must match it. Settle by conceding or agreeing a tie. Can't agree? Raise a <b>dispute</b> and the grove votes (5 settles it); left unresolved an hour later, both forfeit the pot.</p>
+    <div class="ritehdr">The Reckoning · Group Wagers</div>
+    <p class="rtext">Rally two sides — up to <b>6</b> a side, even lopsided (6 v 1). Everyone stakes the same; the starter <b>locks</b> the wager and the winning side <b>splits the whole pot</b>, so fewer winners each take a bigger share. All players must agree who won; if they can’t, the grove votes to settle it.</p>
     <div class="ritehdr">Test of Devotion</div>
     <p class="rtext"><b>50 ✦</b> laid before the Eye Totem, once every 2 hours. The Eye's verdict runs from a <b>+250</b> radiance down to <b>−100</b> wrath, with returned offerings and <b>×2 / ×3</b> blessings that boost your next <b>deed or challenge</b> (never a wager), plus a <b>×2 curse</b> on your next penalty. Roughly 56% of verdicts favor you, and the Eye can never drop you below zero.</p>
+    <div class="ritehdr">Trial of the Chalice</div>
+    <p class="rtext">A 52-card King’s Cup for the circle — <b>4–20 spirits</b>, and one phone may hold several. A nominee opens the lobby and begins; on your turn you draw a card and the circle acts it out aloud — sending others to drink, binding a partner, decreeing a <b>law</b>, or pouring into the Chalice. Devotion rides a <b>hidden tally</b> all game and commits as a single “Trial of the Chalice” line when it ends.</p>
+    <p class="rtext">The <b>fourth King</b> is the reckoning: that drawer either <b>drinks the Chalice</b> (gaining Devotion and the <i>Drained the Chalice</i> badge) or <b>braves a ritual</b> the circle sets aloud — 3 minutes, half must approve. Succeed for the badge and a communal cup (up to four sip, +10 each); fail or refuse and lose <b>50</b>. Break a decreed law and get reported, and if enough agree you’re judged (−5). Spirits may step away (the host passes on), be cast out by a half-vote, or rejoin — and a lobby that never begins dissolves after 15 minutes.</p>
     <div class="ritehdr">The Rites · Voting</div>
     <p class="rtext">Anyone may raise and approve rites — pick your name, then nominate or approve. Honour-based: one vote per name, and each device votes once per rite.</p>
     <div class="rulerow"><span>Award / deduct Devotion</span><span class="rmin">3–8 ✦</span></div>
     <div class="rulerow"><span>↳ scales by size</span><span class="rmin" style="color:var(--sage)">≤20·3 ≤49·4 ≤69·5<br>≤100·6 ≤150·7 ≤200·8</span></div>
     <div class="rulerow"><span>Nominate a badge</span><span class="rmin">7 ✦</span></div>
     <div class="rulerow"><span>Nominate a title</span><span class="rmin">10 ✦</span></div>
-    <div class="rulerow"><span>The Offering · robe + 12h mark</span><span class="rmin">7 ✦</span></div>
+    <div class="rulerow"><span>The Offering · robe + 4h mark</span><span class="rmin">7 ✦</span></div>
     <p class="rtext" style="margin-top:8px">Points are capped at ±200 per nomination. Open rites expire after 3 hours if they do not pass.</p>
+    <div class="ritehdr">The Offering</div>
+    <p class="rtext">The grove’s highest rite (7 ✦ to raise). Nominate a spirit to be offered to the Eye; when it passes they are robed in the <b>Offering Robe</b> with a <b>4-hour</b> mark on their soul card, gain <b>+150</b> Devotion and the <b>Of the Eye</b> badge, while the whole grove’s sky turns — a blood moon and the open Eye — in their honour. The one who raised it earns <b>+25</b>, and only one offering can be made every few hours.</p>
     <div class="ritehdr">Titles & Badges</div>
     <p class="rtext">A <b>title</b> is your single epithet beneath your rank — a new one replaces the old. <b>Badges</b> are collectible ✦ marks; hold as many as you earn.</p>
     <div class="ritehdr">Your Spirit</div>
@@ -3701,7 +3708,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27cz · thought bubbles: edge-clamped on-screen (tail follows) + column-capped · dark glass</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27de · Trials blurbs trimmed (no rules-pointers) + Rules now covers Group Wagers, the Chalice & the Offering</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -3995,7 +4002,7 @@ function renderTrials(){
   const fireHTML=`
     <div class="ritehdr">Stoke the Fire</div>
     <div style="position:relative;height:168px;margin:6px auto 2px;max-width:420px"><canvas id="fireCanvas" style="width:100%;height:100%;display:block"></canvas></div>
-    <p class="rtext" style="text-align:center;margin:0 auto 6px;max-width:36ch">The Order feeds one fire. You don't just have logs — you <b>earn</b> them by doing deeds and finishing challenges (the bigger the reward, the better the odds). Add a log every <b>3h</b>; the flame <b>loses one every 2h</b> if neglected. When ${goal} logs burn together, every tender is blessed <b style="color:var(--candle)">+${nextBless}</b> — it starts at +50 and climbs +25 with each blessing (no daily limit), resetting to +50 if a full day passes with no fire. Whoever lands the final log gets a <b style="color:var(--candle)">+20</b> spark.</p>
+    <p class="rtext" style="text-align:center;margin:0 auto 6px;max-width:36ch">The Order feeds one shared fire — <b>earn logs</b> by doing deeds and challenges, then add them to build a blessing for everyone who tends it (next blessing <b style="color:var(--candle)">+${nextBless}</b>).</p>
     <div style="text-align:center;margin:6px 0">${logs}</div>
     <div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage);margin-bottom:4px">${lvl} / ${goal} logs · streak ${streak} · next blessing +${nextBless}${me?` · <b style="color:var(--candle)">${myLogs}</b> log${myLogs===1?'':'s'} in hand`:''}</div>
     <div style="text-align:center;margin:0 auto 8px;font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage)">${VOTER?`acting as <b style="color:var(--candle)">${VOTER}</b> · <button class="idswitch" onclick="switchIdentity()">switch</button>`:`<button class="idswitch" onclick="switchIdentity()">choose your spirit to act</button>`}</div>
@@ -4006,7 +4013,7 @@ function renderTrials(){
   const cards = open.length? open.map(c=>challengeCard(c,now)).join("") : `<p class="hint" style="margin:12px 0">No open challenges. Stake some of your budget below.</p>`;
   const chalHTML=`
     <div class="ritehdr" style="margin-top:22px">The Challenge Board</div>
-    <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Each season you hold <b style="color:var(--candle)">150</b> points to stake on challenges you set. One spirit may accept each; you or the Keeper approve it done within 24 hours, and the stake passes to them. You may be committed to <b>3</b> at once.</p>
+    <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Stake from your <b style="color:var(--candle)">150</b>-point challenge budget; one spirit takes it on and earns the stake once you approve it done.</p>
     ${ me? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage);margin-bottom:8px">${VOTER} · budget <b style="color:var(--candle)">${budget}</b>/150 · committed ${commits}/3</div>`:""}
     <div id="chalList">${cards}</div>
     <div style="text-align:center;margin-top:10px">${ me? `<button class="gold" onclick="newChallengeForm()">✦ Set a challenge</button>` : `<p class="hint">Pick your name above to set or accept challenges.</p>` }</div>`;
@@ -4015,7 +4022,7 @@ function renderTrials(){
   const wagerCards=[...wmatched.map(wagerMatchedCard),...wopen.map(wagerOpenCard)].join("") || `<p class="hint" style="margin:12px 0">No wagers yet. Stake some of your own points below.</p>`;
   const wagerHTML=`
     <div class="ritehdr" style="margin-top:22px">The Wager Ring</div>
-    <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Stake your <b>own</b> Devotion head-to-head — up to <b style="color:var(--candle)">${WAGER_CAP}</b> per wager. Settle by conceding or agreeing a tie. Can't agree? Raise a <b>dispute</b> — the grove votes (5 settles it), and if it's unresolved 3h later, both forfeit the pot.</p>
+    <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Stake your <b>own</b> Devotion head-to-head, up to <b style="color:var(--candle)">${WAGER_CAP}</b> a wager. Settle by conceding or a tie — or raise a <b>dispute</b> and let the grove vote.</p>
     ${ me? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage);margin-bottom:8px">staking as <b style="color:var(--candle)">${VOTER}</b></div>`:""}
     <div id="wagerList">${wagerCards}</div>
     <div style="text-align:center;margin-top:10px">${ me? ((me.points||0)>=1 ? `<button class="gold" onclick="newWagerForm()">🎲 Raise a wager</button>` : `<button class="ghostbtn" disabled>Earn points before you can wager</button>`) : `<p class="hint">Pick your spirit to wager.</p>` }</div>`;
@@ -4054,7 +4061,7 @@ function wheelSectionHTML(me){
     ctrl=`${buff}<div id="wheelResult" style="text-align:center;min-height:18px;font-family:'Silkscreen',monospace;font-size:13px;color:var(--candle);margin:2px 0 8px"></div><div style="text-align:center">${btn}</div>`;
   }
   return `<div class="ritehdr" style="margin-top:22px">Test of Devotion</div>
-    <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Lay <b style="color:var(--candle)">50 ✦</b> before the <b>Eye Totem</b> — once every <b>2 hours</b>. The Eye weighs your devotion and answers: it may bless you, ignore you, or turn from you. Its verdict lands on top of the cost.</p>
+    <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Lay <b style="color:var(--candle)">50 ✦</b> before the <b>Eye Totem</b> — once every <b>2 hours</b> — its verdict, radiance to wrath, lands on top of the cost.</p>
     <div style="text-align:center;margin:6px 0"><div style="display:inline-block;width:min(64vw,240px)">${buildTotemSVG({anim:true, closed: cd>0})}</div></div>
     ${ctrl}`;
 }
@@ -4342,7 +4349,7 @@ function groupSectionHTML(me){
   const cards=[...live.map(groupCard),...forming.map(groupCard)].join("") || `<p class="hint" style="margin:12px 0">No group wagers yet. Rally two sides and let the pot decide.</p>`;
   return `
     <div class="ritehdr" style="margin-top:22px">The Reckoning · group wagers</div>
-    <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:38ch">Two sides, up to <b>6</b> each — even lopsided (6&nbsp;v&nbsp;1). Everyone stakes the same. The starter <b>locks</b> it, the winning side <b>splits the whole pot</b> (fewer winners, bigger share). All players must agree who won; if not, the grove votes.</p>
+    <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:38ch">Two sides stake the same; the winning side <b>splits the whole pot</b>, so fewer winners take a bigger share.</p>
     ${ me? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage);margin-bottom:8px">acting as <b style="color:var(--candle)">${esc(VOTER)}</b></div>`:""}
     <div id="groupList">${cards}</div>
     <div style="text-align:center;margin-top:10px">${ me? ((me.points||0)>=1 ? `<button class="gold" onclick="newGroupForm()">⚔ Start a group wager</button>` : `<button class="ghostbtn" disabled>Earn points before you can wager</button>`) : `<p class="hint">Pick your spirit to start one.</p>` }</div>`;
@@ -5001,9 +5008,10 @@ CR.forEach(R=>{ R.act4=function(){ return ({
 /* ---------- helpers ---------- */
 function GC(){ return MEM.chalice||null; }
 function me(){ return (typeof VOTER!=='undefined'&&VOTER)?VOTER:''; }
-function hands(){ try{ return JSON.parse(localStorage.getItem('chal-hands')||'[]'); }catch(e){ return []; } }
-function setHands(a){ try{ localStorage.setItem('chal-hands', JSON.stringify(a||[])); }catch(e){} }
-function controls(name){ return hands().indexOf(name)>=0; }
+function curGid(){ var g=GC(); return (g&&g.gid)||''; }
+function hands(){ try{ var o=JSON.parse(localStorage.getItem('chal-hands')||'null'); if(!o||typeof o!=='object'||Array.isArray(o)||o.gid!==curGid()||!Array.isArray(o.names)) return []; return o.names.slice(); }catch(e){ return []; } }
+function setHands(a, gid){ try{ localStorage.setItem('chal-hands', JSON.stringify({gid:(gid!=null?gid:curGid()), names:(a||[])})); }catch(e){} }
+function controls(name){ var g=GC(); if(g&&Array.isArray(g.spirits)&&g.spirits.indexOf(name)<0) return false; return hands().indexOf(name)>=0; }
 function members(){ return (MEM.members||[]); }
 function memNames(){ return members().map(m=>m.name); }
 function clone(o){ try{ return JSON.parse(JSON.stringify(o)); }catch(e){ return o; } }
@@ -5044,8 +5052,9 @@ function openLobby(){
   const who=me(); if(!who){ try{ switchIdentity(); }catch(e){} return; }
   const g={ status:'lobby', nominee:who, spirits:[who], deck:[], drawn:0, turn:0, kings:0,
     current:null, phase:'lobby', tally:{}, laws:[], reports:[], reportCd:{}, bind:null, feed:[],
-    away:{}, kicked:{}, kicks:[], deadline:0, started:0, ended:0, lobbyAt:nowS() };
-  setHands([who]); send(g);
+    away:{}, kicked:{}, kicks:[], deadline:0, started:0, ended:0, lobbyAt:nowS(),
+    gid:'G'+nowS().toString(36)+Math.random().toString(36).slice(2,7) };
+  setHands([who], g.gid); send(g);
 }
 function joinGame(){
   const g=GC(); if(!g||g.status!=='lobby') return; const who=me();
@@ -5106,11 +5115,15 @@ function tallyAdd(n,name,d){ n.tally=n.tally||{}; n.tally[name]=(n.tally[name]||
 function submitPicks(picks){
   const g=GC(); if(!g||g.phase!=='resolve'||!g.current) return; const R=CR[g.current.ri];
   if(!controls(g.current.drawer)){ toast('Only '+g.current.drawer+' may choose.'); return; }
+  // race-safe: drop any target who left / was cast out / is invalid while choosing
+  picks=(picks||[]).filter(p=> p && (g.spirits||[]).indexOf(p)>=0 && !isAway(g,p) && p!==g.current.drawer);
   const n=clone(g); n.current.picks=picks.slice();
   if(R.kind==='pick2'){ // giver self-resolves
-    picks.forEach(p=>tallyAdd(n,p,R.each)); feedPush(n,g.current.drawer+' sends '+picks.join(' & ')+' to drink.'); resolveDone(n);
+    picks.forEach(p=>tallyAdd(n,p,R.each)); feedPush(n, picks.length? (g.current.drawer+' sends '+picks.join(' & ')+' to drink.') : (g.current.drawer+' finds no one to send.')); resolveDone(n);
   } else if(R.kind==='bind'){
-    n.bind={owner:g.current.drawer, mate:picks[0]}; tallyAdd(n,picks[0],R.each); feedPush(n,g.current.drawer+' binds '+picks[0]+'.'); resolveDone(n);
+    if(picks[0]){ n.bind={owner:g.current.drawer, mate:picks[0]}; tallyAdd(n,picks[0],R.each); feedPush(n,g.current.drawer+' binds '+picks[0]+'.'); }
+    else { n.bind=null; feedPush(n,g.current.drawer+' finds no one to bind.'); }
+    resolveDone(n);
   } else { // pick2self -> nominee confirm
     n.phase='confirm'; send(n); return;
   }
@@ -5516,7 +5529,9 @@ function pickUI(g, q, count, single){
 }
 // transient pick buffer kept on the live state (current.picks) but only committed on submit
 function tap(name,count){
-  const g=GC(); if(!g||!g.current) return; const cur=(g.current.picks||[]).slice();
+  const g=GC(); if(!g||!g.current) return;
+  if(!name || (g.spirits||[]).indexOf(name)<0 || isAway(g,name) || name===g.current.drawer) return; // ignore invalid / departed / self targets
+  const cur=(g.current.picks||[]).slice();
   if(cur.length>=count){ return; } cur.push(name); g.current.picks=cur; // local optimistic
   // re-render without sending until done
   renderLocalPick();

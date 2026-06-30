@@ -4,7 +4,7 @@
    - push + notificationclick handlers (used once push is wired on the backend)
    Bump VERSION every build so old caches are cleared and the new worker takes over.
 */
-const VERSION = 'grove-2026-06-30ar';
+const VERSION = 'grove-2026-06-30as';
 const SHELL = ['./', './index.html', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {

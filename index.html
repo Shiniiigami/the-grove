@@ -5039,8 +5039,9 @@ async function send(state, commit){
     if(typeof MODE!=='undefined' && MODE==='remote'){
       let online=true; try{ online=navigator.onLine; }catch(_){}
       if(online){
-        try{ await sbRpc('grove_chalice',{p_action:a}); await refreshRemote(); }
-        catch(e){ if(typeof isNetErr==='function'&&isNetErr(e)){ window.applyAction(a); try{cacheRemote();}catch(_){} try{enqueueOp('grove_chalice',{p_action:a});}catch(_){} } else { try{ toast('Run grove_chalice.sql in Supabase to enable the Trial.'); }catch(_){}}}
+        let wrote=false;
+        try{ await sbRpc('grove_chalice',{p_action:a}); wrote=true; await refreshRemote(); }
+        catch(e){ if(wrote){ /* the write landed; only the refresh failed — apply the state we just sent, but DON'T re-enqueue (that would replay and double-commit Devotion) */ try{ window.applyAction(a); }catch(_){} try{cacheRemote();}catch(_){} } else if(typeof isNetErr==='function'&&isNetErr(e)){ window.applyAction(a); try{cacheRemote();}catch(_){} try{enqueueOp('grove_chalice',{p_action:a});}catch(_){} } else { try{ toast('Run grove_chalice.sql in Supabase to enable the Trial.'); }catch(_){}}}
       } else { window.applyAction(a); try{cacheRemote();}catch(_){} try{enqueueOp('grove_chalice',{p_action:a});}catch(_){} }
     } else { window.applyAction(a); if(typeof saveData==='function') await saveData(); }
   }catch(e){}
@@ -5144,6 +5145,7 @@ function submitLaw(){
 function pickLoser(nm){
   const g=GC(); if(!g||g.phase!=='confirm'||!g.current) return;
   if(g.nominee!==me()&&!controls(g.nominee)){ toast('The nominee names the loser.'); return; }
+  if(!nm || (g.spirits||[]).indexOf(nm)<0 || isAway(g,nm)){ toast('Name a spirit still in the circle.'); return; }
   const n=clone(g); n.current.loser=nm; send(n);
 }
 
@@ -5501,7 +5503,7 @@ function resolveControls(g,R,c,drawer){
     if(R.kind==='loser'){
       const picked=c.loser;
       let h='<div class="chal-pick"><div class="chal-q">'+(canConf?'Name the one who lost':'Awaiting the nominee\u2019s judgement')+'</div>';
-      if(canConf){ h+=g.spirits.map(s=>'<button class="chal-chip'+(picked===s?' on':'')+'" onclick="chalAPI.loser(\''+s+'\')">'+s+'</button>').join(''); h+='<button class="chal-btn '+(picked?'gold':'')+'" '+(picked?'':'disabled')+' onclick="chalAPI.confirm()">Confirm (\u221210)</button>'; }
+      if(canConf){ h+=g.spirits.filter(s=>!isAway(g,s)).map(s=>'<button class="chal-chip'+(picked===s?' on':'')+'" onclick="chalAPI.loser(\''+s+'\')">'+s+'</button>').join(''); h+='<button class="chal-btn '+(picked?'gold':'')+'" '+(picked?'':'disabled')+' onclick="chalAPI.confirm()">Confirm (\u221210)</button>'; }
       return h+'</div>';
     }
     let label='';

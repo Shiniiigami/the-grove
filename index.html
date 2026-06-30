@@ -2335,7 +2335,7 @@ window.editEpithetForm=function(){
       <h3>Bestow a Title</h3>
       <p class="sub">A personal epithet, shown beside their earned rank.</p>
       <div class="field"><label>Member</label><select id="epMem" onchange="syncEpithet()">${opts}</select></div>
-      <div class="field"><label>Personal title</label><input id="epVal" placeholder="e.g. Keeper of the Flame"></div>
+      <div class="field"><label>Personal title</label><input id="epVal" maxlength="40" placeholder="e.g. Keeper of the Flame"></div>
       <button class="gold" onclick="commitEpithet()">Bestow</button>
       <button class="ghostbtn" onclick="keeperPanel()">Back</button>
       <div class="err" id="kerr"></div>
@@ -2372,7 +2372,7 @@ function renderBadgeForm(){
       <p class="sub">Collectible marks of honour — a member can hold many. Each badge gets its own colour automatically; tap the swatch to recolour, ✎ to rename, ✕ to remove, or award a new one below.</p>
       <div class="field"><label>Member</label><select onchange="badgePick(this.value)">${opts}</select></div>
       <div class="badgewrap" style="margin:4px 0 10px">${have}</div>
-      <div class="field"><label>New badge</label><input id="bgVal" oninput="clearChipsHL('bgChips')" placeholder="e.g. Polar Bear"></div>
+      <div class="field"><label>New badge</label><input id="bgVal" maxlength="40" oninput="clearChipsHL('bgChips')" placeholder="e.g. Polar Bear"></div>
       <div class="quick" id="bgChips">${chips}</div>
       <div class="field" style="margin-top:8px"><label>Badge colour</label>${swatchBtns(NEW_BADGE_COL, c=>`pickNewBadgeCol('${c}')`, 'nbc')}</div>
       <button class="gold" style="margin-top:12px" onclick="commitBadge()">Award badge</button>
@@ -3924,7 +3924,7 @@ window.nominateDeedForm=function(){
       <p class="sub">Name the deed, pick one or more members, and set the Devotion Points. A reason is required. Bigger awards need more approvals — max ±200. Keep it witty and the Eye is pleased.</p>
       <div class="crlabel">Members · tap to include</div>
       <div class="seg" style="flex-wrap:wrap">${memBtns}</div>
-      <div class="field" style="margin-top:10px"><label>Reason · required</label><input id="noReason" oninput="clearPresetHL()" placeholder="e.g. Saved the campfire"></div>
+      <div class="field" style="margin-top:10px"><label>Reason · required</label><input id="noReason" maxlength="60" oninput="clearPresetHL()" placeholder="e.g. Saved the campfire"></div>
       <div class="crlabel" style="margin-top:10px">Preset deeds</div>
       <div class="quick">${deedChips}</div>
       <div class="field" style="margin-top:10px"><label>Gain or lose?</label><div class="seg">
@@ -3951,7 +3951,7 @@ window.setNoSign=function(s){ NOSIGN=s; const p=document.getElementById('noSgnP'
 window.submitNomDeed=function(){
   const targets=[...NOM_TARGETS];
   if(!targets.length){ document.getElementById("kerr").textContent="Pick at least one member."; return; }
-  const label=document.getElementById("noReason").value.trim();
+  const label=clampText(document.getElementById("noReason").value,60);
   if(!label){ document.getElementById("kerr").textContent="A deed needs a reason."; return; }
   if(!keeperUnlocked && isKeeperDeed(label)){ document.getElementById("kerr").textContent="“"+deedBase(label)+"” is the Keeper’s to bestow — it cannot be nominated."; return; }
   { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
@@ -4005,7 +4005,7 @@ window.nominateTitleForm=function(){
       <h3>Nominate a Title</h3>
       <p class="sub">Bestow an epithet — ✦ Returned, The Pathfinder, Keeper of the Flame. Needs 10 approvals. Keep it witty and the Eye is pleased.</p>
       <div class="field"><label>Member</label><select id="ntTarget">${opts}</select></div>
-      <div class="field"><label>Title</label><input id="ntTitle" placeholder="e.g. The Pathfinder"></div>
+      <div class="field"><label>Title</label><input id="ntTitle" maxlength="40" placeholder="e.g. The Pathfinder"></div>
       <button class="gold" onclick="submitNomTitle()">Raise nomination</button>
       <button class="ghostbtn" onclick="closeSheet()">Cancel</button>
       <div class="err" id="kerr"></div>
@@ -4014,7 +4014,7 @@ window.nominateTitleForm=function(){
 };
 window.submitNomTitle=function(){
   const target=document.getElementById("ntTarget").value;
-  const label=document.getElementById("ntTitle").value.trim();
+  const label=clampText(document.getElementById("ntTitle").value,40);
   if(!label){ document.getElementById("kerr").textContent="Enter a title."; return; }
   { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
   const _m=memByName(target); const _lc=label.toLowerCase();
@@ -4031,9 +4031,9 @@ function syncBadgeIdeas(){ if(!BADGEIDEAS_EDIT)return; BADGEIDEAS_EDIT.forEach((
 window.badgeIdeaAdd=function(){ syncBadgeIdeas(); BADGEIDEAS_EDIT.push("New badge"); renderBadgeIdeas(); };
 window.badgeIdeaDel=function(i){ syncBadgeIdeas(); BADGEIDEAS_EDIT.splice(i,1); renderBadgeIdeas(); };
 window.badgeIdeasRestore=function(){ if(!confirm("Replace the list with the default cult badges? Nothing saves until you Inscribe."))return; BADGEIDEAS_EDIT=DEFAULT_BADGE_IDEAS.slice(); renderBadgeIdeas(); };
-window.badgeIdeasSave=async function(){ syncBadgeIdeas(); MEM.badgeIdeas=BADGEIDEAS_EDIT.map(b=>String(b).trim()).filter(Boolean); await saveData(); toast("Preset badges inscribed."); keeperPanel(); };
+window.badgeIdeasSave=async function(){ syncBadgeIdeas(); MEM.badgeIdeas=BADGEIDEAS_EDIT.map(b=>clampText(b,40)).filter(Boolean); await saveData(); toast("Preset badges inscribed."); keeperPanel(); };
 function renderBadgeIdeas(){
-  const rows=(BADGEIDEAS_EDIT||[]).map((b,i)=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:7px"><input id="bi_${i}" value="${String(b).replace(/"/g,'&quot;')}" style="flex:1;min-width:0;${inp}font-family:'Spectral',serif;font-size:13px"><button onclick="badgeIdeaDel(${i})" title="Remove" style="background:none;border:none;color:var(--ember);font-size:18px;cursor:pointer">✕</button></div>`).join('')||`<p class="sub">No badge ideas yet — add some.</p>`;
+  const rows=(BADGEIDEAS_EDIT||[]).map((b,i)=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:7px"><input id="bi_${i}" maxlength="40" value="${String(b).replace(/"/g,'&quot;')}" style="flex:1;min-width:0;${inp}font-family:'Spectral',serif;font-size:13px"><button onclick="badgeIdeaDel(${i})" title="Remove" style="background:none;border:none;color:var(--ember);font-size:18px;cursor:pointer">✕</button></div>`).join('')||`<p class="sub">No badge ideas yet — add some.</p>`;
   sheet.innerHTML=`
     <div class="grip"></div>
     <div class="kpanel">
@@ -4058,7 +4058,7 @@ window.nominateBadgeForm=function(){
       <h3>Nominate a Badge</h3>
       <p class="sub">A collectible mark of honour — members can hold many. Needs 7 approvals. Keep it witty and the Eye is pleased.</p>
       <div class="field"><label>Member</label><select id="nbTarget">${opts}</select></div>
-      <div class="field"><label>Badge</label><input id="nbBadge" oninput="clearChipsHL('nbChips')" placeholder="e.g. Polar Bear"></div>
+      <div class="field"><label>Badge</label><input id="nbBadge" maxlength="40" oninput="clearChipsHL('nbChips')" placeholder="e.g. Polar Bear"></div>
       <div class="quick" id="nbChips">${chips}</div>
       <div class="field" style="margin-top:8px"><label>Badge colour</label>${swatchBtns(NOM_BADGE_COL, c=>`pickNomBadgeCol('${c}')`, 'nmc')}</div>
       <button class="gold" style="margin-top:12px" onclick="submitNomBadge()">Raise nomination</button>
@@ -4069,7 +4069,7 @@ window.nominateBadgeForm=function(){
 };
 window.submitNomBadge=function(){
   const target=document.getElementById("nbTarget").value;
-  const label=document.getElementById("nbBadge").value.trim();
+  const label=clampText(document.getElementById("nbBadge").value,40);
   if(!label){ document.getElementById("kerr").textContent="Name the badge."; return; }
   { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
   const _m=memByName(target); const _lc=label.toLowerCase();
@@ -4177,7 +4177,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30at · Shareable spirit image reworked — the chibi now matches its true soul-card size and proportions (no more stretched square) and everything around it is scaled down to suit. The card-theme picker was removed from the soul card.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30au · Character caps added to titles, badges and deed nominations (40 for titles/badges, 60 for a deed's reason) — enforced on the field itself and again on submit, in both the Keeper forms and the grove nomination forms.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

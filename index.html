@@ -1516,20 +1516,15 @@ function drawChibiSprite(canvas,soul,scale,t,base,dpr){
   const cw=GW*px+padX*2, ch=GH*px+padTop+padBot;
   canvas.width=cw*dpr;canvas.height=ch*dpr;canvas.style.width=cw+"px";canvas.style.height=ch+"px";
   const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,cw,ch);
-  // Rank bloom (brighter): a saturated tier-coloured glow with a soft mid-stop, plus a faint
-  // tier ring behind the figure — reads clearly on any sky and grows with rank.
-  const _cx=cw/2,_cy=ch*0.5;
-  const g=ctx.createRadialGradient(_cx,_cy,2,_cx,_cy,ch/1.12);
+  // Rank bloom (brighter): a soft CIRCULAR tier-coloured glow that fades fully within the
+  // sprite bounds — filled as a disc, not the whole canvas rect, so there's no boxy edge.
+  const _cx=cw/2,_cy=ch*0.46, _R=Math.min(cw,ch)*0.5;
+  const g=ctx.createRadialGradient(_cx,_cy,2,_cx,_cy,_R);
   g.addColorStop(0,hexA(base,0.34+soul.ti*0.05));
-  g.addColorStop(0.42,hexA(base,0.15+soul.ti*0.03));
+  g.addColorStop(0.5,hexA(base,0.12+soul.ti*0.025));
   g.addColorStop(1,"transparent");
-  ctx.fillStyle=g;ctx.fillRect(0,0,cw,ch);
-  ctx.save();
-  ctx.globalAlpha=0.22+soul.ti*0.05; ctx.strokeStyle=base; ctx.lineWidth=Math.max(1.2,px*0.7);
-  ctx.shadowColor=base; ctx.shadowBlur=glowR*1.2;
-  ctx.beginPath(); ctx.arc(_cx,_cy,Math.min(cw,ch)*0.34,0,6.28); ctx.stroke();
-  ctx.restore();
-  ctx.save();ctx.shadowColor=base;ctx.shadowBlur=glowR*flick*0.7;
+  ctx.save(); ctx.beginPath(); ctx.arc(_cx,_cy,_R,0,6.28); ctx.fillStyle=g; ctx.fill(); ctx.restore();
+  ctx.save();ctx.shadowColor=base;ctx.shadowBlur=glowR*flick*0.75;
   drawChibi(ctx,f,px,padX,padTop,soul.ti,tiers().length,(typeof moodExpr==='function'?moodExpr(soul.name):'neutral'));
   ctx.restore();
 }
@@ -3922,7 +3917,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30y · The Ledger has a Sky toggle — ☀ Day / ☾ Night freeze the sky at the middle of day or night, ⟳ Auto follows the real Toronto (EST) clock. Brighter rank glow, a fire that grows louder per log and roars on the last one, Keeper fire controls, and a faithful “Share this spirit” card. The Eye Totem costs 15 ✦, the grove shows each spirit’s title &amp; rank, the standings image goes two-column for big groves, and the richer Chalice and all recent changes are intact. The Chalice is richer (ranks in the circle, the Eye on the fourth King, tap-to-report &amp; cast-out, rebalanced rewards), with Keeper-only milestone deeds, no duplicate laws or title/badge nominations, true 1-hour wager disputes, and auto-refreshing builds.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30z · The rank glow is now a soft circle that fades within the sprite (no boxy rectangle behind each spirit). The Ledger has a Sky toggle — ☀ Day / ☾ Night freeze the sky at the middle of day or night, ⟳ Auto follows the real Toronto (EST) clock. Brighter rank glow, a fire that grows louder per log and roars on the last one, Keeper fire controls, and a faithful “Share this spirit” card. The Eye Totem costs 15 ✦, the grove shows each spirit’s title &amp; rank, the standings image goes two-column for big groves, and the richer Chalice and all recent changes are intact. The Chalice is richer (ranks in the circle, the Eye on the fourth King, tap-to-report &amp; cast-out, rebalanced rewards), with Keeper-only milestone deeds, no duplicate laws or title/badge nominations, true 1-hour wager disputes, and auto-refreshing builds.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

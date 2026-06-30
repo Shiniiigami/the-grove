@@ -3298,8 +3298,19 @@ window.shareSpirit=async function(name){
     const m=MEM.members.find(x=>x.name===name); if(!m){ toast("No such spirit."); return; }
     const tier=tierOf(m.points);
     const badges=(m.badges||[]);
-    const deeds=(typeof histGroups==='function'?histGroups(m):[]).slice(0,6);
+    const _rom=(typeof roman==='function')?roman:(n=>String(n));
+    // ---- DEEDS: mirror the soul card exactly (chalice row + history, minus the dup chalice/rite groups) ----
+    const dgroups=(typeof histGroups==='function'?histGroups(m):[]).filter(g=>g.base!=='Rite of the Chalice' && g.base!=='Trial of the Chalice');
     const hasChal=!!(m.chalice && m.chalice.games);
+    const deedItems=[];
+    if(hasChal) deedItems.push({label:'🍷 Trial of the Chalice'+(m.chalice.games>1?(' ×'+_rom(m.chalice.games)):''), val:(m.chalice.total||0)});
+    dgroups.forEach(d=>deedItems.push({label:d.base+(d.count>1?(' ×'+_rom(d.count)):''), val:d.sum}));
+    // ---- CHALLENGES & WAGERS: mirror the soul card ----
+    const cwItems=[];
+    (MEM.challenges||[]).filter(c=>c.accepter===name && c.status!=='expired').sort((a,b)=>(b.created||0)-(a.created||0))
+      .forEach(c=>cwItems.push({label:'⚔ '+c.title+(c.status==='done'?' (done)':' (committed)'), val:+(c.reward||0)}));
+    (MEM.wagers||[]).filter(w=>(w.proposer===name||w.taker===name)&&(w.status==='settled'||w.status==='forfeit')).sort((a,b)=>(b.created||0)-(a.created||0))
+      .forEach(w=>{ let v,sub; if(w.status==='forfeit'){v=-(w.amount||0);sub='lost';} else if(w.winner==='tie'){v=0;sub='tie';} else if(w.winner===name){v=(w.amount||0);sub='won';} else {v=-(w.amount||0);sub='lost';} cwItems.push({label:'🎲 '+w.title+' ('+sub+')', val:v}); });
     const W=600, M=34;                         // width + side margin
     const rr=(c,X,Y,w,h,r)=>{ r=Math.min(r,h/2,w/2); c.beginPath(); c.moveTo(X+r,Y); c.arcTo(X+w,Y,X+w,Y+h,r); c.arcTo(X+w,Y+h,X,Y+h,r); c.arcTo(X,Y+h,X,Y,r); c.arcTo(X,Y,X+w,Y,r); c.closePath(); };
     // ---- measure pass: wrap badges into pill rows ----
@@ -3311,10 +3322,14 @@ window.shareSpirit=async function(name){
     pills.forEach(p=>{ const add=(cur.length?GAP:0)+p.w; if(cw+add>maxRow && cur.length){ rows.push(cur); cur=[]; cw=0; } cur.push(p); cw+=(cur.length>1?GAP:0)+p.w; });
     if(cur.length) rows.push(cur);
     const badgeBlockH = badges.length ? (28 + rows.length*(PILLH+GAP)) : 0;
-    const deedRows = deeds.length + (hasChal?1:0);
-    const deedBlockH = deedRows ? (34 + deedRows*30 + 8) : 0;
-    // ---- total height ----
-    const H = 36 + 150 + 12 + 44 + (m.epithet?26:0) + 30 + 78 + badgeBlockH + deedBlockH + 44;
+    const RH=30, SECHEAD=40;                    // row height, section-heading block
+    const deedBlockH = deedItems.length ? (SECHEAD + deedItems.length*RH) : 0;
+    const cwBlockH   = cwItems.length   ? (SECHEAD + cwItems.length*RH)   : 0;
+    // ---- total height: header/identity block runs to the bottom of the point boxes
+    // (420 with a title, 400 without), then each section adds exactly its own height,
+    // so the footer always sits just below the final row — never overlapping it. ----
+    const topH = m.epithet?420:400;
+    const H = topH + badgeBlockH + deedBlockH + cwBlockH + 36;
     const cv=document.createElement("canvas"); const DPR=2; cv.width=W*DPR; cv.height=H*DPR;
     const x=cv.getContext("2d"); x.scale(DPR,DPR);
     const g=x.createLinearGradient(0,0,0,H); g.addColorStop(0,"#0C140F"); g.addColorStop(1,"#070B09");
@@ -3357,16 +3372,11 @@ window.shareSpirit=async function(name){
       });
       y+=2;
     }
-    // Ledger of Deeds
-    if(deedRows){
-      y+=26; x.fillStyle="#9DB0A4"; x.font="11px Silkscreen, monospace"; x.textAlign="left"; x.fillText("LEDGER OF DEEDS", M, y); x.textAlign="center";
-      x.strokeStyle="rgba(38,53,44,.9)"; x.lineWidth=1; x.beginPath(); x.moveTo(M,y+8); x.lineTo(W-M,y+8); x.stroke();
-      y+=14;
-      const drawRow=(label,val,neg)=>{ y+=30; x.textAlign="left"; x.fillStyle="#D8CDB2"; x.font="16px Spectral, Georgia, serif"; let lab=label; while(x.measureText(lab).width>W-M*2-80 && lab.length>4){ lab=lab.slice(0,-2); } x.fillText(lab + (lab!==label?'…':''), M, y); x.textAlign="right"; x.fillStyle=neg?"#E8A88F":"#F2C45A"; x.font="700 16px Silkscreen, monospace"; x.fillText((val>=0?'+':'')+val, W-M, y); x.textAlign="center"; };
-      if(hasChal) drawRow('🍷 Trial of the Chalice'+(m.chalice.games>1?(' ×'+m.chalice.games):''), m.chalice.total||0, (m.chalice.total||0)<0);
-      deeds.forEach(d=>{ drawRow(d.base+(d.count>1?(' ×'+d.count):''), d.sum, d.sum<0); });
-    }
-    x.fillStyle="#5E6F6B"; x.font="10px Silkscreen, monospace"; x.textAlign="center"; x.fillText("the Eye remembers · "+new Date().toLocaleDateString(), gx, H-16);
+    const drawRow=(label,val)=>{ y+=RH; x.textAlign="left"; x.fillStyle="#D8CDB2"; x.font="16px Spectral, Georgia, serif"; let lab=label; while(x.measureText(lab).width>W-M*2-86 && lab.length>4){ lab=lab.slice(0,-2); } x.fillText(lab + (lab!==label?'…':''), M, y); x.textAlign="right"; x.fillStyle=(val<0)?"#E8A88F":(val>0?"#F2C45A":"#9DB0A4"); x.font="700 16px Silkscreen, monospace"; x.fillText((val>0?'+':'')+val, W-M, y); x.textAlign="center"; };
+    const section=(title,items)=>{ if(!items.length) return; y+=30; x.fillStyle="#9DB0A4"; x.font="11px Silkscreen, monospace"; x.textAlign="left"; x.fillText(title, M, y); x.textAlign="center"; x.strokeStyle="rgba(38,53,44,.9)"; x.lineWidth=1; x.beginPath(); x.moveTo(M,y+8); x.lineTo(W-M,y+8); x.stroke(); y+=10; items.forEach(it=>drawRow(it.label,it.val)); };
+    section("LEDGER OF DEEDS", deedItems);
+    section("CHALLENGES & WAGERS", cwItems);
+    x.fillStyle="#5E6F6B"; x.font="10px Silkscreen, monospace"; x.textAlign="center"; x.fillText("the Eye remembers · "+new Date().toLocaleDateString(), gx, H-18);
     const blob=await new Promise(res=>cv.toBlob(res,"image/png"));
     const file=new File([blob],("grove-"+m.name+".png").replace(/\s+/g,"-"),{type:"image/png"});
     if(navigator.canShare && navigator.canShare({files:[file]})){
@@ -3887,7 +3897,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30v · The Eye Totem now costs 15 ✦ a spin (gentler odds); “Share this spirit” captures the full soul card (chibi, badges as pills, points, deed ledger), and the standings image lays out in two columns for big groves. The grove shows each spirit’s title &amp; rank, with the richer Chalice and all recent changes intact. The Chalice is richer (ranks in the circle, the Eye on the fourth King, tap-to-report &amp; cast-out, rebalanced rewards), with Keeper-only milestone deeds, no duplicate laws or title/badge nominations, true 1-hour wager disputes, and auto-refreshing builds.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30w · “Share this spirit” now captures the whole soul card — every deed (no duplicate Chalice row) plus a Challenges &amp; Wagers section — with the height sized to fit so nothing overlaps the footer. The Eye Totem costs 15 ✦, the grove shows each spirit’s title &amp; rank, the standings image goes two-column for big groves, and the richer Chalice and all recent changes are intact. The Chalice is richer (ranks in the circle, the Eye on the fourth King, tap-to-report &amp; cast-out, rebalanced rewards), with Keeper-only milestone deeds, no duplicate laws or title/badge nominations, true 1-hour wager disputes, and auto-refreshing builds.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

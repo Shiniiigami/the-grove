@@ -3239,8 +3239,14 @@ window.closeChronicle=function(){
 window.shareStandings=async function(){
   try{
     const bySeason = LEDGER_SORT==="season";
-    const list=[...MEM.members].sort((a,b)=> (bySeason?((b.season||0)-(a.season||0)):0) || (b.points-a.points)).slice(0,16);
-    const W=720, padTop=150, rowH=74, padBot=54; const H=padTop + list.length*rowH + padBot;
+    const list=[...MEM.members].sort((a,b)=> (bySeason?((b.season||0)-(a.season||0)):0) || (b.points-a.points)).slice(0,24);
+    // The shared image lays out in TWO columns past ~7 spirits so it stays a readable
+    // shape instead of a tall thin ribbon (the on-screen ledger is unchanged — still one scroll).
+    const cols = list.length>7 ? 2 : 1;
+    const rowsPerCol = Math.ceil(list.length/cols);
+    const colW = 484, gap = 26, margin = 28;
+    const W = margin*2 + colW*cols + (cols-1)*gap;
+    const padTop=150, rowH=74, padBot=52; const H=padTop + rowsPerCol*rowH + padBot;
     const cv=document.createElement("canvas"); const DPR=2; cv.width=W*DPR; cv.height=H*DPR;
     const x=cv.getContext("2d"); x.scale(DPR,DPR);
     // bg
@@ -3255,22 +3261,24 @@ window.shareStandings=async function(){
     x.fillStyle="#7E8C82"; x.font="11px Silkscreen, monospace";
     x.fillText((bySeason?"SEASON STANDINGS":"LIFETIME STANDINGS"), W/2, 118);
     x.strokeStyle="rgba(38,53,44,.9)"; x.beginPath(); x.moveTo(40,134); x.lineTo(W-40,134); x.stroke();
-    // rows
+    // rows — column-major: ranks 1..rowsPerCol on the left, the rest on the right
     list.forEach((m,i)=>{
-      const y=padTop+i*rowH; const tier=tierOf(m.points);
+      const col=Math.floor(i/rowsPerCol), rowInCol=i%rowsPerCol;
+      const colX=margin + col*(colW+gap);
+      const y=padTop+rowInCol*rowH; const tier=tierOf(m.points);
       const big=bySeason?(m.season||0):m.points;
-      x.fillStyle = i%2? "rgba(22,34,27,.5)":"rgba(22,34,27,.25)"; x.fillRect(28,y-26,W-56,rowH-10);
+      x.fillStyle = i%2? "rgba(22,34,27,.5)":"rgba(22,34,27,.25)"; x.fillRect(colX,y-26,colW,rowH-10);
       x.textAlign="left"; x.fillStyle="#9DB0A4"; x.font="700 22px Silkscreen, monospace";
-      x.fillText(String(i+1).padStart(2,"0"), 44, y+6);
+      x.fillText(String(i+1).padStart(2,"0"), colX+16, y+6);
       // chibi
-      try{ const soul=buildSoul(m.name,m.points,m.sprite); const sc=document.createElement("canvas"); drawSoul(sc,soul,3,0); x.drawImage(sc, 92, y-34, 54, 54); }catch(e){}
-      x.fillStyle="#EFE7D6"; x.font="600 21px Cinzel, serif"; x.fillText(m.name, 158, y-2);
-      x.fillStyle=tier.hex||"#9DB0A4"; x.font="12px Silkscreen, monospace"; x.fillText(tier.name, 158, y+18);
-      x.textAlign="right"; x.fillStyle=tier.hex||"#E8C45A"; x.font="700 26px Silkscreen, monospace"; x.fillText(String(big), W-44, y+2);
-      x.fillStyle="#7E8C82"; x.font="10px Silkscreen, monospace"; x.fillText(bySeason?"this season":"lifetime", W-44, y+20);
+      try{ const soul=buildSoul(m.name,m.points,m.sprite); const sc=document.createElement("canvas"); drawSoul(sc,soul,3,0); x.drawImage(sc, colX+62, y-34, 54, 54); }catch(e){}
+      x.fillStyle="#EFE7D6"; x.font="600 21px Cinzel, serif"; x.fillText(m.name, colX+128, y-2);
+      x.fillStyle=tier.hex||"#9DB0A4"; x.font="12px Silkscreen, monospace"; x.fillText(tier.name, colX+128, y+18);
+      x.textAlign="right"; x.fillStyle=tier.hex||"#E8C45A"; x.font="700 26px Silkscreen, monospace"; x.fillText(String(big), colX+colW-16, y+2);
+      x.fillStyle="#7E8C82"; x.font="10px Silkscreen, monospace"; x.fillText(bySeason?"this season":"lifetime", colX+colW-16, y+20);
     });
     x.textAlign="center"; x.fillStyle="#5E6F6B"; x.font="11px Silkscreen, monospace";
-    x.fillText("the Eye remembers · "+new Date().toLocaleDateString(), W/2, H-22);
+    x.fillText("the Eye remembers · "+new Date().toLocaleDateString(), W/2, H-20);
     const blob=await new Promise(res=>cv.toBlob(res,"image/png"));
     const file=new File([blob],"grove-standings.png",{type:"image/png"});
     if(navigator.canShare && navigator.canShare({files:[file]})){
@@ -3833,7 +3841,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30t · The grove shows each spirit’s title &amp; rank, the title reads cleanly on any sky, and the Chalice is richer — ranks in the circle, the Eye opening on the fourth King, tap-to-report &amp; tap-to-cast-out, and rebalanced rewards. Keeper-only milestone deeds, no duplicate laws or title/badge nominations, true 1-hour wager disputes, and builds that auto-refresh on web &amp; PWA.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30u · The grove shows each spirit’s title &amp; rank, you can share a single spirit’s card, and the standings image now lays out in two columns for big groves. The Chalice is richer (ranks in the circle, the Eye on the fourth King, tap-to-report &amp; cast-out, rebalanced rewards), with Keeper-only milestone deeds, no duplicate laws or title/badge nominations, true 1-hour wager disputes, and auto-refreshing builds.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

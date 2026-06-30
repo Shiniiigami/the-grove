@@ -175,6 +175,10 @@
   .chal-card.mech-pen .chal-cdev{color:#cf4a3f} .chal-card.mech-chal .chal-cdev{color:#E0743A} .chal-card.mech-gain .chal-cdev{color:#E0B466}
   .chal-mid{display:flex;justify-content:center;margin:6px 0} .chal-card-mini{width:120px}
   .chal-pill.away{opacity:.45;border-style:dashed}
+  .chal-pill.pick{cursor:pointer;background:rgba(207,74,63,.10);border-color:rgba(207,74,63,.55);color:#F0C9C4;font-family:inherit}
+  .chal-pill.pick:active{background:rgba(207,74,63,.22)}
+  .chal-kickpick{margin-top:8px;padding:8px;border:1px solid rgba(207,74,63,.30);border-radius:10px;text-align:center}
+  .chal-kickpick .chal-pills{margin:6px 0 8px}
   .chal-cd{font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage,#9FB3A3);margin-left:6px}
   .chal-cd.low{color:#cf4a3f}
   .chal-roster{border:1px solid rgba(242,196,90,.16);border-radius:10px;padding:8px 10px;text-align:center}
@@ -3762,7 +3766,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30h · Chalice: must join the circle yourself before adding others to your phone · lock/exit chime fixed (stop audio sources on background) · law-break reports lapse after 30s · version banner no longer cries wolf · shorter test-ping notification · keeper passphrase hashed (bcrypt) · economy server fuzzed · (prev: Chalice anti-stall + cron · 60s nomination undo · profanity filter · stake-bet janitor · server-authoritative wheel + rite/chalice hardening)</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30i · Chalice: any joined spirit can begin the trial (no more host-vanish stall) · cast out by tapping a name, not typing it · must join the circle yourself before adding others to your phone · lock/exit chime fixed (stop audio sources on background) · law-break reports lapse after 30s · version banner no longer cries wolf · shorter test-ping notification · keeper passphrase hashed (bcrypt) · economy server fuzzed · (prev: Chalice anti-stall + cron · 60s nomination undo · profanity filter · stake-bet janitor · server-authoritative wheel + rite/chalice hardening)</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -5186,9 +5190,17 @@ function leaveLobby(nm){
   const n=clone(g); n.spirits=n.spirits.filter(s=>s!==nm); setHands(hands().filter(s=>s!==nm)); send(n);
 }
 function startGame(){
-  const g=GC(); if(!g||g.status!=='lobby') return; if(g.nominee!==me()&&!controls(g.nominee)){ toast('Only the nominee may begin.'); return; }
+  const g=GC(); if(!g||g.status!=='lobby') return;
+  const who=me();
+  // Any spirit in the circle may begin (was nominee-only, which deadlocked the lobby if the
+  // host vanished without leaving — no one else could start, and the circle just sat until it dissolved).
+  if(!who || (g.spirits||[]).indexOf(who)<0){ toast('Join the trial to begin it.'); return; }
   if(g.spirits.length<4){ toast('Four spirits are needed to begin.'); return; }
-  const n=clone(g); n.status='playing'; n.phase='draw'; n.deck=shuffleDeck(); n.turn=0; n.started=nowS(); setDeadline(n);
+  const n=clone(g);
+  // Whoever begins takes the host seat if the prior nominee isn't on this phone, so a gone host
+  // can't keep blocking confirmations during play either.
+  if(n.nominee!==who && !controls(n.nominee)) n.nominee=who;
+  n.status='playing'; n.phase='draw'; n.deck=shuffleDeck(); n.turn=0; n.started=nowS(); setDeadline(n);
   n.feed=[{t:nowS(),x:'The trial begins. '+n.spirits[0]+' draws first.'}]; send(n);
 }
 function curDrawer(){ const g=GC(); return g&&g.spirits?g.spirits[g.turn%g.spirits.length]:null; }
@@ -5315,18 +5327,24 @@ function rejoin(nm){
   const hs=hands(); if(hs.indexOf(nm)<0) hs.push(nm); setHands(hs);
   feedPush(n, nm+' returns to the circle.'); send(n);
 }
+let KICK_PICK=false;
 function proposeKick(){
   const g=GC(); if(!g||(g.status!=='playing'&&g.status!=='lobby')) return; const who=me();
   if(!who){ toast('Pick your spirit first.'); return; }
   const live=liveSpirits(g).filter(s=>!controls(s));
   if(!live.length){ toast('No one to cast out.'); return; }
-  const t=prompt('Cast out which spirit? (half the circle must agree)\n'+live.join(', '));
-  if(!t) return; const target=(g.spirits||[]).find(s=>s.toLowerCase()===t.trim().toLowerCase());
-  if(!target||isAway(g,target)){ toast('No such spirit in the trial.'); return; }
+  KICK_PICK=!KICK_PICK; render();
+}
+function kickPick(name){
+  const g=GC(); if(!g||(g.status!=='playing'&&g.status!=='lobby')){ KICK_PICK=false; return; } const who=me();
+  if(!who){ toast('Pick your spirit first.'); KICK_PICK=false; return; }
+  const target=(g.spirits||[]).find(s=>s===name);
+  if(!target||isAway(g,target)){ toast('No such spirit in the trial.'); KICK_PICK=false; render(); return; }
   if(controls(target)){ toast('You cannot cast out your own spirit.'); return; }
   const n=clone(g); n.kicks=n.kicks||[];
-  if(n.kicks.find(k=>k.target===target&&k.status==='open')){ toast('A vote is already open for '+target+'.'); return; }
+  if(n.kicks.find(k=>k.target===target&&k.status==='open')){ toast('A vote is already open for '+target+'.'); KICK_PICK=false; render(); return; }
   n.kicks.push({id:'K'+nowS()+Math.floor(Math.random()*999), target:target, by:who, agrees:[who], status:'open', t:nowS()});
+  KICK_PICK=false;
   feedPush(n, who+' calls to cast out '+target+'.'); send(n);
 }
 function agreeKick(id){
@@ -5518,8 +5536,8 @@ function renderLobby(g){
   const pool=memNames().filter(s=>(g.spirits||[]).indexOf(s)<0);
   if(joined && pool.length) h+='<select class="chal-sel" onchange="chalAPI.addSel(this.value);this.value=\'\'"><option value="">+ add another spirit to this phone\u2026</option>'+pool.map(p=>'<option value="'+p+'">'+p+'</option>').join('')+'</select>';
   else if(!joined && pool.length) h+='<p class="chal-hint" style="opacity:.65">Join the trial first to add others sharing your phone.</p>';
-  if(isNom){ h+='<button class="chal-btn '+(g.spirits.length>=4?'gold':'')+'" '+(g.spirits.length<4?'disabled':'')+' onclick="chalAPI.start()">Begin the trial ('+g.spirits.length+'/4)</button>'; }
-  else { h+='<p class="chal-hint">Waiting for '+g.nominee+' to begin\u2026</p>'; }
+  if(joined){ h+='<button class="chal-btn '+(g.spirits.length>=4?'gold':'')+'" '+(g.spirits.length<4?'disabled':'')+' onclick="chalAPI.start()">Begin the trial ('+g.spirits.length+'/4)</button>'; }
+  else { h+='<p class="chal-hint">Join the circle to begin \u2014 four spirits are needed.</p>'; }
   if(joined) h+='<button class="chal-btn ghost" onclick="chalAPI.leaveAll()">Leave the trial</button>';
   if(isNom) h+='<button class="chal-mini ghost" style="align-self:center" onclick="chalAPI.end()">Close the circle entirely</button>';
   const left=Math.max(0, LOBBY_SECS-(nowS()-(g.lobbyAt||nowS())));
@@ -5547,7 +5565,13 @@ function rosterStrip(g){
   if(rj.length){ h+='<div class="chal-rejoin">'+rj.map(s=>'<button class="chal-mini" onclick="chalAPI.rejoin(\''+s+'\')">Rejoin as '+s+'</button>').join('')+'</div>'; }
   const ok=(g.kicks||[]).filter(k=>k.status==='open');
   if(ok.length){ h+=ok.map(k=>{ const can=me()&&k.target!==me()&&!controls(k.target)&&k.agrees.indexOf(me())<0; return '<div class="chal-report">\u2715 cast out <b>'+k.target+'</b> ('+k.agrees.length+'/'+Math.max(2,Math.ceil(live.length/2))+') '+(can?'<button onclick="chalAPI.agreeKick(\''+k.id+'\')">Agree</button>':'')+'</div>'; }).join(''); }
-  h+='<div class="chal-rowbtns"><button class="chal-mini" onclick="chalAPI.kick()">Cast out\u2026</button><button class="chal-mini ghost" onclick="chalAPI.leaveAll()">Leave the trial</button></div></div>';
+  if(KICK_PICK){
+    const targets=live.filter(s=>!controls(s)&&!(g.kicks||[]).find(k=>k.target===s&&k.status==='open'));
+    h+='<div class="chal-kickpick"><div class="chal-lawhdr">Cast out whom? (half the circle must agree)</div><div class="chal-pills">';
+    h+=targets.length?targets.map(s=>'<button class="chal-pill pick" onclick="chalAPI.kickPick(\''+chEsc(s).replace(/'/g,"\\'")+'\')">'+chEsc(s)+'</button>').join(''):'<span class="chal-pill away">no one to cast out</span>';
+    h+='</div><button class="chal-mini ghost" onclick="chalAPI.kick()">Cancel</button></div>';
+  }
+  h+='<div class="chal-rowbtns"><button class="chal-mini" onclick="chalAPI.kick()">'+(KICK_PICK?'\u2715 Close':'Cast out\u2026')+'</button><button class="chal-mini ghost" onclick="chalAPI.leaveAll()">Leave the trial</button></div></div>';
   return h;
 }
 function renderPlay(g){
@@ -5718,7 +5742,7 @@ const _origRT = window.renderTrials;
 if(typeof _origRT==='function'){ window.renderTrials=function(){ const r=_origRT.apply(this,arguments); try{ injectLauncher(); }catch(e){} return r; }; }
 
 /* expose handlers */
-window.chalAPI={ show:openUI, open:openLobby, join:joinGame, addSpirit:addSpirit, addSel:addSel, leave:leaveLobby, leaveAll:leaveGame, rejoin:rejoin, kick:proposeKick, agreeKick:agreeKick, start:startGame, draw:draw, tap:tap, picksDone:picksDone, tier:submitTier, law:submitLaw, loser:pickLoser, confirm:confirmCard, drink:drinkChalice, dare:takeDare, vdare:voteDare, giveup:dareGiveUp, sip:sipChalice, seal:sealRite, report:report, agree:agreeReport, end:endGame, dismiss:dismiss, kForce:kForce, kReset:kReset, kHost:kHost };
+window.chalAPI={ show:openUI, open:openLobby, join:joinGame, addSpirit:addSpirit, addSel:addSel, leave:leaveLobby, leaveAll:leaveGame, rejoin:rejoin, kick:proposeKick, kickPick:kickPick, agreeKick:agreeKick, start:startGame, draw:draw, tap:tap, picksDone:picksDone, tier:submitTier, law:submitLaw, loser:pickLoser, confirm:confirmCard, drink:drinkChalice, dare:takeDare, vdare:voteDare, giveup:dareGiveUp, sip:sipChalice, seal:sealRite, report:report, agree:agreeReport, end:endGame, dismiss:dismiss, kForce:kForce, kReset:kReset, kHost:kHost };
 window.closeUI=closeUI;
 })();
 </script>

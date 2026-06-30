@@ -3291,36 +3291,82 @@ window.shareStandings=async function(){
 };
 
 /* ====================== SHARE ONE SPIRIT AS IMAGE ====================== */
+/* A faithful capture of the soul card — chibi, name, title, rank, points, badges
+   and the Ledger of Deeds — minus the thought composer and the edit/share/close buttons. */
 window.shareSpirit=async function(name){
   try{
     const m=MEM.members.find(x=>x.name===name); if(!m){ toast("No such spirit."); return; }
-    const tier=tierOf(m.points); const badges=(m.badges||[]).slice(0,8);
-    const W=620, H=460 + (badges.length?38:0);
+    const tier=tierOf(m.points);
+    const badges=(m.badges||[]);
+    const deeds=(typeof histGroups==='function'?histGroups(m):[]).slice(0,6);
+    const hasChal=!!(m.chalice && m.chalice.games);
+    const W=600, M=34;                         // width + side margin
+    const rr=(c,X,Y,w,h,r)=>{ r=Math.min(r,h/2,w/2); c.beginPath(); c.moveTo(X+r,Y); c.arcTo(X+w,Y,X+w,Y+h,r); c.arcTo(X+w,Y+h,X,Y+h,r); c.arcTo(X,Y+h,X,Y,r); c.arcTo(X,Y,X+w,Y,r); c.closePath(); };
+    // ---- measure pass: wrap badges into pill rows ----
+    const meas=document.createElement("canvas").getContext("2d");
+    meas.font="600 12px Silkscreen, monospace";
+    const PAD=11, GAP=7, PILLH=26, maxRow=W-M*2;
+    const pills=badges.map(b=>({b, w:meas.measureText('✦ '+b).width+PAD*2}));
+    const rows=[]; let cur=[], cw=0;
+    pills.forEach(p=>{ const add=(cur.length?GAP:0)+p.w; if(cw+add>maxRow && cur.length){ rows.push(cur); cur=[]; cw=0; } cur.push(p); cw+=(cur.length>1?GAP:0)+p.w; });
+    if(cur.length) rows.push(cur);
+    const badgeBlockH = badges.length ? (28 + rows.length*(PILLH+GAP)) : 0;
+    const deedRows = deeds.length + (hasChal?1:0);
+    const deedBlockH = deedRows ? (34 + deedRows*30 + 8) : 0;
+    // ---- total height ----
+    const H = 36 + 150 + 12 + 44 + (m.epithet?26:0) + 30 + 78 + badgeBlockH + deedBlockH + 44;
     const cv=document.createElement("canvas"); const DPR=2; cv.width=W*DPR; cv.height=H*DPR;
     const x=cv.getContext("2d"); x.scale(DPR,DPR);
     const g=x.createLinearGradient(0,0,0,H); g.addColorStop(0,"#0C140F"); g.addColorStop(1,"#070B09");
     x.fillStyle=g; x.fillRect(0,0,W,H);
+    const gx=W/2;
     // tier-tinted glow halo behind the chibi
-    const gx=W/2, gy=170; const rg=x.createRadialGradient(gx,gy,10,gx,gy,150);
-    rg.addColorStop(0, hexA(tier.hex,.28)); rg.addColorStop(1, hexA(tier.hex,0));
-    x.fillStyle=rg; x.fillRect(0,40,W,260);
+    const rg=x.createRadialGradient(gx,150,8,gx,150,140);
+    rg.addColorStop(0, hexA(tier.hex,.30)); rg.addColorStop(1, hexA(tier.hex,0));
+    x.fillStyle=rg; x.fillRect(0,40,W,230);
     x.textAlign="center";
-    x.fillStyle="#7E8C82"; x.font="11px Silkscreen, monospace"; x.fillText("ORDER OF THE EYE", W/2, 40);
-    // chibi, large
-    try{ const soul=buildSoul(m.name,m.points,m.sprite); const sc=document.createElement("canvas"); drawSoul(sc,soul,8,0); x.drawImage(sc, gx-soul.w*8/2, 78, soul.w*8, soul.h*8); }catch(e){}
-    let y=300;
-    x.fillStyle="#EFE7D6"; x.font="700 34px Cinzel, serif"; x.fillText(m.name, W/2, y); y+=26;
-    if(m.epithet){ x.fillStyle="#9DB0A4"; x.font="italic 16px Spectral, Georgia, serif"; x.fillText('"'+m.epithet+'"', W/2, y); y+=24; }
-    x.fillStyle=tier.hex||"#E8C45A"; x.font="14px Silkscreen, monospace"; x.fillText(tier.name.toUpperCase(), W/2, y); y+=30;
-    // points
-    x.font="700 22px Silkscreen, monospace";
-    x.fillStyle="#F2C45A"; x.fillText(String(m.points)+" ✦", W/2-70, y);
-    x.fillStyle="#9DB0A4"; x.fillText(String(m.season||0)+" ✦", W/2+70, y);
-    x.font="9px Silkscreen, monospace"; x.fillStyle="#7E8C82";
-    x.fillText("LIFETIME", W/2-70, y+16); x.fillText("THIS SEASON", W/2+70, y+16); y+=44;
-    // badges
-    if(badges.length){ x.font="11px Silkscreen, monospace"; x.fillStyle="#CBB89A"; x.fillText("✦ "+badges.join("  ·  "), W/2, y); y+=20; }
-    x.fillStyle="#5E6F6B"; x.font="10px Silkscreen, monospace"; x.fillText("the Eye remembers · "+new Date().toLocaleDateString(), W/2, H-18);
+    x.fillStyle="#7E8C82"; x.font="11px Silkscreen, monospace"; x.fillText("ORDER OF THE EYE", gx, 38);
+    // chibi — drawSoul sizes its own canvas; draw it into a fixed square box (this was the bug)
+    try{ const soul=buildSoul(m.name,m.points,m.sprite); const sc=document.createElement("canvas"); drawSoul(sc,soul,8,0); const box=132; x.drawImage(sc, gx-box/2, 70, box, box); }catch(e){}
+    let y=270;
+    x.fillStyle="#EFE7D6"; x.font="700 36px Cinzel, serif"; x.fillText(m.name, gx, y); y+=8;
+    if(m.epithet){ y+=20; x.fillStyle="#9DB0A4"; x.font="italic 17px Spectral, Georgia, serif"; x.fillText('"'+m.epithet+'"', gx, y); }
+    // rank pill
+    y+=34; x.font="13px Silkscreen, monospace"; const rkt=tier.name.toUpperCase(); const rkw=x.measureText(rkt).width+30;
+    x.fillStyle=hexA(tier.hex,.14); rr(x,gx-rkw/2,y-19,rkw,26,8); x.fill(); x.strokeStyle=hexA(tier.hex,.55); x.lineWidth=1.4; rr(x,gx-rkw/2,y-19,rkw,26,8); x.stroke();
+    x.fillStyle=tier.hex||"#E8C45A"; x.fillText(rkt, gx, y-1);
+    // two point boxes, like the card
+    y+=22; const bw=(W-M*2-14)/2, bh=66;
+    x.fillStyle="rgba(242,196,90,.08)"; rr(x,M,y,bw,bh,9); x.fill(); x.strokeStyle="rgba(242,196,90,.25)"; x.lineWidth=1; rr(x,M,y,bw,bh,9); x.stroke();
+    x.fillStyle="rgba(143,168,155,.08)"; rr(x,M+bw+14,y,bw,bh,9); x.fill(); x.strokeStyle="rgba(143,168,155,.25)"; rr(x,M+bw+14,y,bw,bh,9); x.stroke();
+    x.font="700 22px Silkscreen, monospace"; x.fillStyle="#F2C45A"; x.fillText(String(m.season||0), M+bw/2, y+28);
+    x.fillStyle="#ECE3CC"; x.fillText(String(m.points), M+bw+14+bw/2, y+28);
+    x.font="9px Silkscreen, monospace"; x.fillStyle="#8FA89B"; x.fillText("✦ THIS SEASON", M+bw/2, y+50); x.fillText("✦ LIFETIME", M+bw+14+bw/2, y+50);
+    y+=bh;
+    // badges as colored pills
+    if(badges.length){
+      y+=26;
+      rows.forEach(rowPills=>{
+        const rowW=rowPills.reduce((s,p)=>s+p.w,0)+GAP*(rowPills.length-1);
+        let px=gx-rowW/2;
+        rowPills.forEach(p=>{ const c=(typeof badgeColor==='function')?badgeColor(p.b):"#CBB89A";
+          x.fillStyle=hexA(c,.13); rr(x,px,y-19,p.w,PILLH,8); x.fill(); x.strokeStyle=hexA(c,.55); x.lineWidth=1; rr(x,px,y-19,p.w,PILLH,8); x.stroke();
+          x.fillStyle=c; x.font="600 12px Silkscreen, monospace"; x.textAlign="left"; x.fillText('✦ '+p.b, px+PAD, y-1); x.textAlign="center";
+          px+=p.w+GAP; });
+        y+=PILLH+GAP;
+      });
+      y+=2;
+    }
+    // Ledger of Deeds
+    if(deedRows){
+      y+=26; x.fillStyle="#9DB0A4"; x.font="11px Silkscreen, monospace"; x.textAlign="left"; x.fillText("LEDGER OF DEEDS", M, y); x.textAlign="center";
+      x.strokeStyle="rgba(38,53,44,.9)"; x.lineWidth=1; x.beginPath(); x.moveTo(M,y+8); x.lineTo(W-M,y+8); x.stroke();
+      y+=14;
+      const drawRow=(label,val,neg)=>{ y+=30; x.textAlign="left"; x.fillStyle="#D8CDB2"; x.font="16px Spectral, Georgia, serif"; let lab=label; while(x.measureText(lab).width>W-M*2-80 && lab.length>4){ lab=lab.slice(0,-2); } x.fillText(lab + (lab!==label?'…':''), M, y); x.textAlign="right"; x.fillStyle=neg?"#E8A88F":"#F2C45A"; x.font="700 16px Silkscreen, monospace"; x.fillText((val>=0?'+':'')+val, W-M, y); x.textAlign="center"; };
+      if(hasChal) drawRow('🍷 Trial of the Chalice'+(m.chalice.games>1?(' ×'+m.chalice.games):''), m.chalice.total||0, (m.chalice.total||0)<0);
+      deeds.forEach(d=>{ drawRow(d.base+(d.count>1?(' ×'+d.count):''), d.sum, d.sum<0); });
+    }
+    x.fillStyle="#5E6F6B"; x.font="10px Silkscreen, monospace"; x.textAlign="center"; x.fillText("the Eye remembers · "+new Date().toLocaleDateString(), gx, H-16);
     const blob=await new Promise(res=>cv.toBlob(res,"image/png"));
     const file=new File([blob],("grove-"+m.name+".png").replace(/\s+/g,"-"),{type:"image/png"});
     if(navigator.canShare && navigator.canShare({files:[file]})){
@@ -3820,7 +3866,7 @@ function renderRules(){
     <div class="ritehdr">The Reckoning · Group Wagers</div>
     <p class="rtext">Rally two sides — up to <b>6</b> a side, even lopsided (6 v 1). Everyone stakes the same; the starter <b>locks</b> the wager and the winning side <b>splits the whole pot</b>, so fewer winners each take a bigger share. All players must agree who won; if they can’t, the grove votes to settle it.</p>
     <div class="ritehdr">Test of Devotion</div>
-    <p class="rtext"><b>50 ✦</b> laid before the Eye Totem, once every 2 hours. The Eye's verdict runs from a <b>+250</b> radiance down to <b>−100</b> wrath, with returned offerings and <b>×2 / ×3</b> blessings that boost your next <b>deed or challenge</b> (never a wager), plus a <b>×2 curse</b> on your next penalty. Roughly 56% of verdicts favor you, and the Eye can never drop you below zero.</p>
+    <p class="rtext"><b>15 ✦</b> laid before the Eye Totem, once every 2 hours. The Eye's verdict runs from a <b>+250</b> radiance down to <b>−100</b> wrath, with returned offerings and <b>×2 / ×3</b> blessings that boost your next <b>deed or challenge</b> (never a wager), plus a <b>×2 curse</b> on your next penalty. Roughly 56% of verdicts favor you, and the Eye can never drop you below zero.</p>
     <div class="ritehdr">Trial of the Chalice</div>
     <p class="rtext">A 52-card King’s Cup for the circle — <b>4–20 spirits</b>, and one phone may hold several. The <b>host</b> opens the lobby and begins the trial; if they don’t, the right to begin passes down the join order so the circle never stalls. Each spirit’s <b>rank shows beneath their name</b>. On your turn you draw a card and the circle acts it out aloud — sending others to drink, binding a partner, decreeing a <b>law</b> (no two laws alike), or pouring into the Chalice. Devotion rides a <b>hidden tally</b> all game and commits as a single “Trial of the Chalice” line when it ends.</p>
     <p class="rtext">The <b>fourth King</b> is the reckoning — the <b>Eye itself opens</b> over the circle: that drawer either <b>drinks the Chalice</b> (gaining Devotion and the <i>Drained the Chalice</i> badge) or <b>braves a ritual</b> the circle sets aloud — 3 minutes, half must approve. Succeed for the badge and a communal cup (up to four sip, +10 each); fail or refuse and lose <b>40</b>. Break a law and a spirit can <b>report you by tapping your name</b> — reports lapse after 30 seconds, and if enough agree you’re judged (−5); you may even own up and vote on your own report. Spirits may step away (the host passes on), be <b>cast out by tapping a name</b> and a half-vote (the named may vote too), or rejoin — and a lobby that never begins dissolves after <b>3 minutes</b>.</p>
@@ -3841,7 +3887,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30u · The grove shows each spirit’s title &amp; rank, you can share a single spirit’s card, and the standings image now lays out in two columns for big groves. The Chalice is richer (ranks in the circle, the Eye on the fourth King, tap-to-report &amp; cast-out, rebalanced rewards), with Keeper-only milestone deeds, no duplicate laws or title/badge nominations, true 1-hour wager disputes, and auto-refreshing builds.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30v · The Eye Totem now costs 15 ✦ a spin (gentler odds); “Share this spirit” captures the full soul card (chibi, badges as pills, points, deed ledger), and the standings image lays out in two columns for big groves. The grove shows each spirit’s title &amp; rank, with the richer Chalice and all recent changes intact. The Chalice is richer (ranks in the circle, the Eye on the fourth King, tap-to-report &amp; cast-out, rebalanced rewards), with Keeper-only milestone deeds, no duplicate laws or title/badge nominations, true 1-hour wager disputes, and auto-refreshing builds.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4022,7 +4068,7 @@ function applyAction(a){
   else if(a.t==='wager_void'){ const w=wagerById(a.id); if(!w||(w.status!=='matched'&&w.status!=='disputed')||!a.keeper)return; const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); MEM.wagers=(MEM.wagers||[]).filter(x=>x.id!==a.id); }
   else if(a.t==='wager_vote'){ const w=wagerById(a.id); if(!w||w.status!=='disputed')return; if(a.side!=='proposer'&&a.side!=='taker')return; w.votes=w.votes||{}; if(w.votes[a.voter])return; w.votes[a.voter]=a.side; let pv=0,tv=0; for(const k in w.votes){ if(w.votes[k]==='proposer')pv++; else if(w.votes[k]==='taker')tv++; } if(pv>=5||tv>=5){ const winnerName=(pv>=5)?w.proposer:w.taker; const win=memByName(winnerName); if(win){ adjPts(win,2*(w.amount||0)); maybeEarnLog(win,w.amount||0); } w.status='settled'; w.winner=winnerName; } }
   else if(a.t==='wager_tie'){ const w=wagerById(a.id); if(!w||(w.status!=='matched'&&w.status!=='disputed'))return; if(a.keeper){ const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); w.status='settled'; w.winner='tie'; return; } if(a.name!==w.proposer&&a.name!==w.taker)return; w.tie=w.tie||[]; if(!w.tie.includes(a.name))w.tie.push(a.name); if(w.tie.includes(w.proposer)&&w.tie.includes(w.taker)){ const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); w.status='settled'; w.winner='tie'; } }
-  else if(a.t==='wheel_spin'){ const m=memByName(a.name); if(!m)return; if(now-(m.lastSpin||0)<2*3600)return; if((m.points||0)<50)return; const o=a.outcome||{}; adjPts(m,-50); m.lastSpin=now; if(o.special==='free'){ adjPts(m,50); m.lastSpin=0; } else if(o.special==='x2'){ m.winMult=2; } else if(o.special==='x3'){ m.winMult=3; } else if(o.special==='x2neg'){ m.lossMult=2; } else if(typeof o.pts==='number'){ adjPts(m,o.pts); if(o.pts>0)maybeEarnLog(m,o.pts); } }
+  else if(a.t==='wheel_spin'){ const m=memByName(a.name); if(!m)return; if(now-(m.lastSpin||0)<2*3600)return; if((m.points||0)<15)return; const o=a.outcome||{}; adjPts(m,-15); m.lastSpin=now; if(o.special==='free'){ adjPts(m,15); m.lastSpin=0; } else if(o.special==='x2'){ m.winMult=2; } else if(o.special==='x3'){ m.winMult=3; } else if(o.special==='x2neg'){ m.lossMult=2; } else if(typeof o.pts==='number'){ adjPts(m,o.pts); if(o.pts>0)maybeEarnLog(m,o.pts); } }
   else if(a.t==='group_new'){ const m=memByName(a.starter); if(!m)return; const amt=Math.max(1,Math.min(GROUP_CAP,a.stake|0)); if((m.points||0)<amt)return; if(a.side!=='A'&&a.side!=='B')return; adjPts(m,-amt); MEM.groups=MEM.groups||[]; const g={id:'g'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),starter:a.starter,title:a.title,stake:amt,sideA:[],sideB:[],status:'pending',created:now,lockedAt:null,claims:{},votes:{},winner:null}; (a.side==='A'?g.sideA:g.sideB).push(a.starter); MEM.groups.push(g); }
   else if(a.t==='group_join'){ const g=groupById(a.id); if(!g||g.status!=='pending')return; if(a.side!=='A'&&a.side!=='B')return; if(groupParts(g).includes(a.name))return; const sd=(a.side==='A')?g.sideA:g.sideB; if(sd.length>=GROUP_SIDE_MAX)return; const m=memByName(a.name); if(!m||(m.points||0)<(g.stake||0))return; adjPts(m,-(g.stake||0)); sd.push(a.name); }
   else if(a.t==='group_leave'){ const g=groupById(a.id); if(!g||g.status!=='pending')return; if(a.name===g.starter)return; if(!groupParts(g).includes(a.name))return; const m=memByName(a.name); if(m)adjPts(m,g.stake||0); g.sideA=(g.sideA||[]).filter(n=>n!==a.name); g.sideB=(g.sideB||[]).filter(n=>n!==a.name); }
@@ -4224,12 +4270,12 @@ function wheelSectionHTML(me){
     const buff = (me.winMult>1 ? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:#E8C45A;margin:2px 0 6px">✦ ×${me.winMult} blessing banked for your next deed or challenge ✦</div>`:'') + (me.lossMult>1 ? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:#C77B9A;margin:2px 0 6px">☠ ×${me.lossMult} curse on your next penalty ☠</div>`:'');
     let btn;
     if(cd>0){ const tm=Math.ceil(cd/60), hh=Math.floor(tm/60), mm=tm%60; btn=`<button class="rapprove" disabled>The Eye looks away · ${hh>0?hh+'h ':''}${mm}m</button>`; }
-    else if((me.points||0)<50){ btn=`<button class="rapprove" disabled>Need 50 ✦ to be tested</button>`; }
-    else { btn=`<button class="gold" id="spinBtn" onclick="spinTheWheel()">Lay 50 ✦ before the Eye</button>`; }
+    else if((me.points||0)<15){ btn=`<button class="rapprove" disabled>Need 15 ✦ to be tested</button>`; }
+    else { btn=`<button class="gold" id="spinBtn" onclick="spinTheWheel()">Lay 15 ✦ before the Eye</button>`; }
     ctrl=`${buff}<div id="wheelResult" style="text-align:center;min-height:18px;font-family:'Silkscreen',monospace;font-size:13px;color:var(--candle);margin:2px 0 8px"></div><div style="text-align:center">${btn}</div>`;
   }
   return `<div class="ritehdr" style="margin-top:22px">Test of Devotion</div>
-    <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Lay <b style="color:var(--candle)">50 ✦</b> before the <b>Eye Totem</b> — once every <b>2 hours</b> — its verdict, radiance to wrath, lands on top of the cost.</p>
+    <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Lay <b style="color:var(--candle)">15 ✦</b> before the <b>Eye Totem</b> — once every <b>2 hours</b> — its verdict, radiance to wrath, lands on top of the cost.</p>
     <div style="text-align:center;margin:6px 0"><div style="display:inline-block;width:min(64vw,240px)">${buildTotemSVG({anim:true, closed: cd>0})}</div></div>
     ${ctrl}`;
 }
@@ -4382,7 +4428,7 @@ window.spinTheWheel=async function(){
   if(WHEEL_BUSY) return; const me=memByName(VOTER); if(!me) return;
   const now=Date.now()/1000;
   if(now-(me.lastSpin||0)<2*3600){ trialsRefresh(); return; }
-  if((me.points||0)<50){ toast("You need 50 ✦ to be tested."); return; }
+  if((me.points||0)<15){ toast("You need 15 ✦ to be tested."); return; }
   // The Eye decides — the outcome is computed server-side so it can't be willed by the supplicant.
   let online=true; try{ online=navigator.onLine; }catch(_){}
   if(typeof MODE!=='undefined' && MODE==='remote' && !online){ toast('The Eye needs a connection to weigh you.'); return; }

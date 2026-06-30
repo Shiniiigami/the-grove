@@ -175,6 +175,10 @@
   .chal-card.mech-pen .chal-cdev{color:#cf4a3f} .chal-card.mech-chal .chal-cdev{color:#E0743A} .chal-card.mech-gain .chal-cdev{color:#E0B466}
   .chal-mid{display:flex;justify-content:center;margin:6px 0} .chal-card-mini{width:120px}
   .chal-pill.away{opacity:.45;border-style:dashed}
+  .chal-pill.pick{cursor:pointer;background:rgba(207,74,63,.10);border-color:rgba(207,74,63,.55);color:#F0C9C4;font-family:inherit}
+  .chal-pill.pick:active{background:rgba(207,74,63,.22)}
+  .chal-kickpick{margin-top:8px;padding:8px;border:1px solid rgba(207,74,63,.30);border-radius:10px;text-align:center}
+  .chal-kickpick .chal-pills{margin:6px 0 8px}
   .chal-cd{font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage,#9FB3A3);margin-left:6px}
   .chal-cd.low{color:#cf4a3f}
   .chal-roster{border:1px solid rgba(242,196,90,.16);border-radius:10px;padding:8px 10px;text-align:center}
@@ -559,7 +563,8 @@ const DEFAULT_DEEDS = [
 function tiers(){ return (MEM && MEM.tiers && MEM.tiers.length)?MEM.tiers:DEFAULT_TIERS; }
 function deeds(){ return (MEM && MEM.deeds && MEM.deeds.length)?MEM.deeds:DEFAULT_DEEDS; }
 function ensureDefaults(){ if(!MEM)return; if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); if(MEM._tierMig!==1){ MEM.tiers=structuredClone(DEFAULT_TIERS); MEM._tierMig=1; } if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); if(MEM._deedMig!==3){ MEM.deeds=structuredClone(DEFAULT_DEEDS); MEM._deedMig=3; } if(!MEM.rites)MEM.rites=[]; if(!MEM.challenges)MEM.challenges=[]; if(!MEM.seasonHistory)MEM.seasonHistory=[]; if(!MEM.wagers)MEM.wagers=[]; if(!MEM.itemLocks)MEM.itemLocks={}; if(!MEM.badgeColors)MEM.badgeColors={}; if(!MEM.badgeColors["Of the Eye"])MEM.badgeColors["Of the Eye"]="#E0B466"; if(!MEM.badgeColors["Drained the Chalice"])MEM.badgeColors["Drained the Chalice"]="#E0743A"; if(MEM.seasonStart===undefined)MEM.seasonStart=0;
-  if(MEM._hatMig!==3){ const _hm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && ['crown','laurel','halo'].includes(c.hat)){ c.hat='none'; _hm.push(m); } }); MEM._hatMig=3; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _hm.length && !localStorage.getItem('grove-crownpurge3')){ _hm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-crownpurge3','1'); } }catch(e){} } if(!MEM.fire)MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[]}; if(!MEM.fire.stokers)MEM.fire.stokers=[]; if(MEM.fire.lastDecay===undefined)MEM.fire.lastDecay=Date.now()/1000; if(MEM.fire.streak===undefined)MEM.fire.streak=0; if(MEM._fireTune!==2){ MEM.fire.goal=6; MEM._fireTune=2; } (MEM.members||[]).forEach(m=>{ if(m.season===undefined) m.season=0; if(m.chalBudget===undefined) m.chalBudget=150; if(m.oath===undefined) m.oath=true; if(m.lastStoke===undefined) m.lastStoke=0; if(m.logs===undefined) m.logs=0; if(m.fireLogs===undefined) m.fireLogs=0; if(!(m.points>0)) m.points=Math.max(0,m.points||0); if(!(m.season>0)) m.season=Math.max(0,m.season||0); if(m._preTop!==undefined && !(m.offered&&m.offered>Date.now()/1000)){ const c=m.sprite&&m.sprite.chibi; if(c&&c.top_style==='robes'){ const cc=structuredClone(c); cc.top_style=m._preTop||(cc.sleeves===false?'tank':'tee'); m.sprite={chibi:cc}; } delete m._preTop; } }); }
+  if(MEM._hatMig!==3){ const _hm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && ['crown','laurel','halo'].includes(c.hat)){ c.hat='none'; _hm.push(m); } }); MEM._hatMig=3; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _hm.length && !localStorage.getItem('grove-crownpurge3')){ _hm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-crownpurge3','1'); } }catch(e){} }
+  if(MEM._fadeMig!==1){ const _fm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && c.hair_style==='fade'){ c.hair_style='short'; _fm.push(m); } }); MEM._fadeMig=1; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _fm.length && !localStorage.getItem('grove-fademig1')){ _fm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-fademig1','1'); } }catch(e){} } if(!MEM.fire)MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[]}; if(!MEM.fire.stokers)MEM.fire.stokers=[]; if(MEM.fire.lastDecay===undefined)MEM.fire.lastDecay=Date.now()/1000; if(MEM.fire.streak===undefined)MEM.fire.streak=0; if(MEM._fireTune!==2){ MEM.fire.goal=6; MEM._fireTune=2; } (MEM.members||[]).forEach(m=>{ if(m.season===undefined) m.season=0; if(m.chalBudget===undefined) m.chalBudget=150; else { const cb=m.chalBudget|0; m.chalBudget = cb>150?150 : (cb<0?0:cb); } if(m.oath===undefined) m.oath=true; if(m.lastStoke===undefined) m.lastStoke=0; if(m.logs===undefined) m.logs=0; if(m.fireLogs===undefined) m.fireLogs=0; if(!(m.points>0)) m.points=Math.max(0,m.points||0); if(!(m.season>0)) m.season=Math.max(0,m.season||0); if(m._preTop!==undefined && !(m.offered&&m.offered>Date.now()/1000)){ const c=m.sprite&&m.sprite.chibi; if(c&&c.top_style==='robes'){ const cc=structuredClone(c); cc.top_style=m._preTop||(cc.sleeves===false?'tank':'tee'); m.sprite={chibi:cc}; } delete m._preTop; } }); }
 function tierOf(p){const T=tiers();let t=T[0];for(const x of T)if(p>=x.min)t=x;return t;}
 function tierIndex(p){const T=tiers();let i=0;T.forEach((x,k)=>{if(p>=x.min)i=k;});return i;}
 function rankProgress(p){
@@ -704,7 +709,7 @@ function grovePush(payload){ try{
   if(!PUSH_FN || (typeof SB_ON!=='undefined' && !SB_ON)) return;
   fetch(PUSH_FN,{method:'POST',headers:{apikey:SUPABASE.anonKey,Authorization:'Bearer '+SUPABASE.anonKey,'Content-Type':'application/json'},body:JSON.stringify(payload)}).catch(function(){});
 }catch(e){} }
-function deedPush(label,nominator){ grovePush({targets:'all', exclude:nominator, title:'\ud83d\udcdc A new deed', body:(label?('\u201c'+label+'\u201d '):'')+'awaits the grove\u2019s vote.', url:'./'}); }
+function deedPush(label,nominator){ grovePush({targets:'all', exclude:nominator, title:'\ud83d\udcdc A new deed', body:(label?('\u201c'+label+'\u201d '):'')+'awaits the grove\u2019s vote.', url:'./#rites'}); }
 function riteMsg(item){
   const t=item.target||'';
   switch(item.kind){
@@ -717,7 +722,7 @@ function riteMsg(item){
     default:        return {title:'\ud83d\udcdc A new rite', body:'A new rite awaits the grove\u2019s vote.'};
   }
 }
-function ritePush(item){ try{ if(!item) return; const m=riteMsg(item); grovePush({targets:'all', exclude:item.nominator, title:m.title, body:m.body, url:'./'}); }catch(e){} }
+function ritePush(item){ try{ if(!item) return; const m=riteMsg(item); grovePush({targets:'all', exclude:item.nominator, title:m.title, body:m.body, url:'./#rites'}); }catch(e){} }
 /* ===== in-app pop-up when an offering is raised (seen by everyone but the nominator) ===== */
 let OFFER_SNAP=null;
 function offerIds(){ const s={}; (MEM.rites||[]).forEach(r=>{ if(r&&r.kind==='offer'&&!r.applied&&r.id) s[r.id]=1; }); return s; }
@@ -2508,7 +2513,7 @@ function renderCreator(){
       <div class="crlabel">Eyewear</div>${segHTML('glasses',[['None','none'],['Specs','specs'],['Shades','shades']])}${CHIBI_EDIT.glasses!=='none'?swHTML('glassCol',PAL.lens):''}
       <div class="crlabel">Earrings</div>${segHTML('ears',[['None','none'],['Stud','stud'],['Dangle','dangle']])}${CHIBI_EDIT.ears==='dangle'?swHTML('earCol',PAL.metal):''}`;
   const secBody = `<div class="crlabel">Skin</div>${swHTML('skin',PAL.skin)}
-      <div class="crlabel">Hair style</div>${segHTML('hair_style',[['Short','short'],['Fade','fade'],['Curly','curly'],['Long','long'],['Curly-long','curlylong'],['Wavy','wavy'],['Ponytail','ponytail'],['Afro','afro'],['Pixie','pixie'],['Bun','bun'],['Buzz','buzz'],['Bald','bald'],['Mohawk','mohawk'],['Mullet','mullet'],['Spiky','spiky'],['Dreads','dreads'],['Braids','pigtails']])}
+      <div class="crlabel">Hair style</div>${segHTML('hair_style',[['Short','short'],['Curly','curly'],['Long','long'],['Curly-long','curlylong'],['Wavy','wavy'],['Ponytail','ponytail'],['Afro','afro'],['Pixie','pixie'],['Bun','bun'],['Buzz','buzz'],['Bald','bald'],['Mohawk','mohawk'],['Mullet','mullet'],['Spiky','spiky'],['Dreads','dreads'],['Braids','pigtails']])}
       <div class="crlabel">Hair colour</div>${swHTML('hair',PAL.hair)}
       <div class="crlabel">Facial hair</div>${segHTML('facial',[['None','none'],['Mustache','mustache'],['Goatee','goatee'],['Full','full'],['Overgrown','overgrown']])}${CHIBI_EDIT.facial!=='none'?swHTML('beard',PAL.hair):''}
       <div class="crlabel">Eye colour</div>${swHTML('eyeCol',PAL.eye)}`;
@@ -3419,7 +3424,7 @@ window.voteRite=async function(id, voter){
   if(r && r.applied) toast("The grove has spoken — it is done.");
   // an offering just passed → tell the grove (the offered spirit gets their own ping on their device)
   if(r && r.applied && !_wasApplied && r.kind==='offer'){
-    try{ grovePush({targets:'all', exclude:(r.target||''), title:'\ud83d\udd2e An offering is accepted', body:((r.target||'A soul')+' has been offered to the Eye.'), url:'./'}); }catch(e){}
+    try{ grovePush({targets:'all', exclude:(r.target||''), title:'\ud83d\udd2e An offering is accepted', body:((r.target||'A soul')+' has been offered to the Eye.'), url:'./#rites'}); }catch(e){}
   }
 };
 window.withdrawRite=async function(id){
@@ -3762,7 +3767,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30g · lock/exit chime fixed by stopping audio sources on background (sound unchanged otherwise) · law-break reports lapse after 30s · version banner no longer cries wolf · shorter test-ping notification · keeper passphrase hashed (bcrypt) · economy server fuzzed · (prev: Chalice anti-stall + cron · 60s nomination undo · profanity filter · stake-bet janitor · server-authoritative wheel + rite/chalice hardening)</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30j · removed the “fade” hairstyle (existing ones become “short”) · notifications now open the right page (deed → Rites, wager/challenge → Trials) · fixed “bad passphrase” when the Keeper removes a rite (server pass-check now bcrypt-aware) · thoughts no longer error on emoji (Unicode-safe trim) · challenge budget can’t exceed 150 (capped + healed) · Chalice: host begins, then the right passes down the join order if they don’t · lobby dissolves after 3 min · cast out by tapping a name · must join before adding others · lock/exit chime fixed · law-break reports lapse after 30s · keeper passphrase hashed (bcrypt) · (prev: Chalice anti-stall + cron · 60s nomination undo · profanity filter · stake-bet janitor · server-authoritative wheel + rite/chalice hardening)</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -3903,7 +3908,8 @@ const WHEEL=[
 function spinWheel(){ const tot=WHEEL.reduce((s,o)=>s+o.w,0); let r=Math.random()*tot; for(const o of WHEEL){ if(r<o.w)return o; r-=o.w; } return WHEEL[0]; }
 function chalById(id){ return (MEM.challenges||[]).find(c=>c.id===id); }
 function activeCommitments(name){ return (MEM.challenges||[]).filter(c=>c.status==='accepted'&&c.accepter===name).length; }
-function sweepChallenges(now){ let changed=false; (MEM.challenges||[]).forEach(c=>{ if((c.status==='open'||c.status==='accepted') && now-(c.created||now)>=24*3600){ c.status='expired'; const o=memByName(c.owner); if(o)o.chalBudget=(o.chalBudget||0)+(c.reward||0); changed=true; } else if(c.status==='accepted' && c.deadline && now>c.deadline){ c.status='expired'; const o=memByName(c.owner); if(o)o.chalBudget=(o.chalBudget||0)+(c.reward||0); changed=true; } }); return changed; }
+function refundBudget(o,amt){ if(!o)return; o.chalBudget=Math.max(0,Math.min(150,(o.chalBudget||0)+(amt||0))); }
+function sweepChallenges(now){ let changed=false; (MEM.challenges||[]).forEach(c=>{ if((c.status==='open'||c.status==='accepted') && now-(c.created||now)>=24*3600){ c.status='expired'; refundBudget(memByName(c.owner),c.reward||0); changed=true; } else if(c.status==='accepted' && c.deadline && now>c.deadline){ c.status='expired'; refundBudget(memByName(c.owner),c.reward||0); changed=true; } }); return changed; }
 const WAGER_CAP=100;
 function wagerById(id){ return (MEM.wagers||[]).find(w=>w.id===id); }
 function sweepWagers(now){ let changed=false; (MEM.wagers||[]).forEach(w=>{
@@ -3928,11 +3934,11 @@ function applyAction(a){
   if(a.t==='stoke'){ const m=memByName(a.name); if(!m)return; if(now-(m.lastStoke||0)<3*3600)return; if((m.logs||0)<1)return; m.logs=(m.logs||0)-1; m.fireLogs=(m.fireLogs||0)+1; m.lastStoke=now; MEM.fire=MEM.fire||{level:0,goal:6,lastBlessed:0,stokers:[],lastDecay:now,streak:0}; MEM.fire.stokers=MEM.fire.stokers||[]; if(!MEM.fire.stokers.includes(a.name))MEM.fire.stokers.push(a.name); MEM.fire.level=(MEM.fire.level||0)+1; MEM.fire.lastDecay=now; if(MEM.fire.level>=(MEM.fire.goal||6)){ if(MEM.fire.lastBlessed && now-MEM.fire.lastBlessed>=24*3600) MEM.fire.streak=0; const bless=Math.min(200,50+25*(MEM.fire.streak||0)); MEM.fire.stokers.forEach(nm=>{const x=memByName(nm); if(x)adjPts(x,bless);}); adjPts(m,20); MEM.fire.lastSpark=a.name; MEM.fire.lastBless=bless; MEM.fire.streak=(MEM.fire.streak||0)+1; MEM.fire.level=0; MEM.fire.stokers=[]; MEM.fire.lastBlessed=now; fireKeeperBadge(); } }
   else if(a.t==='chal_new'){ const m=memByName(a.owner); if(!m)return; const r=Math.max(1,Math.min(150,a.reward|0)); if((m.chalBudget||0)<r)return; m.chalBudget-=r; MEM.challenges=MEM.challenges||[]; MEM.challenges.push({id:'c'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),owner:a.owner,title:a.title,reward:r,accepter:null,created:now,status:'open'}); }
   else if(a.t==='chal_accept'){ const c=chalById(a.id); if(!c||c.status!=='open')return; if(a.name===c.owner)return; if(activeCommitments(a.name)>=3)return; c.accepter=a.name; c.status='accepted'; }
-  else if(a.t==='chal_remove'){ const c=chalById(a.id); if(!c)return; if(a.by!==c.owner && !a.keeper)return; if(c.status==='open' || (a.keeper && c.status==='accepted')){ const o=memByName(c.owner); if(o)o.chalBudget=(o.chalBudget||0)+(c.reward||0); MEM.challenges=(MEM.challenges||[]).filter(x=>x.id!==a.id); } else if(a.keeper){ /* done/expired: the reward is already settled (paid out or already refunded by the sweep) — remove the record without refunding again, else Devotion inflates */ MEM.challenges=(MEM.challenges||[]).filter(x=>x.id!==a.id); } else if(c.status==='accepted' && !c.removeReq){ c.removeReq=now; } }
-  else if(a.t==='chal_remove_resolve'){ const c=chalById(a.id); if(!c||c.status!=='accepted'||!c.removeReq)return; if(a.name!==c.accepter)return; if(a.choice==='accept'){ const o=memByName(c.owner); if(o)o.chalBudget=(o.chalBudget||0)+(c.reward||0); MEM.challenges=(MEM.challenges||[]).filter(x=>x.id!==a.id); } else { c.deadline=now+3600; delete c.removeReq; } }
+  else if(a.t==='chal_remove'){ const c=chalById(a.id); if(!c)return; if(a.by!==c.owner && !a.keeper)return; if(c.status==='open' || (a.keeper && c.status==='accepted')){ refundBudget(memByName(c.owner),c.reward||0); MEM.challenges=(MEM.challenges||[]).filter(x=>x.id!==a.id); } else if(a.keeper){ /* done/expired: the reward is already settled (paid out or already refunded by the sweep) — remove the record without refunding again, else Devotion inflates */ MEM.challenges=(MEM.challenges||[]).filter(x=>x.id!==a.id); } else if(c.status==='accepted' && !c.removeReq){ c.removeReq=now; } }
+  else if(a.t==='chal_remove_resolve'){ const c=chalById(a.id); if(!c||c.status!=='accepted'||!c.removeReq)return; if(a.name!==c.accepter)return; if(a.choice==='accept'){ refundBudget(memByName(c.owner),c.reward||0); MEM.challenges=(MEM.challenges||[]).filter(x=>x.id!==a.id); } else { c.deadline=now+3600; delete c.removeReq; } }
   else if(a.t==='chal_approve'){ const c=chalById(a.id); if(!c||c.status!=='accepted')return; if(a.approver!==c.owner && !a.keeper)return; const w=memByName(c.accepter); if(w){ const mult=consumeMult(w); adjPts(w,(c.reward||0)*mult); maybeEarnLog(w,(c.reward||0)*mult); } c.status='done'; }
   else if(a.t==='oath'){ const m=memByName(a.name); if(!m)return; m.oath=true; m.badges=m.badges||[]; if(!m.badges.includes('Initiated'))m.badges.push('Initiated'); }
-  else if(a.t==='thought'){ const m=memByName(a.name); if(!m)return; const txt=(a.text==null?'':String(a.text)).slice(0,28).trim(); if(txt){ m.thought={text:txt, at:Date.now()/1000}; } else { delete m.thought; } }
+  else if(a.t==='thought'){ const m=memByName(a.name); if(!m)return; const txt=clampThought(a.text); if(txt){ m.thought={text:txt, at:Date.now()/1000}; } else { delete m.thought; } }
   else if(a.t==='wager_new'){ const m=memByName(a.proposer); if(!m)return; const amt=Math.max(1,Math.min(WAGER_CAP,a.amount|0)); if((m.points||0)<amt)return; adjPts(m,-amt); MEM.wagers=MEM.wagers||[]; MEM.wagers.push({id:'w'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),proposer:a.proposer,amount:amt,title:a.title,taker:null,status:'open',winner:null,created:now,votes:{},tie:[]}); }
   else if(a.t==='wager_accept'){ const w=wagerById(a.id); if(!w||w.status!=='open')return; if(a.name===w.proposer)return; const m=memByName(a.name); if(!m||(m.points||0)<w.amount)return; adjPts(m,-w.amount); w.taker=a.name; w.status='matched'; w.matchedAt=now; }
   else if(a.t==='wager_cancel'){ const w=wagerById(a.id); if(!w||w.status!=='open')return; if(a.by!==w.proposer && !a.keeper)return; const p=memByName(w.proposer); if(p)adjPts(p,w.amount||0); MEM.wagers=(MEM.wagers||[]).filter(x=>x.id!==a.id); }
@@ -3959,11 +3965,11 @@ async function communityAction(a){
     let online=true; try{ online=navigator.onLine; }catch(_){}
     if(online){
       const _bb=(MEM.fire&&MEM.fire.lastBlessed)||0;
-      try{ await sbRpc("grove_action",{p_action:a}); await refreshRemote(); okR=true; if(a&&a.t==='stoke'){ const _nb=(MEM.fire&&MEM.fire.lastBlessed)||0; if(_nb>_bb){ grovePush({targets:'all', title:'\ud83d\udd25 The grove is blessed', body:'The sixth log caught \u2014 every tender is blessed.', url:'./'}); } }
+      try{ await sbRpc("grove_action",{p_action:a}); await refreshRemote(); okR=true; if(a&&a.t==='stoke'){ const _nb=(MEM.fire&&MEM.fire.lastBlessed)||0; if(_nb>_bb){ grovePush({targets:'all', title:'\ud83d\udd25 The grove is blessed', body:'The sixth log caught \u2014 every tender is blessed.', url:'./#trials'}); } }
         try{
-          if(a&&a.t==='wager_new'){ grovePush({targets:'all', exclude:(a.proposer||''), title:'\ud83c\udfb2 A wager is raised', body:((a.proposer||'A spirit')+' stakes '+(a.amount||0)+' \u2726'+(a.title?(' \u2014 \u201c'+a.title+'\u201d'):'')+'. Match it in the Ring.'), url:'./'}); }
-          else if(a&&a.t==='group_new'){ grovePush({targets:'all', exclude:(a.starter||''), title:'\ud83c\udfb2 A group wager opens', body:((a.starter||'A spirit')+' opened'+(a.title?(' \u201c'+a.title+'\u201d'):' a wager')+' \u2014 pick a side.'), url:'./'}); }
-          else if(a&&a.t==='chal_new'){ grovePush({targets:'all', exclude:(a.owner||''), title:'\u2694 A challenge is set', body:((a.owner||'A spirit')+' offers '+(a.reward||0)+' \u2726'+(a.title?(' \u2014 \u201c'+a.title+'\u201d'):'')+'. Take it up.'), url:'./'}); }
+          if(a&&a.t==='wager_new'){ grovePush({targets:'all', exclude:(a.proposer||''), title:'\ud83c\udfb2 A wager is raised', body:((a.proposer||'A spirit')+' stakes '+(a.amount||0)+' \u2726'+(a.title?(' \u2014 \u201c'+a.title+'\u201d'):'')+'. Match it in the Ring.'), url:'./#trials'}); }
+          else if(a&&a.t==='group_new'){ grovePush({targets:'all', exclude:(a.starter||''), title:'\ud83c\udfb2 A group wager opens', body:((a.starter||'A spirit')+' opened'+(a.title?(' \u201c'+a.title+'\u201d'):' a wager')+' \u2014 pick a side.'), url:'./#trials'}); }
+          else if(a&&a.t==='chal_new'){ grovePush({targets:'all', exclude:(a.owner||''), title:'\u2694 A challenge is set', body:((a.owner||'A spirit')+' offers '+(a.reward||0)+' \u2726'+(a.title?(' \u2014 \u201c'+a.title+'\u201d'):'')+'. Take it up.'), url:'./#trials'}); }
         }catch(e){}
       }
       catch(e){ if(isNetErr(e)){ applyAction(a); cacheRemote(); enqueueOp("grove_action",{p_action:a}); toast("No signal — saved. It'll sync when you're back."); okR=true; } else { toast("The Eye did not answer — is grove_trials.sql installed?"); return false; } }
@@ -3975,9 +3981,18 @@ async function communityAction(a){
 }
 function trialsRefresh(){ renderTrials(); layoutGrove(); renderLedger(); try{ syncOffering(); }catch(e){} try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectBetEndings(); }catch(e){} }
 function thoughtLive(t){ return !!(t && t.text && (Date.now()/1000 - (t.at||0)) < 12*3600); }
+// Truncate by code points, not UTF-16 units: String.slice can cut an emoji's
+// surrogate pair in half, leaving a lone surrogate that JSON can carry but Postgres
+// rejects ("The Eye did not answer"). Array.from keeps each emoji whole; we drop any
+// stray lone surrogates so the text is always valid Unicode before it hits the DB.
+function clampThought(text){
+  let cp=Array.from(text==null?'':String(text));
+  cp=cp.filter(ch=>{ if(ch.length!==1) return true; const c=ch.charCodeAt(0); return !(c>=0xD800 && c<=0xDFFF); });
+  return cp.slice(0,28).join('').trim();
+}
 async function setThought(text){
   const me=(typeof VOTER!=='undefined')?VOTER:''; if(!me) return;
-  const t=(text==null?'':String(text)).slice(0,28).trim();
+  const t=clampThought(text);
   if(typeof MODE!=='undefined' && MODE==='remote'){
     let online=true; try{ online=navigator.onLine; }catch(_){}
     if(online){
@@ -4086,7 +4101,7 @@ function renderTrials(){
     <div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage);margin-bottom:4px">${lvl} / ${goal} logs · streak ${streak} · next blessing +${nextBless}${me?` · <b style="color:var(--candle)">${myLogs}</b> log${myLogs===1?'':'s'} in hand`:''}</div>
     <div style="text-align:center;margin:0 auto 8px;font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage)">${VOTER?`acting as <b style="color:var(--candle)">${VOTER}</b> · <button class="idswitch" onclick="switchIdentity()">switch</button>`:`<button class="idswitch" onclick="switchIdentity()">choose your spirit to act</button>`}</div>
     <div style="text-align:center">${stokeBtn}</div>`;
-  const budget = me? (me.chalBudget!==undefined?me.chalBudget:150) : null;
+  const budget = me? Math.max(0,Math.min(150, me.chalBudget!==undefined?me.chalBudget:150)) : null;
   const commits = me? activeCommitments(VOTER) : 0;
   const open=(MEM.challenges||[]).filter(c=>c.status==='open'||c.status==='accepted').sort((a,b)=>(b.created||0)-(a.created||0));
   const cards = open.length? open.map(c=>challengeCard(c,now)).join("") : `<p class="hint" style="margin:12px 0">No open challenges. Stake some of your budget below.</p>`;
@@ -4624,7 +4639,7 @@ window.keeperAddChallenge=async function(){ const owner=document.getElementById(
 window.keeperAddWager=async function(){ const proposer=document.getElementById('kaWp').value; const title=(document.getElementById('kaWt').value||'').trim(); const amount=Math.max(1,parseInt(document.getElementById('kaWa').value,10)||0); if(!title){ document.getElementById('kerr').textContent='Name the wager.'; return; } MEM.wagers=MEM.wagers||[]; MEM.wagers.push({id:'w'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),proposer,amount,title,taker:null,status:'open',winner:null,created:Date.now()/1000,votes:{},tie:[],keeperSeeded:true}); await saveData(); _trialsAfter(); toast('Wager added.'); renderTrialsKeeper(); };
 window.newChallengeForm=function(){
   if(!VOTER){ toast("Pick your name first."); return; }
-  const me=memByName(VOTER); const bud=me?(me.chalBudget!==undefined?me.chalBudget:150):0;
+  const me=memByName(VOTER); const bud=me?Math.max(0,Math.min(150, me.chalBudget!==undefined?me.chalBudget:150)):0;
   sheet.innerHTML=`
     <div class="grip"></div>
     <div class="kpanel">
@@ -4641,7 +4656,7 @@ window.newChallengeForm=function(){
 window.submitChallenge=async function(){
   const title=document.getElementById("chTitle").value.trim();
   const rew=parseInt(document.getElementById("chRew").value,10);
-  const me=memByName(VOTER); const bud=me?(me.chalBudget!==undefined?me.chalBudget:150):0;
+  const me=memByName(VOTER); const bud=me?Math.max(0,Math.min(150, me.chalBudget!==undefined?me.chalBudget:150)):0;
   if(!title){ document.getElementById("kerr").textContent="Name the challenge."; return; }
   if(isNaN(rew)||rew<1){ document.getElementById("kerr").textContent="Stake at least 1 point."; return; }
   if(rew>bud){ document.getElementById("kerr").textContent=`You only have ${bud} to stake.`; return; }
@@ -4707,6 +4722,14 @@ document.querySelectorAll(".tab").forEach(t=>{
     if(v==="rules") renderRules();
   };
 });
+
+/* Deep-link from a tapped notification: pushes carry a hash (#rites, #trials, …) so a
+   deed lands on Rites, a wager/challenge on Trials, etc. We route on boot (cold open) and
+   on hashchange (the service worker navigates an already-open app to the new hash). */
+function gotoView(v){ try{ const b=document.querySelector('.tab[data-view="'+v+'"]'); if(b){ b.click(); return true; } }catch(_){} return false; }
+function routeFromHash(){ try{ const h=(location.hash||'').replace(/^#\/?/,'').toLowerCase(); if(['grove','ledger','rites','trials','rules'].indexOf(h)>=0) gotoView(h); }catch(_){} }
+window.addEventListener('hashchange', routeFromHash);
+try{ if(location.hash) routeFromHash(); }catch(_){}
 
 /* ====================== BACKDROP CANVASES ====================== */
 function drawTrees(){
@@ -5117,13 +5140,25 @@ function shuffleDeck(){ const d=[]; for(let ri=0;ri<13;ri++)for(let si=0;si<4;si
 function thr(n){ return Math.max(1, Math.ceil(n/3)); }
 const TURN_SECS=120;
 const DARE_SECS=180;
-const LOBBY_SECS=900;   // a lobby that never begins dissolves after 15 min
+const LOBBY_SECS=180;   // a lobby that never begins dissolves after 3 min
+const START_GRACE=45;   // host may begin at once; if they don't, the next joiner can after this, then the next, down the join order
 const REPORT_SECS=30;   // a law-break report lapses if the circle doesn't agree within 30s
 function reportLive(r){ return !!(r && r.status==='open' && (nowS()-(r.t||0) < REPORT_SECS)); }
 function isAway(n,s){ return !!((n.away&&n.away[s])||(n.kicked&&n.kicked[s])); }
 function liveSpirits(n){ return (n.spirits||[]).filter(s=>!isAway(n,s)); }
 function advanceTurn(n){ const L=(n.spirits||[]).length; for(let k=1;k<=L;k++){ const idx=(n.turn+k)%L; if(!isAway(n,n.spirits[idx])){ n.turn=idx; return true; } } return false; }
 function firstLiveHost(n, exclude){ for(let i=0;i<(n.spirits||[]).length;i++){ const s=n.spirits[i]; if(s!==exclude && !isAway(n,s)) return s; } return null; }
+// Begin-authority by join order. The host (spirits[0]) may begin immediately; if they
+// don't, the right passes one seat down the join order every START_GRACE seconds, so a
+// host who closed the app can't freeze the lobby — but a random latecomer can't jump the
+// queue either. eligibleRank is how far down the order the right has reached by now.
+function eligibleRank(g){ return Math.floor((nowS()-(g.lobbyAt||nowS()))/START_GRACE); }
+function startSeat(g){ const rank=eligibleRank(g); for(let i=0;i<(g.spirits||[]).length && i<=rank;i++){ const s=g.spirits[i]; if(!isAway(g,s) && controls(s)) return s; } return null; }
+function nextStartIn(g){ // seconds until THIS device's earliest-joined spirit may begin
+  const sp=(g.spirits||[]); let best=Infinity;
+  for(let i=0;i<sp.length;i++){ if(!isAway(g,sp[i]) && controls(sp[i])){ best=Math.min(best, Math.max(0, i*START_GRACE-(nowS()-(g.lobbyAt||nowS())))); } }
+  return best;
+}
 function setDeadline(n){ n.deadline = nowS()+TURN_SECS; }
 function fmtCd(s){ s=Math.max(0,s|0); return Math.floor(s/60)+':'+('0'+(s%60)).slice(-2); }
 
@@ -5163,6 +5198,7 @@ function joinGame(){
 }
 function addSpirit(){
   const g=GC(); if(!g||g.status!=='lobby') return;
+  if((g.spirits||[]).indexOf(me())<0){ toast('Join the trial yourself first.'); return; }
   const pool=memNames().filter(nm=>g.spirits.indexOf(nm)<0);
   if(!pool.length){ toast('Every spirit has joined.'); return; }
   const nm=prompt('Add another spirit to THIS phone:\n'+pool.join(', '));
@@ -5173,6 +5209,7 @@ function addSpirit(){
 }
 function addSel(nm){
   const g=GC(); if(!g||g.status!=='lobby'||!nm) return;
+  if((g.spirits||[]).indexOf(me())<0){ toast('Join the trial yourself first.'); return; }
   if((g.spirits||[]).indexOf(nm)>=0){ toast(nm+' already joined.'); return; }
   if(g.spirits.length>=20){ toast('The circle is full (20).'); return; }
   const n=clone(g); n.spirits.push(nm); const hs=hands(); if(hs.indexOf(nm)<0) hs.push(nm); setHands(hs);
@@ -5184,9 +5221,19 @@ function leaveLobby(nm){
   const n=clone(g); n.spirits=n.spirits.filter(s=>s!==nm); setHands(hands().filter(s=>s!==nm)); send(n);
 }
 function startGame(){
-  const g=GC(); if(!g||g.status!=='lobby') return; if(g.nominee!==me()&&!controls(g.nominee)){ toast('Only the nominee may begin.'); return; }
+  const g=GC(); if(!g||g.status!=='lobby') return;
+  const who=me();
+  if(!who || (g.spirits||[]).indexOf(who)<0){ toast('Join the trial to begin it.'); return; }
   if(g.spirits.length<4){ toast('Four spirits are needed to begin.'); return; }
-  const n=clone(g); n.status='playing'; n.phase='draw'; n.deck=shuffleDeck(); n.turn=0; n.started=nowS(); setDeadline(n);
+  // The host begins. If the host hasn't (e.g. closed the app), the right to begin passes down
+  // the join order one seat at a time, so the lobby can't freeze but order is still respected.
+  const seat=startSeat(g);
+  if(!seat){ const wait=nextStartIn(g); toast(wait===Infinity?'The host begins the trial.':('The host begins first — you can begin in '+fmtCd(wait)+' if they don’t.')); return; }
+  const n=clone(g);
+  // Whoever rightfully begins takes the host seat if the prior nominee isn't on this phone, so a
+  // gone host can't keep blocking confirmations during play either.
+  if(n.nominee!==seat && !controls(n.nominee)) n.nominee=seat;
+  n.status='playing'; n.phase='draw'; n.deck=shuffleDeck(); n.turn=0; n.started=nowS(); setDeadline(n);
   n.feed=[{t:nowS(),x:'The trial begins. '+n.spirits[0]+' draws first.'}]; send(n);
 }
 function curDrawer(){ const g=GC(); return g&&g.spirits?g.spirits[g.turn%g.spirits.length]:null; }
@@ -5313,18 +5360,24 @@ function rejoin(nm){
   const hs=hands(); if(hs.indexOf(nm)<0) hs.push(nm); setHands(hs);
   feedPush(n, nm+' returns to the circle.'); send(n);
 }
+let KICK_PICK=false;
 function proposeKick(){
   const g=GC(); if(!g||(g.status!=='playing'&&g.status!=='lobby')) return; const who=me();
   if(!who){ toast('Pick your spirit first.'); return; }
   const live=liveSpirits(g).filter(s=>!controls(s));
   if(!live.length){ toast('No one to cast out.'); return; }
-  const t=prompt('Cast out which spirit? (half the circle must agree)\n'+live.join(', '));
-  if(!t) return; const target=(g.spirits||[]).find(s=>s.toLowerCase()===t.trim().toLowerCase());
-  if(!target||isAway(g,target)){ toast('No such spirit in the trial.'); return; }
+  KICK_PICK=!KICK_PICK; render();
+}
+function kickPick(name){
+  const g=GC(); if(!g||(g.status!=='playing'&&g.status!=='lobby')){ KICK_PICK=false; return; } const who=me();
+  if(!who){ toast('Pick your spirit first.'); KICK_PICK=false; return; }
+  const target=(g.spirits||[]).find(s=>s===name);
+  if(!target||isAway(g,target)){ toast('No such spirit in the trial.'); KICK_PICK=false; render(); return; }
   if(controls(target)){ toast('You cannot cast out your own spirit.'); return; }
   const n=clone(g); n.kicks=n.kicks||[];
-  if(n.kicks.find(k=>k.target===target&&k.status==='open')){ toast('A vote is already open for '+target+'.'); return; }
+  if(n.kicks.find(k=>k.target===target&&k.status==='open')){ toast('A vote is already open for '+target+'.'); KICK_PICK=false; render(); return; }
   n.kicks.push({id:'K'+nowS()+Math.floor(Math.random()*999), target:target, by:who, agrees:[who], status:'open', t:nowS()});
+  KICK_PICK=false;
   feedPush(n, who+' calls to cast out '+target+'.'); send(n);
 }
 function agreeKick(id){
@@ -5457,7 +5510,7 @@ function startPoll(){ if(POLL) return; POLL=setInterval(async()=>{
   g=GC();
   if(g && g.status==='lobby' && (nowS()-(g.lobbyAt||0))>=LOBBY_SECS){
     const n=clone(g); n.status='idle'; setHands([]); send(n);
-    try{ toast('The circle dissolved \u2014 no trial began within 15 minutes.'); }catch(e){}
+    try{ toast('The circle dissolved \u2014 no trial began within 3 minutes.'); }catch(e){}
     return;
   }
   // ----- auto-advance / timeout janitor -----
@@ -5514,9 +5567,16 @@ function renderLobby(g){
   h+='<div class="chal-pills">'+list+'</div>';
   if(!joined) h+='<button class="chal-btn gold" onclick="chalAPI.join()">Join the trial</button>';
   const pool=memNames().filter(s=>(g.spirits||[]).indexOf(s)<0);
-  if(pool.length) h+='<select class="chal-sel" onchange="chalAPI.addSel(this.value);this.value=\'\'"><option value="">+ add another spirit to this phone\u2026</option>'+pool.map(p=>'<option value="'+p+'">'+p+'</option>').join('')+'</select>';
-  if(isNom){ h+='<button class="chal-btn '+(g.spirits.length>=4?'gold':'')+'" '+(g.spirits.length<4?'disabled':'')+' onclick="chalAPI.start()">Begin the trial ('+g.spirits.length+'/4)</button>'; }
-  else { h+='<p class="chal-hint">Waiting for '+g.nominee+' to begin\u2026</p>'; }
+  if(joined && pool.length) h+='<select class="chal-sel" onchange="chalAPI.addSel(this.value);this.value=\'\'"><option value="">+ add another spirit to this phone\u2026</option>'+pool.map(p=>'<option value="'+p+'">'+p+'</option>').join('')+'</select>';
+  else if(!joined && pool.length) h+='<p class="chal-hint" style="opacity:.65">Join the trial first to add others sharing your phone.</p>';
+  if(joined){
+    const ready=g.spirits.length>=4;
+    const mayBegin=!!startSeat(g);
+    if(!ready){ h+='<button class="chal-btn" disabled>Begin the trial ('+g.spirits.length+'/4)</button>'; }
+    else if(mayBegin){ h+='<button class="chal-btn gold" onclick="chalAPI.start()">Begin the trial ('+g.spirits.length+'/4)</button>'; }
+    else { const wait=nextStartIn(g); h+='<button class="chal-btn" disabled>The host begins\u2026</button>'+(wait!==Infinity?'<p class="chal-hint" style="opacity:.7">If the host doesn\u2019t begin, you can in '+fmtCd(wait)+'.</p>':''); }
+  }
+  else { h+='<p class="chal-hint">Join the circle to begin \u2014 four spirits are needed.</p>'; }
   if(joined) h+='<button class="chal-btn ghost" onclick="chalAPI.leaveAll()">Leave the trial</button>';
   if(isNom) h+='<button class="chal-mini ghost" style="align-self:center" onclick="chalAPI.end()">Close the circle entirely</button>';
   const left=Math.max(0, LOBBY_SECS-(nowS()-(g.lobbyAt||nowS())));
@@ -5544,7 +5604,13 @@ function rosterStrip(g){
   if(rj.length){ h+='<div class="chal-rejoin">'+rj.map(s=>'<button class="chal-mini" onclick="chalAPI.rejoin(\''+s+'\')">Rejoin as '+s+'</button>').join('')+'</div>'; }
   const ok=(g.kicks||[]).filter(k=>k.status==='open');
   if(ok.length){ h+=ok.map(k=>{ const can=me()&&k.target!==me()&&!controls(k.target)&&k.agrees.indexOf(me())<0; return '<div class="chal-report">\u2715 cast out <b>'+k.target+'</b> ('+k.agrees.length+'/'+Math.max(2,Math.ceil(live.length/2))+') '+(can?'<button onclick="chalAPI.agreeKick(\''+k.id+'\')">Agree</button>':'')+'</div>'; }).join(''); }
-  h+='<div class="chal-rowbtns"><button class="chal-mini" onclick="chalAPI.kick()">Cast out\u2026</button><button class="chal-mini ghost" onclick="chalAPI.leaveAll()">Leave the trial</button></div></div>';
+  if(KICK_PICK){
+    const targets=live.filter(s=>!controls(s)&&!(g.kicks||[]).find(k=>k.target===s&&k.status==='open'));
+    h+='<div class="chal-kickpick"><div class="chal-lawhdr">Cast out whom? (half the circle must agree)</div><div class="chal-pills">';
+    h+=targets.length?targets.map(s=>'<button class="chal-pill pick" onclick="chalAPI.kickPick(\''+chEsc(s).replace(/'/g,"\\'")+'\')">'+chEsc(s)+'</button>').join(''):'<span class="chal-pill away">no one to cast out</span>';
+    h+='</div><button class="chal-mini ghost" onclick="chalAPI.kick()">Cancel</button></div>';
+  }
+  h+='<div class="chal-rowbtns"><button class="chal-mini" onclick="chalAPI.kick()">'+(KICK_PICK?'\u2715 Close':'Cast out\u2026')+'</button><button class="chal-mini ghost" onclick="chalAPI.leaveAll()">Leave the trial</button></div></div>';
   return h;
 }
 function renderPlay(g){
@@ -5715,7 +5781,7 @@ const _origRT = window.renderTrials;
 if(typeof _origRT==='function'){ window.renderTrials=function(){ const r=_origRT.apply(this,arguments); try{ injectLauncher(); }catch(e){} return r; }; }
 
 /* expose handlers */
-window.chalAPI={ show:openUI, open:openLobby, join:joinGame, addSpirit:addSpirit, addSel:addSel, leave:leaveLobby, leaveAll:leaveGame, rejoin:rejoin, kick:proposeKick, agreeKick:agreeKick, start:startGame, draw:draw, tap:tap, picksDone:picksDone, tier:submitTier, law:submitLaw, loser:pickLoser, confirm:confirmCard, drink:drinkChalice, dare:takeDare, vdare:voteDare, giveup:dareGiveUp, sip:sipChalice, seal:sealRite, report:report, agree:agreeReport, end:endGame, dismiss:dismiss, kForce:kForce, kReset:kReset, kHost:kHost };
+window.chalAPI={ show:openUI, open:openLobby, join:joinGame, addSpirit:addSpirit, addSel:addSel, leave:leaveLobby, leaveAll:leaveGame, rejoin:rejoin, kick:proposeKick, kickPick:kickPick, agreeKick:agreeKick, start:startGame, draw:draw, tap:tap, picksDone:picksDone, tier:submitTier, law:submitLaw, loser:pickLoser, confirm:confirmCard, drink:drinkChalice, dare:takeDare, vdare:voteDare, giveup:dareGiveUp, sip:sipChalice, seal:sealRite, report:report, agree:agreeReport, end:endGame, dismiss:dismiss, kForce:kForce, kReset:kReset, kHost:kHost };
 window.closeUI=closeUI;
 })();
 </script>

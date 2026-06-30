@@ -207,13 +207,14 @@
     color:var(--parch);opacity:.86;white-space:nowrap;text-shadow:0 1px 3px #000;}
   .spirit .pts{font-family:'Silkscreen',monospace;font-size:8px;color:var(--candle);opacity:.75;}
   .spirit .think{position:absolute;left:50%;top:14px;transform:translate(-50%,-100%);
-    background:#f1e7cf;color:#241c10;border-radius:9px;padding:3px 7px;font-size:10px;line-height:1.22;
-    max-width:106px;text-align:center;box-shadow:0 2px 9px rgba(0,0,0,.45);z-index:4;
-    font-family:'Spectral',Georgia,serif;word-break:break-word;}
+    background:rgba(16,13,24,.42);color:#ECE3CF;border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:4px 8px;font-size:10px;line-height:1.22;
+    width:max-content;max-width:130px;text-align:center;box-shadow:0 2px 7px rgba(0,0,0,.28);z-index:4;
+    font-family:'Spectral',Georgia,serif;word-break:break-word;text-shadow:0 1px 2px rgba(0,0,0,.55);backdrop-filter:blur(4px) saturate(1.1);-webkit-backdrop-filter:blur(4px) saturate(1.1);}
+  .spirit .think .tht{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
   .spirit .think:after{content:'';position:absolute;left:50%;bottom:-7px;width:7px;height:7px;border-radius:50%;
-    background:#f1e7cf;transform:translateX(-8px);box-shadow:0 2px 6px rgba(0,0,0,.3)}
+    background:rgba(16,13,24,.5);transform:translateX(-8px)}
   .spirit .think:before{content:'';position:absolute;left:50%;bottom:-13px;width:4px;height:4px;border-radius:50%;
-    background:#f1e7cf;transform:translateX(-3px)}
+    background:rgba(16,13,24,.5);transform:translateX(-3px)}
   .spirit .think .thinkx{position:absolute;top:-7px;right:-7px;width:16px;height:16px;border-radius:50%;
     border:1px solid rgba(0,0,0,.18);background:#fff;color:#7a3d44;font-size:11px;line-height:1;cursor:pointer;
     display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.35);padding:0;font-family:system-ui}
@@ -1502,7 +1503,7 @@ function layoutGrove(){
   const w = (groveEl.clientWidth>40 ? groveEl.clientWidth : 0) || Math.min(688,(window.innerWidth||360)-34) || 340;
   const cols = w<360?3:(w<520?4:5);
   const cellW = w/cols;
-  const rowH = 144;
+  const rowH = 162;
   members.forEach((m,i)=>{
     const soul=buildSoul(m.name,m.points,m.sprite);
     const wrap=document.createElement("div");
@@ -1510,9 +1511,9 @@ function layoutGrove(){
     const col=i%cols, row=Math.floor(i/cols);
     // seeded jitter so it feels like a grove, not a grid
     const jx=(rng(soul.seed)()-0.5)*cellW*0.4;
-    const jy=(rng(soul.seed^99)()-0.5)*26;
+    const jy=(rng(soul.seed^99)()-0.5)*16;
     wrap.style.left=(col*cellW + cellW/2 - 42 + jx)+"px";
-    wrap.style.top=(row*rowH + 8 + jy)+"px";
+    wrap.style.top=(row*rowH + 44 + jy)+"px";
     const cv=document.createElement("canvas");
     cv.style.setProperty('--bd',(2.6+rng(soul.seed^7)()*1.6).toFixed(2)+'s');
     cv.style.setProperty('--dl',(-(rng(soul.seed^13)()*3)).toFixed(2)+'s');
@@ -1521,7 +1522,7 @@ function layoutGrove(){
     wrap.append(cv,nm,pts);
     if(thoughtLive(m.thought)){
       const tb=document.createElement("div"); tb.className="think";
-      tb.innerHTML = esc(m.thought.text) + ((typeof VOTER!=='undefined'&&VOTER===m.name)? '<button class="thinkx" title="Remove now" onclick="event.stopPropagation();removeThought(\''+m.name.replace(/'/g,"\\'")+'\')">\u00d7</button>' : '');
+      tb.innerHTML = '<span class="tht">'+esc(m.thought.text)+'</span>' + ((typeof VOTER!=='undefined'&&VOTER===m.name)? '<button class="thinkx" title="Remove now" onclick="event.stopPropagation();removeThought(\''+m.name.replace(/'/g,"\\'")+'\')">\u00d7</button>' : '');
       wrap.appendChild(tb);
     }
     wrap.onclick=()=>openSoul(m.name);
@@ -1530,7 +1531,7 @@ function layoutGrove(){
     spirits.push({member:m,soul,canvas:cv});
   });
   const rows=Math.ceil(members.length/cols);
-  groveEl.style.height=(rows*rowH+30)+"px";
+  groveEl.style.height=(rows*rowH+70)+"px";
   renderChronicle();
 }
 let _glResizeT;
@@ -1658,6 +1659,7 @@ window.keeperRenameSpirit=async function(oldName){
   try{ await saveData(); }catch(e){ toast('Could not save the rename.'); return; }
   try{ layoutGrove(); }catch(e){} try{ renderLedger(); }catch(e){} try{ renderRites(); }catch(e){}
   toast('\u201c'+oldName+'\u201d now walks as \u201c'+v+'\u201d.');
+  return v;
 };
 window.keeperDeleteSpirit=async function(name){
   if(!keeperUnlocked){ toast('Only the Keeper may remove spirits.'); return; }
@@ -1671,6 +1673,21 @@ window.keeperDeleteSpirit=async function(name){
   try{ await saveData(); }catch(e){ toast('Could not save the deletion.'); return; }
   try{ layoutGrove(); }catch(e){} try{ renderLedger(); }catch(e){} try{ renderRites(); }catch(e){}
   toast('\u201c'+name+'\u201d has been removed from the grove.');
+};
+window.keeperRenameFromCreator=async function(){
+  if(!keeperUnlocked){ toast('Only the Keeper may rename spirits.'); return; }
+  if(!CHIBI_MEMBER){ return; }
+  const nn=await keeperRenameSpirit(CHIBI_MEMBER);
+  if(nn){ CHIBI_MEMBER=nn; try{ CHIBI_EDIT=cloneChibi(MEM.members.find(m=>m.name===nn)); }catch(e){} }
+  renderCreator();
+};
+window.keeperDeleteFromCreator=async function(){
+  if(!keeperUnlocked){ toast('Only the Keeper may remove spirits.'); return; }
+  if(!CHIBI_MEMBER){ return; }
+  const name=CHIBI_MEMBER;
+  await keeperDeleteSpirit(name);
+  if(!memByName(name)){ CHIBI_EDIT=null; CHIBI_MEMBER=null; try{ closeSheet(); }catch(e){} }
+  else { renderCreator(); }
 };
 window.keeperResetOfferCooldowns=async function(){
   if(!keeperUnlocked){ toast("Only the Keeper may reset cooldowns."); return; }
@@ -2484,6 +2501,14 @@ function renderCreator(){
       ${crSection('outfit','Outfit details','legs · shoes · eyewear · more',secOutfit,CRSEC_OPEN.outfit)}
       ${crSection('body','Body &amp; face','skin · hair · eyes',secBody,CRSEC_OPEN.body)}
       <button class="gold" style="margin-top:14px" onclick="commitChibi()">${CHIBI_SELF?'Become this':'Weave into being'}</button>
+      ${keeperUnlocked && CHIBI_MEMBER ? `<div style="margin-top:14px;border-top:1px solid rgba(232,168,143,.25);padding-top:12px">
+        <div style="text-align:center;font-family:'Silkscreen',monospace;font-size:10px;color:#E8A88F;letter-spacing:.08em;margin-bottom:8px">\u26b7 KEEPER \u00b7 ${esc(CHIBI_MEMBER)}</div>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+          <button class="ghostbtn" style="width:auto;margin:0;padding:8px 14px" onclick="keeperRenameFromCreator()">\u270e Rename spirit</button>
+          <button class="ghostbtn" style="width:auto;margin:0;padding:8px 14px;border-color:rgba(210,80,70,.55);color:#F0A090" onclick="keeperDeleteFromCreator()">\u2716 Delete spirit</button>
+        </div>
+        <p class="sub" style="text-align:center;margin-top:8px;font-size:11px">Renaming carries Devotion &amp; history. Deleting is permanent and needs the Keeper password.</p>
+      </div>` : ''}
       <button class="ghostbtn" onclick="${CHIBI_SELF?'closeSheet()':'keeperPanel()'}">Back</button>
     </div>`;
   const pv=document.getElementById('chibiPrev');
@@ -3669,7 +3694,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27cs · Keeper: rename / delete spirits (password-gated) · Trial of the Chalice + totem · thought bubbles</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27cx · thought bubbles: dark frosted-glass (translucent, recedes) · Keeper rename/delete</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -3814,7 +3839,7 @@ function applyAction(a){
   else if(a.t==='chal_remove_resolve'){ const c=chalById(a.id); if(!c||c.status!=='accepted'||!c.removeReq)return; if(a.name!==c.accepter)return; if(a.choice==='accept'){ const o=memByName(c.owner); if(o)o.chalBudget=(o.chalBudget||0)+(c.reward||0); MEM.challenges=(MEM.challenges||[]).filter(x=>x.id!==a.id); } else { c.deadline=now+3600; delete c.removeReq; } }
   else if(a.t==='chal_approve'){ const c=chalById(a.id); if(!c||c.status!=='accepted')return; if(a.approver!==c.owner && !a.keeper)return; const w=memByName(c.accepter); if(w){ const mult=consumeMult(w); adjPts(w,(c.reward||0)*mult); maybeEarnLog(w,(c.reward||0)*mult); } c.status='done'; }
   else if(a.t==='oath'){ const m=memByName(a.name); if(!m)return; m.oath=true; m.badges=m.badges||[]; if(!m.badges.includes('Initiated'))m.badges.push('Initiated'); }
-  else if(a.t==='thought'){ const m=memByName(a.name); if(!m)return; const txt=(a.text==null?'':String(a.text)).slice(0,40).trim(); if(txt){ m.thought={text:txt, at:Date.now()/1000}; } else { delete m.thought; } }
+  else if(a.t==='thought'){ const m=memByName(a.name); if(!m)return; const txt=(a.text==null?'':String(a.text)).slice(0,28).trim(); if(txt){ m.thought={text:txt, at:Date.now()/1000}; } else { delete m.thought; } }
   else if(a.t==='wager_new'){ const m=memByName(a.proposer); if(!m)return; const amt=Math.max(1,Math.min(WAGER_CAP,a.amount|0)); if((m.points||0)<amt)return; adjPts(m,-amt); MEM.wagers=MEM.wagers||[]; MEM.wagers.push({id:'w'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),proposer:a.proposer,amount:amt,title:a.title,taker:null,status:'open',winner:null,created:now,votes:{},tie:[]}); }
   else if(a.t==='wager_accept'){ const w=wagerById(a.id); if(!w||w.status!=='open')return; if(a.name===w.proposer)return; const m=memByName(a.name); if(!m||(m.points||0)<w.amount)return; adjPts(m,-w.amount); w.taker=a.name; w.status='matched'; w.matchedAt=now; }
   else if(a.t==='wager_cancel'){ const w=wagerById(a.id); if(!w||w.status!=='open')return; if(a.by!==w.proposer && !a.keeper)return; const p=memByName(w.proposer); if(p)adjPts(p,w.amount||0); MEM.wagers=(MEM.wagers||[]).filter(x=>x.id!==a.id); }
@@ -3859,7 +3884,7 @@ function trialsRefresh(){ renderTrials(); layoutGrove(); renderLedger(); try{ sy
 function thoughtLive(t){ return !!(t && t.text && (Date.now()/1000 - (t.at||0)) < 12*3600); }
 async function setThought(text){
   const me=(typeof VOTER!=='undefined')?VOTER:''; if(!me) return;
-  const t=(text==null?'':String(text)).slice(0,40).trim();
+  const t=(text==null?'':String(text)).slice(0,28).trim();
   if(typeof MODE!=='undefined' && MODE==='remote'){
     let online=true; try{ online=navigator.onLine; }catch(_){}
     if(online){
@@ -3871,14 +3896,14 @@ async function setThought(text){
   try{ layoutGrove(); }catch(e){}
 }
 window.removeThought=function(name){ if(!((typeof VOTER!=='undefined')&&VOTER===name)){ toast('Only '+name+' may clear this thought.'); return; } setThought(''); };
-window.thoughtIns=function(e){ const el=document.getElementById('thoughtInput'); if(el && (el.value+e).length<=40){ el.value=(el.value?el.value+' ':'')+e; el.focus(); } };
+window.thoughtIns=function(e){ const el=document.getElementById('thoughtInput'); if(el && (el.value+e).length<=28){ el.value=(el.value?el.value+' ':'')+e; el.focus(); } };
 window.saveThoughtFromSoul=function(name){ if(!((typeof VOTER!=='undefined')&&VOTER===name)){ toast('Only '+name+' may set this thought.'); return; } const el=document.getElementById('thoughtInput'); const v=el?el.value:''; setThought(v); toast(v.trim()?'Your thought rises above you.':'Thought cleared.'); closeSheet(); };
 window.clearThoughtFromSoul=function(name){ if(!((typeof VOTER!=='undefined')&&VOTER===name)) return; setThought(''); toast('Thought cleared.'); closeSheet(); };
 function thoughtComposerHTML(m){
   const liveT = thoughtLive(m.thought); const cur = liveT ? esc(m.thought.text) : '';
   const emo = ['\u{1F525}','\u{1F441}','\u{1F608}','\u{1F377}','\u{1F480}','\u{1F634}','\u{1F33F}','\u2728','\u{1F319}'].map(e=>`<button type="button" class="emobtn" onclick="thoughtIns('${e}')">${e}</button>`).join('');
   return `<div class="hist"><h4>Your thought <span style="font-weight:400;color:var(--sage);font-size:11px">\u00b7 floats above you for 12h</span></h4>
-    <input id="thoughtInput" maxlength="40" placeholder="What\u2019s on your mind?" value="${cur.replace(/"/g,'&quot;')}" style="width:100%;font-family:'Spectral',Georgia,serif;font-size:14px;color:#E8DCC2;background:rgba(255,255,255,.05);border:1px solid rgba(242,196,90,.3);border-radius:10px;padding:9px 11px;box-sizing:border-box"/>
+    <input id="thoughtInput" maxlength="28" placeholder="What\u2019s on your mind?" value="${cur.replace(/"/g,'&quot;')}" style="width:100%;font-family:'Spectral',Georgia,serif;font-size:14px;color:#E8DCC2;background:rgba(255,255,255,.05);border:1px solid rgba(242,196,90,.3);border-radius:10px;padding:9px 11px;box-sizing:border-box"/>
     <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px">${emo}</div>
     <div style="display:flex;gap:8px;margin-top:9px">
       <button class="ghostbtn" style="margin:0" onclick="saveThoughtFromSoul('${m.name.replace(/'/g,"\\'")}')">${liveT?'Update thought':'Set thought'}</button>
@@ -4982,6 +5007,7 @@ function shuffleDeck(){ const d=[]; for(let ri=0;ri<13;ri++)for(let si=0;si<4;si
 function thr(n){ return Math.max(1, Math.ceil(n/3)); }
 const TURN_SECS=120;
 const DARE_SECS=180;
+const LOBBY_SECS=900;   // a lobby that never begins dissolves after 15 min
 function isAway(n,s){ return !!((n.away&&n.away[s])||(n.kicked&&n.kicked[s])); }
 function liveSpirits(n){ return (n.spirits||[]).filter(s=>!isAway(n,s)); }
 function advanceTurn(n){ const L=(n.spirits||[]).length; for(let k=1;k<=L;k++){ const idx=(n.turn+k)%L; if(!isAway(n,n.spirits[idx])){ n.turn=idx; return true; } } return false; }
@@ -5011,7 +5037,7 @@ function openLobby(){
   const who=me(); if(!who){ try{ switchIdentity(); }catch(e){} return; }
   const g={ status:'lobby', nominee:who, spirits:[who], deck:[], drawn:0, turn:0, kings:0,
     current:null, phase:'lobby', tally:{}, laws:[], reports:[], reportCd:{}, bind:null, feed:[],
-    away:{}, kicked:{}, kicks:[], deadline:0, started:0, ended:0 };
+    away:{}, kicked:{}, kicks:[], deadline:0, started:0, ended:0, lobbyAt:nowS() };
   setHands([who]); send(g);
 }
 function joinGame(){
@@ -5310,6 +5336,11 @@ function startPoll(){ if(POLL) return; POLL=setInterval(async()=>{
   let g=GC(); const editing=g&&g.current&&(g.current.picks||[]).length>0&&controls(g.current.drawer);
   if(typeof MODE!=='undefined'&&MODE==='remote'&&!editing){ try{ await refreshRemote(); }catch(e){} }
   g=GC();
+  if(g && g.status==='lobby' && (nowS()-(g.lobbyAt||0))>=LOBBY_SECS){
+    const n=clone(g); n.status='idle'; setHands([]); send(n);
+    try{ toast('The circle dissolved \u2014 no trial began within 15 minutes.'); }catch(e){}
+    return;
+  }
   if(g&&g.status==='playing'&&(g.nominee===me()||controls(g.nominee))){
     if(g.phase==='dare' && g.dare && g.deadline && nowS()>g.deadline){ resolveDareFail(clone(g), g.dare.who+'\u2019s ritual time ran out \u2014 the Chalice curses them (\u221250).'); return; }
     const drawerAway=(g.phase==='draw') && isAway(g, g.spirits[g.turn]);
@@ -5356,6 +5387,8 @@ function renderLobby(g){
   else { h+='<p class="chal-hint">Waiting for '+g.nominee+' to begin\u2026</p>'; }
   if(joined) h+='<button class="chal-btn ghost" onclick="chalAPI.leaveAll()">Leave the trial</button>';
   if(isNom) h+='<button class="chal-mini ghost" style="align-self:center" onclick="chalAPI.end()">Close the circle entirely</button>';
+  const left=Math.max(0, LOBBY_SECS-(nowS()-(g.lobbyAt||nowS())));
+  h+='<p class="chal-hint" style="opacity:.65;margin-top:2px">The circle dissolves in '+fmtCd(left)+' if the trial hasn\u2019t begun.</p>';
   h+=keeperStrip();
   h+='</div>'; return h;
 }

@@ -2335,7 +2335,7 @@ window.editEpithetForm=function(){
       <h3>Bestow a Title</h3>
       <p class="sub">A personal epithet, shown beside their earned rank.</p>
       <div class="field"><label>Member</label><select id="epMem" onchange="syncEpithet()">${opts}</select></div>
-      <div class="field"><label>Personal title</label><input id="epVal" maxlength="40" placeholder="e.g. Keeper of the Flame"></div>
+      <div class="field"><label>Personal title</label><input id="epVal" maxlength="28" placeholder="e.g. Keeper of the Flame"></div>
       <button class="gold" onclick="commitEpithet()">Bestow</button>
       <button class="ghostbtn" onclick="keeperPanel()">Back</button>
       <div class="err" id="kerr"></div>
@@ -2348,7 +2348,7 @@ window.syncEpithet=function(){
 };
 window.commitEpithet=async function(){
   const m=MEM.members.find(x=>x.name===document.getElementById("epMem").value);
-  m.epithet=clampText(document.getElementById("epVal").value,40);
+  m.epithet=clampText(document.getElementById("epVal").value,28);
   await saveData();layoutGrove();renderLedger();closeSheet();
   toast(`${m.name}: "${m.epithet||'—'}"`);
 };
@@ -2372,7 +2372,7 @@ function renderBadgeForm(){
       <p class="sub">Collectible marks of honour — a member can hold many. Each badge gets its own colour automatically; tap the swatch to recolour, ✎ to rename, ✕ to remove, or award a new one below.</p>
       <div class="field"><label>Member</label><select onchange="badgePick(this.value)">${opts}</select></div>
       <div class="badgewrap" style="margin:4px 0 10px">${have}</div>
-      <div class="field"><label>New badge</label><input id="bgVal" maxlength="40" oninput="clearChipsHL('bgChips')" placeholder="e.g. Polar Bear"></div>
+      <div class="field"><label>New badge</label><input id="bgVal" maxlength="24" oninput="clearChipsHL('bgChips')" placeholder="e.g. Polar Bear"></div>
       <div class="quick" id="bgChips">${chips}</div>
       <div class="field" style="margin-top:8px"><label>Badge colour</label>${swatchBtns(NEW_BADGE_COL, c=>`pickNewBadgeCol('${c}')`, 'nbc')}</div>
       <button class="gold" style="margin-top:12px" onclick="commitBadge()">Award badge</button>
@@ -2391,7 +2391,7 @@ window.editBadge=async function(i){
 };
 window.commitBadge=async function(){
   const m=MEM.members.find(x=>x.name===BADGE_MEMBER);
-  const b=clampText(document.getElementById("bgVal").value,40);
+  const b=clampText(document.getElementById("bgVal").value,24);
   if(!b){ document.getElementById("kerr").textContent="Name the badge."; return; }
   m.badges=m.badges||[]; if(!m.badges.includes(b)) m.badges.push(b);
   MEM.badgeColors=MEM.badgeColors||{}; MEM.badgeColors[b]=NEW_BADGE_COL;
@@ -3924,7 +3924,7 @@ window.nominateDeedForm=function(){
       <p class="sub">Name the deed, pick one or more members, and set the Devotion Points. A reason is required. Bigger awards need more approvals — max ±200. Keep it witty and the Eye is pleased.</p>
       <div class="crlabel">Members · tap to include</div>
       <div class="seg" style="flex-wrap:wrap">${memBtns}</div>
-      <div class="field" style="margin-top:10px"><label>Reason · required</label><input id="noReason" maxlength="60" oninput="clearPresetHL()" placeholder="e.g. Saved the campfire"></div>
+      <div class="field" style="margin-top:10px"><label>Reason · required</label><input id="noReason" maxlength="40" oninput="clearPresetHL()" placeholder="e.g. Saved the campfire"></div>
       <div class="crlabel" style="margin-top:10px">Preset deeds</div>
       <div class="quick">${deedChips}</div>
       <div class="field" style="margin-top:10px"><label>Gain or lose?</label><div class="seg">
@@ -3951,7 +3951,7 @@ window.setNoSign=function(s){ NOSIGN=s; const p=document.getElementById('noSgnP'
 window.submitNomDeed=function(){
   const targets=[...NOM_TARGETS];
   if(!targets.length){ document.getElementById("kerr").textContent="Pick at least one member."; return; }
-  const label=clampText(document.getElementById("noReason").value,60);
+  const label=clampText(document.getElementById("noReason").value,40);
   if(!label){ document.getElementById("kerr").textContent="A deed needs a reason."; return; }
   if(!keeperUnlocked && isKeeperDeed(label)){ document.getElementById("kerr").textContent="“"+deedBase(label)+"” is the Keeper’s to bestow — it cannot be nominated."; return; }
   { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
@@ -4005,7 +4005,7 @@ window.nominateTitleForm=function(){
       <h3>Nominate a Title</h3>
       <p class="sub">Bestow an epithet — ✦ Returned, The Pathfinder, Keeper of the Flame. Needs 10 approvals. Keep it witty and the Eye is pleased.</p>
       <div class="field"><label>Member</label><select id="ntTarget">${opts}</select></div>
-      <div class="field"><label>Title</label><input id="ntTitle" maxlength="40" placeholder="e.g. The Pathfinder"></div>
+      <div class="field"><label>Title</label><input id="ntTitle" maxlength="28" placeholder="e.g. The Pathfinder"></div>
       <button class="gold" onclick="submitNomTitle()">Raise nomination</button>
       <button class="ghostbtn" onclick="closeSheet()">Cancel</button>
       <div class="err" id="kerr"></div>
@@ -4014,7 +4014,7 @@ window.nominateTitleForm=function(){
 };
 window.submitNomTitle=function(){
   const target=document.getElementById("ntTarget").value;
-  const label=clampText(document.getElementById("ntTitle").value,40);
+  const label=clampText(document.getElementById("ntTitle").value,28);
   if(!label){ document.getElementById("kerr").textContent="Enter a title."; return; }
   { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
   const _m=memByName(target); const _lc=label.toLowerCase();
@@ -4031,9 +4031,9 @@ function syncBadgeIdeas(){ if(!BADGEIDEAS_EDIT)return; BADGEIDEAS_EDIT.forEach((
 window.badgeIdeaAdd=function(){ syncBadgeIdeas(); BADGEIDEAS_EDIT.push("New badge"); renderBadgeIdeas(); };
 window.badgeIdeaDel=function(i){ syncBadgeIdeas(); BADGEIDEAS_EDIT.splice(i,1); renderBadgeIdeas(); };
 window.badgeIdeasRestore=function(){ if(!confirm("Replace the list with the default cult badges? Nothing saves until you Inscribe."))return; BADGEIDEAS_EDIT=DEFAULT_BADGE_IDEAS.slice(); renderBadgeIdeas(); };
-window.badgeIdeasSave=async function(){ syncBadgeIdeas(); MEM.badgeIdeas=BADGEIDEAS_EDIT.map(b=>clampText(b,40)).filter(Boolean); await saveData(); toast("Preset badges inscribed."); keeperPanel(); };
+window.badgeIdeasSave=async function(){ syncBadgeIdeas(); MEM.badgeIdeas=BADGEIDEAS_EDIT.map(b=>clampText(b,24)).filter(Boolean); await saveData(); toast("Preset badges inscribed."); keeperPanel(); };
 function renderBadgeIdeas(){
-  const rows=(BADGEIDEAS_EDIT||[]).map((b,i)=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:7px"><input id="bi_${i}" maxlength="40" value="${String(b).replace(/"/g,'&quot;')}" style="flex:1;min-width:0;${inp}font-family:'Spectral',serif;font-size:13px"><button onclick="badgeIdeaDel(${i})" title="Remove" style="background:none;border:none;color:var(--ember);font-size:18px;cursor:pointer">✕</button></div>`).join('')||`<p class="sub">No badge ideas yet — add some.</p>`;
+  const rows=(BADGEIDEAS_EDIT||[]).map((b,i)=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:7px"><input id="bi_${i}" maxlength="24" value="${String(b).replace(/"/g,'&quot;')}" style="flex:1;min-width:0;${inp}font-family:'Spectral',serif;font-size:13px"><button onclick="badgeIdeaDel(${i})" title="Remove" style="background:none;border:none;color:var(--ember);font-size:18px;cursor:pointer">✕</button></div>`).join('')||`<p class="sub">No badge ideas yet — add some.</p>`;
   sheet.innerHTML=`
     <div class="grip"></div>
     <div class="kpanel">
@@ -4058,7 +4058,7 @@ window.nominateBadgeForm=function(){
       <h3>Nominate a Badge</h3>
       <p class="sub">A collectible mark of honour — members can hold many. Needs 7 approvals. Keep it witty and the Eye is pleased.</p>
       <div class="field"><label>Member</label><select id="nbTarget">${opts}</select></div>
-      <div class="field"><label>Badge</label><input id="nbBadge" maxlength="40" oninput="clearChipsHL('nbChips')" placeholder="e.g. Polar Bear"></div>
+      <div class="field"><label>Badge</label><input id="nbBadge" maxlength="24" oninput="clearChipsHL('nbChips')" placeholder="e.g. Polar Bear"></div>
       <div class="quick" id="nbChips">${chips}</div>
       <div class="field" style="margin-top:8px"><label>Badge colour</label>${swatchBtns(NOM_BADGE_COL, c=>`pickNomBadgeCol('${c}')`, 'nmc')}</div>
       <button class="gold" style="margin-top:12px" onclick="submitNomBadge()">Raise nomination</button>
@@ -4069,7 +4069,7 @@ window.nominateBadgeForm=function(){
 };
 window.submitNomBadge=function(){
   const target=document.getElementById("nbTarget").value;
-  const label=clampText(document.getElementById("nbBadge").value,40);
+  const label=clampText(document.getElementById("nbBadge").value,24);
   if(!label){ document.getElementById("kerr").textContent="Name the badge."; return; }
   { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
   const _m=memByName(target); const _lc=label.toLowerCase();
@@ -4177,7 +4177,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30au · Character caps added to titles, badges and deed nominations (40 for titles/badges, 60 for a deed's reason) — enforced on the field itself and again on submit, in both the Keeper forms and the grove nomination forms.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30av · The Eye Totem is now the Devotion Weirwood — a heart-tree whose blood-red canopy grows with the Order's collective devotion this season, its carved Eye open and watching, closing while the offering cooldown runs. The Eye's verdict now blooms or blights the tree (gold blessings, ×3 and a +250 blaze, or a red mark, dimming, or full wrath). The Trial of the Chalice now sits beneath Stoke the Fire, and titles/badges/deed nominations have tighter character caps.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4574,7 +4574,7 @@ function renderTrials(){
     ${ me? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage);margin-bottom:8px">staking as <b style="color:var(--candle)">${VOTER}</b></div>`:""}
     <div id="wagerList">${wagerCards}</div>
     <div style="text-align:center;margin-top:10px">${ me? ((me.points||0)>=1 ? `<button class="gold" onclick="newWagerForm()">🎲 Raise a wager</button>` : `<button class="ghostbtn" disabled>Earn points before you can wager</button>`) : `<p class="hint">Pick your spirit to wager.</p>` }</div>`;
-  el.innerHTML=`<p class="hint" style="margin:6px 0 10px">Trials of the Order — feed the fire, set your challenges, test your luck.</p>${wheelSectionHTML(me)}${fireHTML}${chalHTML}${wagerHTML}${groupSectionHTML(me)}
+  el.innerHTML=`<p class="hint" style="margin:6px 0 10px">Trials of the Order — feed the fire, set your challenges, test your luck.</p>${wheelSectionHTML(me)}${fireHTML}<div id="chalSlot"></div>${chalHTML}${wagerHTML}${groupSectionHTML(me)}
     <p class="hint" style="margin:16px 0 2px;font-size:11px;opacity:.7">${MODE==='remote'?"Honour system — actions are trusted across the grove.":"Local preview — syncs once hosted."}</p>`;
   try{ mountFire(); }catch(e){}
 }
@@ -4631,7 +4631,34 @@ function ensureTotemStyle(){
   .dvov.reveal .dvflash{animation:dvFlash .7s ease-out}
   @keyframes dvFlash{0%{opacity:0}16%{opacity:1}100%{opacity:0}}
   .dvov .totem{position:absolute;top:39%;left:50%;width:min(78vw,340px);transform:translate(-50%,-50%);filter:drop-shadow(0 0 32px rgba(242,196,90,.5))}
-  .dvov.reveal .totem{animation:dvShake .62s cubic-bezier(.36,.07,.19,.97)}
+  .dvov.reveal.bad .totem{animation:dvShake .62s cubic-bezier(.36,.07,.19,.97)}
+  /* --- weirwood idle + verdict reactions --- */
+  .ww-canopy{transform-box:fill-box;transform-origin:100px 150px;animation:wwSway 6.5s ease-in-out infinite}
+  @keyframes wwSway{0%,100%{transform:rotate(-.7deg)}50%{transform:rotate(.7deg)}}
+  .ww-aura{animation:wwAura 4.2s ease-in-out infinite}
+  @keyframes wwAura{0%,100%{opacity:.4}50%{opacity:.8}}
+  .ww-blink{animation:wwBlink 7s ease-in-out infinite}
+  @keyframes wwBlink{0%,42%,46%,100%{transform:scaleY(1)}44%{transform:scaleY(.06)}}
+  .ww-look{animation:wwLook 9s ease-in-out infinite}
+  @keyframes wwLook{0%,100%{transform:translateX(0)}30%{transform:translateX(-2.2px)}65%{transform:translateX(2px)}}
+  .ww-pup{animation:wwPup 7s ease-in-out infinite}
+  @keyframes wwPup{0%,100%{transform:scaleY(1)}48%,52%{transform:scaleY(.7)}}
+  .ww-burst{transform-box:fill-box;transform-origin:center;animation:wwBurst 1.5s ease-out forwards}
+  @keyframes wwBurst{0%{transform:scale(.05);opacity:0}18%{opacity:.95}100%{transform:scale(1);opacity:0}}
+  .ww-ring{transform-box:fill-box;transform-origin:center;animation:wwRing 1.4s ease-out forwards}
+  @keyframes wwRing{0%{transform:scale(.15);opacity:.9}100%{transform:scale(1.7);opacity:0}}
+  .ww-flash{transform-box:fill-box;transform-origin:center;opacity:0;animation:wwFlash 1.4s ease-out forwards}
+  @keyframes wwFlash{0%{opacity:0}14%{opacity:1}100%{opacity:0}}
+  .ww-mote{transform-box:fill-box;opacity:0;animation:wwMote 1.8s ease-out forwards}
+  @keyframes wwMote{0%{transform:translate(0,0);opacity:0}15%{opacity:1}100%{transform:translate(var(--mx),var(--my));opacity:0}}
+  .ww-fall{transform-box:fill-box;opacity:0;animation:wwFall 2.2s ease-in forwards}
+  @keyframes wwFall{0%{transform:translate(0,0) rotate(0)}8%{opacity:.95}100%{transform:translate(var(--dx),200px) rotate(360deg);opacity:0}}
+  .ww-eyeflare{transform-box:fill-box;transform-origin:center;opacity:0;animation:wwEyeflare 1.5s ease-out forwards}
+  @keyframes wwEyeflare{0%,100%{opacity:0}20%{opacity:1}}
+  .ww-breath{animation:wwBreath 1.6s ease-in-out}
+  @keyframes wwBreath{0%,100%{transform:scale(1)}30%{transform:scale(1.045)}}
+  .ww-shudder{animation:wwShudder 1.4s ease-in-out}
+  @keyframes wwShudder{0%,100%{transform:translate(0,0) rotate(0)}8%{transform:translate(-3px,1px) rotate(-.7deg)}24%{transform:translate(3px,-1px) rotate(.7deg)}42%{transform:translate(-3px,1px) rotate(-.6deg)}60%{transform:translate(2px,0) rotate(.4deg)}78%{transform:translate(-2px,1px)}90%{transform:translate(1px,0)}}
   @keyframes dvShake{10%{transform:translate(-52%,-50%)}20%{transform:translate(-48%,-51%)}30%{transform:translate(-53%,-49%)}40%{transform:translate(-47%,-50%)}55%{transform:translate(-51.5%,-51%)}70%{transform:translate(-49%,-49.5%)}85%{transform:translate(-50.5%,-50%)}100%{transform:translate(-50%,-50%)}}
   .dvov.reveal .sauce-grp{transform-box:fill-box;transform-origin:top center;animation:sauceGush .85s ease-out forwards}
   @keyframes sauceGush{0%{transform:scaleY(1)}100%{transform:scaleY(1.2)}}
@@ -4649,67 +4676,116 @@ function ensureTotemStyle(){
   @keyframes dvOut{to{opacity:0}}
   @keyframes dvUp{to{opacity:1}}
   @keyframes dvReveal{0%{opacity:0;transform:translateX(-50%) translateY(14px) scale(.96)}100%{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
-  @media (prefers-reduced-motion:reduce){ .dvov *{animation-duration:.01ms!important} .te-glow,.te-pupil,.sauce-pool,.dvhalo{animation:none} }
+  @media (prefers-reduced-motion:reduce){ .dvov *{animation-duration:.01ms!important} .te-glow,.te-pupil,.sauce-pool,.dvhalo,.ww-canopy,.ww-aura,.ww-blink,.ww-look,.ww-pup{animation:none} }
   `;
   document.head.appendChild(st);
+  if(!document.getElementById('wwDefs')){
+    const d=document.createElement('div'); d.id='wwDefs'; d.style.cssText='position:absolute;width:0;height:0;overflow:hidden';
+    d.innerHTML=`<svg width="0" height="0"><defs>
+      <radialGradient id="ww_gold"><stop offset="0%" stop-color="rgba(255,240,180,.95)"/><stop offset="45%" stop-color="rgba(242,196,90,.6)"/><stop offset="100%" stop-color="rgba(242,196,90,0)"/></radialGradient>
+      <radialGradient id="ww_rad"><stop offset="0%" stop-color="rgba(255,250,235,.95)"/><stop offset="40%" stop-color="rgba(255,200,90,.55)"/><stop offset="100%" stop-color="rgba(255,160,40,0)"/></radialGradient>
+      <radialGradient id="ww_redf"><stop offset="0%" stop-color="rgba(229,40,20,0)"/><stop offset="60%" stop-color="rgba(150,12,6,0)"/><stop offset="100%" stop-color="rgba(120,8,4,.9)"/></radialGradient>
+    </defs></svg>`;
+    document.body.appendChild(d);
+  }
 }
+/* ===== The Devotion Weirwood — a season-grown heart-tree with a carved Eye ===== */
+const WW_CFG={seed:5,depth:5,segPerLimb:3,segTaper:0.92,curve:0.48,upBias:0.03,forkSpread:0.74,forkJitter:0.44,forkThin:0.86,lenDecay:0.86,len0:42,minWid:0.9,triProb:0.5,leafLevels:1,baseY:294,topY:238,baseHW:26,topHW:17,crownW:34,overlap:20,eyeY:268,eyeHW:19};
+const WW_BARK={lo:'#E9E2D2',hi:'#cdbfa8',sh:'#8f8470'}, WW_LEAF={lo:'#7a2a14',hi:'#E5381F'};
+const WW_EX=100, WW_EY=WW_CFG.eyeY, WW_EHW=WW_CFG.eyeHW, WW_EVH=WW_CFG.eyeHW*0.84;
+function wwMix(c1,c2,t){const a=[parseInt(c1.slice(1,3),16),parseInt(c1.slice(3,5),16),parseInt(c1.slice(5,7),16)],b=[parseInt(c2.slice(1,3),16),parseInt(c2.slice(3,5),16),parseInt(c2.slice(5,7),16)];const h=x=>('0'+Math.max(0,Math.min(255,Math.round(x))).toString(16)).slice(-2);return '#'+h(a[0]+(b[0]-a[0])*t)+h(a[1]+(b[1]-a[1])*t)+h(a[2]+(b[2]-a[2])*t);}
+function wwLeaf(cx,cy,r,rot,fill){let p='';for(let i=0;i<10;i++){const ang=rot+i*Math.PI/5,rr=(i%2===0)?r:r*0.42;p+=(i?'L':'M')+(cx+Math.cos(ang)*rr).toFixed(1)+','+(cy+Math.sin(ang)*rr).toFixed(1)+' ';}return '<path d="'+p+'Z" fill="'+fill+'" stroke="rgba(40,8,4,.3)" stroke-width="0.4" stroke-linejoin="round"/>';}
+function wwRng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+let _WWSK=null;
+function wwCrown(){ if(_WWSK) return _WWSK; const C=WW_CFG, rng=wwRng(C.seed), segs=[], tips=[];
+  (function limb(x,y,ang,len,wid,depth){const segN=C.segPerLimb,segLen=len/segN;let cx=x,cy=y,ca=ang,cw=wid;
+    for(let k=0;k<segN;k++){ca+=(rng()-0.5)*C.curve;ca+=(-Math.PI/2-ca)*C.upBias;const x1=cx+Math.cos(ca)*segLen,y1=cy+Math.sin(ca)*segLen,nw=cw*C.segTaper;segs.push({x0:cx,y0:cy,x1,y1,w0:cw,w1:Math.max(0.7,nw),depth});cx=x1;cy=y1;cw=nw;}
+    if(depth<=0||cw<C.minWid){tips.push([cx,cy]);return;}const n=(rng()<C.triProb?3:2);
+    for(let i=0;i<n;i++){const off=(i-(n-1)/2)*C.forkSpread+(rng()-0.5)*C.forkJitter;limb(cx,cy,ca+off,len*C.lenDecay*(0.85+rng()*0.3),cw*C.forkThin,depth-1);}
+  })(100,C.topY+C.overlap,-Math.PI/2,C.len0,C.crownW,C.depth);
+  const rnd=wwRng(C.seed+99), anch=[];
+  segs.filter(s=>s.depth<=C.leafLevels).forEach(s=>{const dx=s.x1-s.x0,dy=s.y1-s.y0,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L,cnt=s.depth===0?3:2;
+    for(let i=0;i<cnt;i++){const t=Math.min(1,0.42+(i/cnt)*0.55+rnd()*0.12),off=(rnd()-0.5)*2.4;anch.push([s.x0+dx*t+nx*off,s.y0+dy*t+ny*off,rnd(),0.7+rnd()*0.7]);}
+    if(s.depth===0)anch.push([s.x1,s.y1,rnd(),0.8+rnd()*0.6]);});
+  anch.forEach(p=>p._k=p[2]*0.55+(1-p[1]/300)*0.45);anch.sort((a,b)=>b._k-a._k);segs.sort((a,b)=>b.w0-a.w0);
+  let cx=0,cy=0;tips.forEach(t=>{cx+=t[0];cy+=t[1];});cx/=tips.length;cy/=tips.length;
+  _WWSK={segs,anch,cx,cy}; return _WWSK; }
+function wwTrunkPath(){ const C=WW_CFG,bY=C.baseY,tY=C.topY,bHW=C.baseHW,tHW=C.topHW,span=bY-tY,cLY=tY+span*0.55,cLHW=(tHW+(bHW-tHW)*0.5)*0.96,flareY=bY-span*0.12,flareHW=bHW*0.86;
+  return `M${(100-bHW).toFixed(1)},${bY} Q${(100-flareHW).toFixed(1)},${flareY.toFixed(1)} ${(100-cLHW).toFixed(1)},${cLY.toFixed(1)} Q${(100-tHW*1.15).toFixed(1)},${(tY+span*0.12).toFixed(1)} ${(100-tHW).toFixed(1)},${tY} L${(100+tHW).toFixed(1)},${tY} Q${(100+tHW*1.15).toFixed(1)},${(tY+span*0.12).toFixed(1)} ${(100+cLHW).toFixed(1)},${cLY.toFixed(1)} Q${(100+flareHW).toFixed(1)},${flareY.toFixed(1)} ${(100+bHW).toFixed(1)},${bY} Z`; }
+// collective season devotion → 0..1 canopy fill (Keeper-tunable via MEM.devotionGoal)
+function devotionProgress(){ try{ const tot=(MEM.members||[]).reduce((s,m)=>s+Math.max(0,+m.season||0),0); const goal=(MEM&&+MEM.devotionGoal>0)?+MEM.devotionGoal:Math.max(1200,(MEM.members||[]).length*400); return Math.max(0,Math.min(1,tot/goal)); }catch(e){ return 0.4; } }
+let WW_N=0;
 function buildTotemSVG(opts){ opts=opts||{};
-  const closed=!!opts.closed;
-  const anim=opts.anim!==false && !closed;
-  const gC=anim?'te-glow':''; const pC=anim?'te-pupil':''; const sC=(opts.anim!==false)?'sauce-grp':'';
-  const auraOp=closed?' opacity=".3"':'';
-  const eye = closed ? `
-   <path d="M52,96 Q100,52 148,96 Q100,140 52,96 Z" fill="url(#te_knot)" stroke="#150c06" stroke-width="3"/>
-   <path d="M58,94 Q100,108 142,94" fill="none" stroke="#241608" stroke-width="3.4" stroke-linecap="round"/>
-   <path d="M63,99 Q100,107 137,99" fill="none" stroke="rgba(0,0,0,.3)" stroke-width="1.6" stroke-linecap="round"/>
-   <g stroke="#241608" stroke-width="2.2" stroke-linecap="round"><path d="M59,95 l-6,5"/><path d="M73,101 l-3,5"/><path d="M127,101 l3,5"/><path d="M141,95 l6,5"/></g>
-   <path d="M60,90 Q100,80 140,90" fill="none" stroke="rgba(255,232,163,.16)" stroke-width="1.4"/>
-   <path d="M52,96 Q100,52 148,96 Q100,140 52,96 Z" fill="none" stroke="#7a5230" stroke-width="2"/>` : `
-   <path d="M52,96 Q100,52 148,96 Q100,140 52,96 Z" fill="#231610" stroke="#150c06" stroke-width="3"/>
-   <g clip-path="url(#te_clip)">
-     <ellipse cx="100" cy="96" rx="30" ry="26" fill="url(#te_knot)"/>
-     <ellipse cx="100" cy="96" rx="24" ry="21" fill="none" stroke="#4a2f18" stroke-width="1.6" opacity=".85"/>
-     <ellipse cx="100" cy="96" rx="17" ry="15" fill="none" stroke="#5a3a20" stroke-width="1.4" opacity=".85"/>
-     <ellipse cx="100" cy="96" rx="22" ry="19" fill="url(#te_inner)"/>
-     <ellipse class="${pC}" cx="100" cy="96" rx="6" ry="15" fill="#0c0805"/>
-     <circle cx="92" cy="89" r="3" fill="#FFE9C0" opacity=".7"/>
-   </g>
-   <path d="M52,96 Q100,52 148,96 Q100,140 52,96 Z" fill="none" stroke="#7a5230" stroke-width="2"/>
-   <path d="M52,96 Q100,52 148,96" fill="none" stroke="rgba(255,232,163,.22)" stroke-width="1.4"/>`;
-  return `<svg viewBox="0 0 200 268" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+  const closed=!!opts.closed, anim=opts.anim!==false && !closed;
+  const progress=(opts.progress!=null)?Math.max(0,Math.min(1,opts.progress)):devotionProgress();
+  const n=++WW_N, id='ww'+n, SK=wwCrown(), C=WW_CFG;
+  const EX=WW_EX,EY=WW_EY,EHW=WW_EHW,EVH=WW_EVH,bY=C.baseY,tY=C.topY,bHW=C.baseHW,tHW=C.topHW;
+  const almond=(hw,vh)=>`M${(EX-hw).toFixed(1)},${EY} Q${EX},${(EY-vh).toFixed(1)} ${(EX+hw).toFixed(1)},${EY} Q${EX},${(EY+vh).toFixed(1)} ${(EX-hw).toFixed(1)},${EY} Z`;
+  const ALM=almond(EHW,EVH), tp=wwTrunkPath();
+  const segStroke=SK.segs.map(s=>`<path d="M${s.x0.toFixed(1)},${s.y0.toFixed(1)} L${s.x1.toFixed(1)},${s.y1.toFixed(1)}" stroke-width="${((s.w0+s.w1)/2).toFixed(1)}"/>`).join('');
+  const segUnder=SK.segs.map(s=>`<path d="M${s.x0.toFixed(1)},${s.y0.toFixed(1)} L${s.x1.toFixed(1)},${s.y1.toFixed(1)}" stroke-width="${((s.w0+s.w1)/2+0.8).toFixed(1)}"/>`).join('');
+  const ln=Math.round(progress*SK.anch.length); let leaves='';
+  for(let i=0;i<ln;i++){const a=SK.anch[i];const col=wwMix(WW_LEAF.lo,WW_LEAF.hi,(0.2+0.8*progress)*(0.5+a[2]*0.5));const r=(2+a[3]*1.7)*(0.72+0.28*progress);leaves+=wwLeaf(a[0],a[1],r,a[2]*6.283,col);}
+  const stri=[-0.55,-0.2,0.2,0.55].map(f=>{const x0=100+f*bHW,x1=100+f*tHW;return `<path d="M${x0.toFixed(1)},${(bY-6)} C${(x0*0.5+x1*0.5).toFixed(1)},${((bY+tY)/2)} ${x1.toFixed(1)},${(tY+8)} ${x1.toFixed(1)},${tY}"/>`;}).join('');
+  const auraCls=anim?'ww-aura':'', canCls=anim?'ww-canopy':'', blinkCls=anim?'ww-blink':'', lookCls=anim?'ww-look':'', pupCls=anim?'ww-pup':'';
+  const eyeInner = closed
+   ? `<path d="${almond(EHW-1.6,EVH-1.6)}" fill="url(#bk_${id})"/>
+      <path d="M${(EX-EHW+3).toFixed(1)},${(EY+1).toFixed(1)} Q${EX},${(EY+4.5).toFixed(1)} ${(EX+EHW-3).toFixed(1)},${(EY+1).toFixed(1)}" fill="none" stroke="#140b06" stroke-width="1.7" stroke-linecap="round"/>
+      <path d="M${(EX-EHW+4).toFixed(1)},${(EY-1.5).toFixed(1)} Q${EX},${(EY+1).toFixed(1)} ${(EX+EHW-4).toFixed(1)},${(EY-1.5).toFixed(1)}" fill="none" stroke="${WW_BARK.sh}" stroke-width="1" opacity=".5"/>`
+   : `<g clip-path="url(#ec_${id})"><g class="${lookCls}"><g class="${blinkCls}" style="transform-box:fill-box;transform-origin:center">
+        <ellipse class="wwIris" cx="${EX}" cy="${EY}" rx="${(EHW*0.72).toFixed(1)}" ry="${(EVH*0.74).toFixed(1)}" fill="url(#iris_${id})"/>
+        <ellipse class="${pupCls}" style="transform-box:fill-box;transform-origin:center" cx="${EX}" cy="${EY}" rx="${(EHW*0.2).toFixed(1)}" ry="${(EVH*0.62).toFixed(1)}" fill="#0c0604"/>
+        <circle cx="${(EX-EHW*0.24).toFixed(1)}" cy="${(EY-EVH*0.3).toFixed(1)}" r="2.1" fill="#FFE9C0" opacity=".55"/>
+      </g></g></g>`;
+  return `<svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
    <defs>
-    <linearGradient id="te_wood" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#2c1c0f"/><stop offset="22%" stop-color="#5a3a20"/><stop offset="50%" stop-color="#714a28"/><stop offset="78%" stop-color="#492f18"/><stop offset="100%" stop-color="#26180c"/></linearGradient>
-    <radialGradient id="te_knot" cx="50%" cy="48%" r="55%"><stop offset="0%" stop-color="#9a6638"/><stop offset="38%" stop-color="#6f4826"/><stop offset="74%" stop-color="#4a2f18"/><stop offset="100%" stop-color="#311e0e"/></radialGradient>
-    <radialGradient id="te_inner" cx="50%" cy="42%" r="60%"><stop offset="0%" stop-color="rgba(242,196,90,.55)"/><stop offset="55%" stop-color="rgba(224,138,60,.12)"/><stop offset="100%" stop-color="rgba(224,138,60,0)"/></radialGradient>
-    <radialGradient id="te_aura" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(242,196,90,.6)"/><stop offset="60%" stop-color="rgba(224,138,60,.18)"/><stop offset="100%" stop-color="rgba(224,138,60,0)"/></radialGradient>
-    <linearGradient id="te_sauce" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#E5381F"/><stop offset="55%" stop-color="#B71E10"/><stop offset="100%" stop-color="#7E140A"/></linearGradient>
-    <clipPath id="te_clip"><path d="M52,96 Q100,52 148,96 Q100,140 52,96 Z"/></clipPath>
+    <linearGradient id="bk_${id}" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="${WW_BARK.sh}"/><stop offset="24%" stop-color="${WW_BARK.hi}"/><stop offset="52%" stop-color="${WW_BARK.lo}"/><stop offset="80%" stop-color="${WW_BARK.hi}"/><stop offset="100%" stop-color="${WW_BARK.sh}"/></linearGradient>
+    <radialGradient id="knot_${id}" cx="50%" cy="44%" r="58%"><stop offset="0%" stop-color="${wwMix(WW_BARK.lo,'#000000',0.2)}"/><stop offset="58%" stop-color="${wwMix(WW_BARK.sh,'#000000',0.28)}"/><stop offset="100%" stop-color="#140b06"/></radialGradient>
+    <radialGradient id="iris_${id}" cx="50%" cy="42%" r="60%"><stop offset="0%" stop-color="rgba(242,80,40,.62)"/><stop offset="55%" stop-color="rgba(160,20,12,.32)"/><stop offset="100%" stop-color="rgba(120,16,8,0)"/></radialGradient>
+    <radialGradient id="aura_${id}" cx="50%" cy="42%" r="52%"><stop offset="0%" stop-color="rgba(226,60,30,${(0.1+progress*0.4).toFixed(2)})"/><stop offset="70%" stop-color="rgba(180,30,16,0)"/></radialGradient>
+    <radialGradient id="fol_${id}" cx="50%" cy="46%" r="55%"><stop offset="0%" stop-color="${wwMix(WW_LEAF.lo,'#000000',0.3)}"/><stop offset="70%" stop-color="${wwMix(WW_LEAF.lo,'#000000',0.5)}"/><stop offset="100%" stop-color="rgba(0,0,0,0)"/></radialGradient>
+    <clipPath id="trunk_${id}"><path d="${tp}"/></clipPath>
+    <clipPath id="ec_${id}"><path d="${ALM}"/></clipPath>
    </defs>
-   <circle class="${gC}" cx="100" cy="96" r="72" fill="url(#te_aura)"${auraOp}/>
-   <rect x="54" y="242" width="92" height="16" rx="4" fill="url(#te_wood)" stroke="#1a1008" stroke-width="2.5"/>
-   <path d="M60,244 L68,130 L132,130 L140,244 Z" fill="url(#te_wood)" stroke="#1a1008" stroke-width="2.5"/>
-   <rect x="56" y="118" width="88" height="14" rx="3" fill="url(#te_wood)" stroke="#1a1008" stroke-width="2.5"/>
-   <rect x="50" y="58" width="100" height="64" rx="12" fill="url(#te_wood)" stroke="#1a1008" stroke-width="2.5"/>
-   <rect x="44" y="44" width="112" height="16" rx="4" fill="url(#te_wood)" stroke="#1a1008" stroke-width="2.5"/>
-   <rect x="50" y="32" width="18" height="14" rx="2" fill="url(#te_wood)" stroke="#1a1008" stroke-width="2.5"/>
-   <rect x="86" y="24" width="28" height="22" rx="3" fill="url(#te_wood)" stroke="#1a1008" stroke-width="2.5"/>
-   <rect x="132" y="32" width="18" height="14" rx="2" fill="url(#te_wood)" stroke="#1a1008" stroke-width="2.5"/>
-   <g stroke="#3d2814" stroke-width="1.4" fill="none" opacity=".5">
-     <path d="M84,134 C82,180 83,214 84,240"/><path d="M100,134 C100,180 100,214 100,240"/><path d="M116,134 C118,180 117,214 116,240"/>
-     <path d="M72,150 C71,186 71,214 72,240"/><path d="M128,150 C129,186 129,214 128,240"/>
+   <ellipse class="wwAura ${auraCls}" cx="${SK.cx.toFixed(0)}" cy="${SK.cy.toFixed(0)}" rx="104" ry="86" fill="url(#aura_${id})" ${closed?'opacity=".16"':''}/>
+   <g class="wwRoot" style="transform-box:fill-box;transform-origin:100px 290px">
+     <g fill="url(#bk_${id})" stroke="#160c06" stroke-width="1.8">
+       <path d="M${100-bHW+3},${bY-8} C${100-bHW-16},${bY+2} ${100-bHW-26},${bY+7} ${100-bHW-44},${bY+11} C${100-bHW-24},${bY+1} ${100-bHW-12},${bY-4} ${100-bHW+2},${bY-2} Z"/>
+       <path d="M${100+bHW-3},${bY-8} C${100+bHW+16},${bY+2} ${100+bHW+26},${bY+7} ${100+bHW+44},${bY+11} C${100+bHW+24},${bY+1} ${100+bHW+12},${bY-4} ${100+bHW-2},${bY-2} Z"/>
+     </g>
+     <g stroke="#160c06" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".4">${segUnder}</g>
+     <path d="${tp}" fill="url(#bk_${id})" stroke="#160c06" stroke-width="2.2"/>
+     <g clip-path="url(#trunk_${id})"><g stroke="${WW_BARK.sh}" stroke-width="1.2" fill="none" opacity=".45">${stri}</g></g>
+     <g stroke="url(#bk_${id})" fill="none" stroke-linecap="round" stroke-linejoin="round">${segStroke}</g>
+     <ellipse cx="${SK.cx.toFixed(0)}" cy="${SK.cy.toFixed(0)}" rx="${(80*Math.sqrt(progress)).toFixed(1)}" ry="${(56*Math.sqrt(progress)).toFixed(1)}" fill="url(#fol_${id})" opacity="${(progress*0.5).toFixed(2)}"/>
+     <g class="${canCls}">${leaves}</g>
+     <g>
+       <path d="${ALM}" fill="url(#knot_${id})" stroke="#140b06" stroke-width="2.4"/>
+       ${eyeInner}
+       <path d="${ALM}" fill="none" stroke="${WW_BARK.sh}" stroke-width="1.4"/>
+     </g>
    </g>
-   <g stroke="#3d2814" stroke-width="2" fill="none" opacity=".5"><path d="M70,210 L100,218 L130,210"/></g>
-   ${eye}
-   <g class="${sC}">
-     <ellipse class="sauce-pool" cx="100" cy="258" rx="30" ry="6.5" fill="url(#te_sauce)"/>
-     <ellipse cx="90" cy="256" rx="9" ry="2" fill="#F4795C" opacity=".4"/>
-     <ellipse cx="100" cy="114" rx="20" ry="6" fill="url(#te_sauce)"/>
-     <path d="M81,112 q-3,38 0,74 q3,6 6,0 q3,-36 0,-74 z" fill="url(#te_sauce)"/>
-     <path d="M96,114 q-4,69 0,138 q4,7 8,0 q4,-69 0,-138 z" fill="url(#te_sauce)"/>
-     <path d="M115,112 q-2,26 0,50 q3,6 6,0 q2,-24 0,-50 z" fill="url(#te_sauce)"/>
-     <ellipse cx="95" cy="112" rx="6" ry="2" fill="#F4795C" opacity=".45"/>
-   </g>
+   <g class="wwFx"></g>
   </svg>`;
+}
+// the Eye's verdict → which reaction the tree plays (generic gains share the ×2 blessing)
+function wwReactType(o){ if(!o)return 'free'; if(o.key==='jackpot')return 'jackpot'; if(o.special==='x3')return 'x3'; if(o.special==='x2')return 'x2'; if(o.special==='free')return 'free'; if(o.special==='x2neg')return 'marked'; if(o.key==='zero')return 'turned'; const p=+o.pts||0; if(p>0)return 'x2'; if(p<=-100)return 'wrath'; if(p<0)return 'marked'; return 'free'; }
+function wwApplyReaction(scope,type){ if(!scope)return; const fx=scope.querySelector('.wwFx'); if(!fx)return;
+  const root=scope.querySelector('.wwRoot'), iris=scope.querySelector('.wwIris');
+  const EX=WW_EX,EY=WW_EY,EHW=WW_EHW,EVH=WW_EVH,SK=wwCrown(),CX=Math.round(SK.cx),CY=Math.round(SK.cy);
+  const setIris=c=>{ if(iris) iris.setAttribute('fill',c); };
+  const motes=(col,count,spread)=>{let s='';for(let i=0;i<count;i++){const mx=(Math.random()-0.5)*spread,my=-(30+Math.random()*60);s+=`<circle class="ww-mote" cx="${(CX+(Math.random()-0.5)*spread).toFixed(1)}" cy="${(CY+(Math.random()-0.5)*spread*0.5).toFixed(1)}" r="${(1+Math.random()*1.6).toFixed(1)}" fill="${col}" style="--mx:${mx.toFixed(1)}px;--my:${my.toFixed(1)}px;animation-delay:${(i*0.06).toFixed(2)}s"/>`;}return s;};
+  const shower=(count)=>{let s='';for(let i=0;i<count;i++){const a=SK.anch[(i*3)%SK.anch.length];if(!a)continue;const dx=((i%2)?1:-1)*(6+Math.random()*22);s+=`<g class="ww-fall" style="--dx:${dx.toFixed(0)}px;animation-delay:${(Math.random()*0.5).toFixed(2)}s">${wwLeaf(a[0],a[1],3+Math.random()*1.5,Math.random()*6.28,wwMix(WW_LEAF.lo,WW_LEAF.hi,0.7))}</g>`;}return s;};
+  let html='';
+  if(type==='jackpot'){ if(root)root.classList.add('ww-breath');
+    html+=`<circle class="ww-burst" cx="${EX}" cy="${EY}" r="46" fill="url(#ww_rad)"/><circle class="ww-ring" cx="${EX}" cy="${EY}" r="30" fill="none" stroke="rgba(255,240,180,.9)" stroke-width="2.5"/><ellipse class="ww-flash" cx="${CX}" cy="${CY}" rx="120" ry="96" fill="url(#ww_rad)"/>`+motes('#FFE9A8',22,90); setIris('url(#ww_rad)'); }
+  else if(type==='x3'){ html+=`<circle class="ww-ring" cx="${EX}" cy="${EY}" r="34" fill="none" stroke="rgba(242,196,90,.9)" stroke-width="2.4"/><circle class="ww-ring" cx="${EX}" cy="${EY}" r="22" fill="none" stroke="rgba(255,235,160,.8)" stroke-width="1.6" style="animation-delay:.18s"/><circle class="ww-burst" cx="${EX}" cy="${EY}" r="30" fill="url(#ww_gold)"/>`+motes('#F2C45A',14,70); setIris('url(#ww_gold)'); }
+  else if(type==='x2'){ html+=`<circle class="ww-ring" cx="${EX}" cy="${EY}" r="28" fill="none" stroke="rgba(242,196,90,.9)" stroke-width="1.8"/><circle class="ww-burst" cx="${EX}" cy="${EY}" r="22" fill="url(#ww_gold)"/>`+motes('#F2C45A',8,70); setIris('url(#ww_gold)'); }
+  else if(type==='free'){ html+=`<circle class="ww-ring" cx="${EX}" cy="${EY}" r="20" fill="none" stroke="rgba(157,176,164,.6)" stroke-width="1.3"/>`; }
+  else if(type==='marked'){ html+=`<ellipse class="ww-flash" cx="${CX}" cy="${CY}" rx="118" ry="150" fill="url(#ww_redf)"/><ellipse class="ww-eyeflare" cx="${EX}" cy="${EY}" rx="${(EHW*0.8).toFixed(1)}" ry="${(EVH*0.8).toFixed(1)}" fill="rgba(40,4,2,.85)"/>`; setIris('#3a0a06'); }
+  else if(type==='turned'){ html+=`<rect class="ww-flash" x="0" y="0" width="200" height="300" fill="#05080a"/>`; setIris('#1a0c08'); }
+  else if(type==='wrath'){ if(root)root.classList.add('ww-shudder'); html+=`<ellipse class="ww-flash" cx="${EX}" cy="${EY}" rx="150" ry="170" fill="url(#ww_redf)"/><ellipse class="ww-eyeflare" cx="${EX}" cy="${EY}" rx="${(EHW*0.85).toFixed(1)}" ry="${(EVH*0.85).toFixed(1)}" fill="rgba(229,30,16,.9)"/>`+shower(16); setIris('#E5381F'); }
+  fx.innerHTML=html;
 }
 
 function verdictOf(o){
@@ -4750,7 +4826,7 @@ function devotionVerdict(o){
       }; raf=requestAnimationFrame(frame);
       try{ if(Snd.isOn&&Snd.isOn()) Snd.sfx('shimmer'); }catch(e){}
       const end=()=>{ cleanup(); if(ov){ ov.classList.add('out'); const x=ov; setTimeout(()=>{ try{x.remove();}catch(e){} finish(); },650);} else finish(); };
-      setTimeout(async ()=>{ if(ov) ov.classList.add('reveal'); try{ if(Snd.isOn&&Snd.isOn()){ if(v.tone==='bad') Snd.sfx('thunder'); else Snd.sfx('gong'); } }catch(e){} revealed=true; }, 2200);
+      setTimeout(async ()=>{ if(ov){ ov.classList.add('reveal'); if(v.tone==='bad') ov.classList.add('bad'); try{ wwApplyReaction(ov, wwReactType(o)); }catch(e){} } try{ if(Snd.isOn&&Snd.isOn()){ if(v.tone==='bad') Snd.sfx('thunder'); else Snd.sfx('gong'); } }catch(e){} revealed=true; }, 2200);
       const autoT=setTimeout(end, 5400);
       ov.addEventListener('pointerdown',()=>{ if(revealed){ clearTimeout(autoT); end(); } });
       window.addEventListener('resize',size);
@@ -6412,13 +6488,14 @@ function chalTotem(active, kings){
 }
 function injectLauncher(){
   const el=document.getElementById('trials'); if(!el) return; if(document.getElementById('chalLaunch')) return;
+  const slot=document.getElementById('chalSlot');   // sits directly beneath Stoke the Fire
   const g=GC(); const active=g&&(g.status==='lobby'||g.status==='playing');
-  const box=document.createElement('div'); box.id='chalLaunch'; box.style.cssText='max-width:520px;margin:26px auto 0;text-align:center';
+  const box=document.createElement('div'); box.id='chalLaunch'; box.style.cssText='max-width:520px;margin:22px auto 0;text-align:center';
   box.innerHTML='<div class="ritehdr" style="margin-top:0">The Trial of the Chalice</div>'
     +'<div class="chal-stage" onclick="chalAPI.show()">'+chalTotem(active, g&&g.kings)+'</div>'
     +'<p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">A 52-card King\u2019s Cup for the circle. Devotion rides a hidden tally and commits as one line when the trial ends.</p>'
     +'<button class="gold" onclick="chalAPI.show()">'+(active?'\u2726 Rejoin the trial':'\u2726 Open the Trial of the Chalice')+'</button>';
-  el.appendChild(box);
+  if(slot) slot.appendChild(box); else el.appendChild(box);
 }
 const _origRT = window.renderTrials;
 if(typeof _origRT==='function'){ window.renderTrials=function(){ const r=_origRT.apply(this,arguments); try{ injectLauncher(); }catch(e){} return r; }; }

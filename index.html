@@ -3620,6 +3620,10 @@ window.submitNomTitle=function(){
   const label=document.getElementById("ntTitle").value.trim();
   if(!label){ document.getElementById("kerr").textContent="Enter a title."; return; }
   { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
+  const _m=memByName(target); const _lc=label.toLowerCase();
+  if(_m && String(_m.epithet||'').trim().toLowerCase()===_lc){ document.getElementById("kerr").textContent=`${target} already bears the title “${label}”.`; return; }
+  const _n=Date.now()/1000, _ttl=3*3600;
+  if((MEM.rites||[]).some(r=>r.kind==='title' && !r.applied && (_n-(r.created||_n)<_ttl) && r.target===target && String(r.label||'').trim().toLowerCase()===_lc && r.nominator===VOTER)){ document.getElementById("kerr").textContent=`You’ve already nominated ${target} for that title.`; return; }
   proposeRite({kind:"title",target,label,threshold:10,nominator:VOTER});
 };
 const DEFAULT_BADGE_IDEAS=["The Unburnt","Pathfinder","Iron Liver","Keeper of the Flame","The Shepherd","The Wraith","The Phoenix","Owl of the Eye","Beast of Burden","Jam Boy","The Anointed","Last of the Faithful"];
@@ -3671,6 +3675,10 @@ window.submitNomBadge=function(){
   const label=document.getElementById("nbBadge").value.trim();
   if(!label){ document.getElementById("kerr").textContent="Name the badge."; return; }
   { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
+  const _m=memByName(target); const _lc=label.toLowerCase();
+  if(_m && (_m.badges||[]).some(bb=>String(bb).trim().toLowerCase()===_lc)){ document.getElementById("kerr").textContent=`${target} already wears the “${label}” badge.`; return; }
+  const _n=Date.now()/1000, _ttl=3*3600;
+  if((MEM.rites||[]).some(r=>r.kind==='badge' && !r.applied && (_n-(r.created||_n)<_ttl) && r.target===target && String(r.label||'').trim().toLowerCase()===_lc && r.nominator===VOTER)){ document.getElementById("kerr").textContent=`You’ve already nominated ${target} for that badge.`; return; }
   const color=NOM_BADGE_COL;
   if(color){ setLocalBadgeColor(label,color); }
   proposeRite({kind:"badge",target,label,color,threshold:7,nominator:VOTER});
@@ -3766,13 +3774,13 @@ function renderRules(){
     <div class="ritehdr">The Offering</div>
     <p class="rtext">The grove’s highest rite (7 ✦ to raise). Nominate a spirit to be offered to the Eye; when it passes they are robed in the <b>Offering Robe</b> with a <b>4-hour</b> mark on their soul card, gain <b>+150</b> Devotion and the <b>Of the Eye</b> badge, while the whole grove’s sky turns — a blood moon and the open Eye — in their honour. The one who raised it earns <b>+25</b>, and only one offering can be made every few hours.</p>
     <div class="ritehdr">Titles & Badges</div>
-    <p class="rtext">A <b>title</b> is your single epithet beneath your rank — a new one replaces the old. <b>Badges</b> are collectible ✦ marks; hold as many as you earn.</p>
+    <p class="rtext">A <b>title</b> is your single epithet beneath your rank — a new one replaces the old. <b>Badges</b> are collectible ✦ marks; hold as many as you earn. A spirit can’t be nominated for a title or badge they already hold, and you can’t raise the same nomination on them twice.</p>
     <div class="ritehdr">Your Spirit</div>
     <p class="rtext">Tap any spirit → <b>Edit this spirit</b> to shape your form. New gear — held items and the Offering Robe — unlocks as you rise in rank.</p>
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30q · wager dispute countdown now shows the true 1-hour limit · refuse/give-up messages corrected to −40 · Chalice: draining the cup +40, each early King +5, refusing the rite −40 · Keeper-only milestone deeds now match any wording (e.g. “Made the Pilgrimage”) · you can report any spirit, including your own (single-phone games) · new builds auto-refresh on web & PWA (no stale version) · rules updated for recent changes · the Eye opens when the fourth King fills the Chalice · ranks shown in the Chalice circle · tap-to-report & tap-to-cast-out · the accused may vote on their own report/cast-out · no duplicate laws · Keeper-only milestone deeds · notifications open the right page · emoji thoughts fixed · challenge budget capped at 150</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30r · Chalice gains nudged up (Cascade +10, the Eye +15, Shared Burden +15) for a richer trial · no duplicate title/badge nominations and none re-awarded · wager dispute countdown shows the true 1-hour limit · refuse/give-up messages corrected to −40 · Chalice: draining the cup +40, each early King +5, refusing the rite −40 · Keeper-only milestone deeds now match any wording (e.g. “Made the Pilgrimage”) · you can report any spirit, including your own (single-phone games) · new builds auto-refresh on web & PWA (no stale version) · rules updated for recent changes · the Eye opens when the fourth King fills the Chalice · ranks shown in the Chalice circle · tap-to-report & tap-to-cast-out · the accused may vote on their own report/cast-out · no duplicate laws · Keeper-only milestone deeds · notifications open the right page · emoji thoughts fixed · challenge budget capped at 150</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -5164,10 +5172,10 @@ function chaliceReckoning(drawer){
 
 /* ---------- trial data (resolution metadata) ---------- */
 const CR=[
- {r:'A', name:'The Cascade',       em:'cascade', mech:'gain', dev:'+5 all',          kind:'all',       conf:'nominee', slow:true},
+ {r:'A', name:'The Cascade',       em:'cascade', mech:'gain', dev:'+10 all',         kind:'all',       conf:'nominee', slow:true},
  {r:'2', name:'Twin Offering',     em:'twin',    mech:'gain', dev:'+5 each',         kind:'pick2',     conf:'giver',   each:5},
- {r:'3', name:'The Eye Upon You',  em:'eye',     mech:'gain', dev:'+10',             kind:'self',      conf:'nominee', self:10},
- {r:'4', name:'Shared Burden',     em:'burden',  mech:'gain', dev:'+10 you · +5 ea', kind:'pick2self', conf:'nominee', self:10, each:5},
+ {r:'3', name:'The Eye Upon You',  em:'eye',     mech:'gain', dev:'+15',             kind:'self',      conf:'nominee', self:15},
+ {r:'4', name:'Shared Burden',     em:'burden',  mech:'gain', dev:'+15 you · +5 ea', kind:'pick2self', conf:'nominee', self:15, each:5},
  {r:'5', name:'The Decree',        em:'decree',  mech:'pen',  dev:'−5 / break',      kind:'law',       conf:'nominee'},
  {r:'6', name:'The Hidden Sign',   em:'hidden',  mech:'pen',  dev:'−10 last',        kind:'loser',     conf:'nominee', pen:10},
  {r:'7', name:'The Sign of the Eye', em:'reach',   mech:'pen',  dev:'−10 last',        kind:'loser',     conf:'nominee', pen:10},
@@ -5421,7 +5429,7 @@ function confirmCard(){
   // who may confirm
   if(R.conf==='nominee'){ if(g.nominee!==me()&&!controls(g.nominee)){ toast('The nominee confirms this.'); return; } }
   const n=clone(g);
-  if(R.kind==='all'){ liveSpirits(n).forEach(s=>tallyAdd(n,s,5)); feedPush(n,'The Cascade — all drink (+5).'); }
+  if(R.kind==='all'){ liveSpirits(n).forEach(s=>tallyAdd(n,s,10)); feedPush(n,'The Cascade — all drink (+10).'); }
   else if(R.kind==='self'){ tallyAdd(n,c.drawer,R.self); feedPush(n,c.drawer+' drinks (+'+R.self+').'); if(n.bind&&n.bind.owner===c.drawer){ tallyAdd(n,n.bind.mate,5); feedPush(n,n.bind.mate+' is bound — also drinks (+5).'); } }
   else if(R.kind==='pick2self'){ tallyAdd(n,c.drawer,R.self); (c.picks||[]).forEach(p=>tallyAdd(n,p,R.each)); feedPush(n,c.drawer+' drinks twice; '+(c.picks||[]).join(' & ')+' drink.'); }
   else if(R.kind==='law'){ const lt=String(c.law||'').trim(); if(lt && !(n.laws||[]).some(l=>String(l.text||'').trim().toLowerCase()===lt.toLowerCase())){ n.laws.push({id:'L'+nowS()+Math.floor(Math.random()*999), text:lt, by:c.drawer, t:nowS()}); feedPush(n,c.drawer+' decrees: \u201c'+lt+'\u201d'); } else { feedPush(n,c.drawer+'\u2019s decree echoes a law already in force.'); } }

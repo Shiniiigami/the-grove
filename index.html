@@ -353,7 +353,7 @@
     background:linear-gradient(180deg,var(--candle),#d9a93f);box-shadow:0 4px 16px rgba(242,196,90,.22);}
   .ghostbtn{width:100%;padding:11px;border-radius:11px;cursor:pointer;margin-top:9px;
     font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
-    background:transparent;border:1px solid var(--moss);color:var(--sage);}
+    background:rgba(10,16,12,.4);border:1px solid rgba(143,168,155,.55);color:#DCE6DA;text-shadow:0 1px 2px rgba(0,0,0,.5);}
   .quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;}
   .quick button{flex:1 1 auto;min-width:62px;max-width:100%;font-family:'Silkscreen',monospace;font-size:9px;padding:8px 6px;
     border-radius:8px;background:rgba(38,53,44,.4);border:1px solid var(--moss);color:var(--parch);cursor:pointer;
@@ -427,6 +427,8 @@
   body.sky-day #identBar{color:#F6EFDC;text-shadow:0 1px 2px rgba(6,12,9,.85);}
   body.sky-day .idtitle{text-shadow:0 1px 3px rgba(6,12,9,.8),0 0 16px rgba(6,12,9,.5);}
   body.sky-day .rtext{color:#F3EAD2;text-shadow:0 1px 2px rgba(6,12,9,.7);}
+  /* daytime: rite/offer buttons get a solid dark backing so their text reads over the bright sky */
+  body.sky-day .ghostbtn{background:rgba(8,14,10,.62);border-color:rgba(236,227,204,.5);color:#F4ECDA;}
   /* ---- rank-up confetti ---- */
   #confettiLayer{position:fixed;inset:0;pointer-events:none;z-index:400;overflow:hidden;}
   .confetti{position:absolute;width:9px;height:9px;top:-14px;opacity:.95;will-change:transform;animation:cfall linear forwards;}
@@ -1514,10 +1516,20 @@ function drawChibiSprite(canvas,soul,scale,t,base,dpr){
   const cw=GW*px+padX*2, ch=GH*px+padTop+padBot;
   canvas.width=cw*dpr;canvas.height=ch*dpr;canvas.style.width=cw+"px";canvas.style.height=ch+"px";
   const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,cw,ch);
-  const g=ctx.createRadialGradient(cw/2,ch*0.5,2,cw/2,ch*0.5,ch/1.2);
-  g.addColorStop(0,hexA(base,0.12+soul.ti*0.04));g.addColorStop(1,"transparent");
+  // Rank bloom (brighter): a saturated tier-coloured glow with a soft mid-stop, plus a faint
+  // tier ring behind the figure — reads clearly on any sky and grows with rank.
+  const _cx=cw/2,_cy=ch*0.5;
+  const g=ctx.createRadialGradient(_cx,_cy,2,_cx,_cy,ch/1.12);
+  g.addColorStop(0,hexA(base,0.34+soul.ti*0.05));
+  g.addColorStop(0.42,hexA(base,0.15+soul.ti*0.03));
+  g.addColorStop(1,"transparent");
   ctx.fillStyle=g;ctx.fillRect(0,0,cw,ch);
-  ctx.save();ctx.shadowColor=base;ctx.shadowBlur=glowR*flick*0.55;
+  ctx.save();
+  ctx.globalAlpha=0.22+soul.ti*0.05; ctx.strokeStyle=base; ctx.lineWidth=Math.max(1.2,px*0.7);
+  ctx.shadowColor=base; ctx.shadowBlur=glowR*1.2;
+  ctx.beginPath(); ctx.arc(_cx,_cy,Math.min(cw,ch)*0.34,0,6.28); ctx.stroke();
+  ctx.restore();
+  ctx.save();ctx.shadowColor=base;ctx.shadowBlur=glowR*flick*0.7;
   drawChibi(ctx,f,px,padX,padTop,soul.ti,tiers().length,(typeof moodExpr==='function'?moodExpr(soul.name):'neutral'));
   ctx.restore();
 }
@@ -1947,6 +1959,7 @@ function keeperPanel(){
       <button class="ghostbtn" onclick="ranksForm()">✎ Manage ranks</button>
       <button class="ghostbtn" onclick="itemLocksForm()">🔒 Item rank-locks</button>
       <button class="ghostbtn" onclick="trialsKeeperForm()">⚖ Trials override · wagers · groups · challenges</button>
+      <button class="ghostbtn" onclick="fireForm()">🔥 Tend the fire · logs &amp; blessing level</button>
       <button class="ghostbtn" onclick="addMemberForm()">+ Initiate a new member</button>
       <button class="ghostbtn" onclick="sinceForm()">✎ Set member-since years</button>
       <button class="ghostbtn" onclick="oathStatusForm()">⚖ Oath status (swear / unswear)</button>
@@ -3040,7 +3053,11 @@ const Snd=(function(){
   function thunder(){ if(!ctx) return; const t=ctx.currentTime; const dur=1.6+Math.random()*1.6; const len=Math.floor(ctx.sampleRate*dur),b=ctx.createBuffer(1,len,ctx.sampleRate),d=b.getChannelData(0); for(let i=0;i<len;i++){ d[i]=(Math.random()*2-1)*Math.pow(1-i/len,1.7); } const src=ctx.createBufferSource(); src.buffer=b; const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.setValueAtTime(420,t); lp.frequency.exponentialRampToValueAtTime(80,t+dur); const g=ctx.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.22,t+0.06); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); src.connect(lp); lp.connect(g); g.connect(sfxBus); src.start(t); }
   function scheduleTick(at,vol){ const o=ctx.createOscillator(); o.type='square'; o.frequency.value=1150; const g=ctx.createGain(); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(vol,at+0.002); g.gain.exponentialRampToValueAtTime(0.0001,at+0.05); o.connect(g); g.connect(sfxBus); o.start(at); o.stop(at+0.06); }
   function wheel(dur){ if(!on||!ctx) return; dur=dur||4.2; const t0=ctx.currentTime; let t=0; while(t<dur){ const k=t/dur; scheduleTick(t0+t, 0.055*(1-0.45*k)); t+=0.03+0.34*k*k; } setTimeout(()=>{ if(on) bell(659.25,1.1,0.11); }, dur*1000+40); }
-  function fire(level){ fireLevel=Math.max(0,level|0); if(!ctx||!fireBed) return; const t=ctx.currentTime; fireBed.gain.cancelScheduledValues(t); fireBed.gain.linearRampToValueAtTime(fireLevel>0?Math.min(0.13,0.03+fireLevel*0.013):0, t+0.8); }
+  // Steady fire loudness grows with each log (0.07 at one log → ~0.17 near full), capped
+  // below the music so it never overpowers it. The last log triggers fireRoar() — a brief swell.
+  function steadyFireGain(){ return fireLevel>0?Math.min(0.17,0.045+fireLevel*0.026):0; }
+  function fire(level){ fireLevel=Math.max(0,level|0); if(!ctx||!fireBed) return; const t=ctx.currentTime; fireBed.gain.cancelScheduledValues(t); fireBed.gain.linearRampToValueAtTime(steadyFireGain(), t+0.8); }
+  function fireRoar(){ if(!ctx||!fireBed) return; const t=ctx.currentTime; const cur=Math.max(0.06, fireBed.gain.value||0.1); fireBed.gain.cancelScheduledValues(t); fireBed.gain.setValueAtTime(cur,t); fireBed.gain.linearRampToValueAtTime(0.30, t+0.4); fireBed.gain.linearRampToValueAtTime(0.27, t+1.7); fireBed.gain.linearRampToValueAtTime(steadyFireGain()||0.03, t+5.2); for(let i=0;i<12;i++){ setTimeout(()=>{ try{ crackle(); }catch(e){} }, i*60+Math.random()*50); } }
   function crackle(){ if(!ctx||!on||fireLevel<=0||fireBuf) return; const t=ctx.currentTime; const big=Math.random()<0.16; const dur=big?(0.05+Math.random()*0.07):(0.012+Math.random()*0.03); const len=Math.max(2,Math.floor(ctx.sampleRate*dur)),b=ctx.createBuffer(1,len,ctx.sampleRate),d=b.getChannelData(0); for(let i=0;i<len;i++){ d[i]=(Math.random()*2-1)*Math.pow(1-i/len, big?2.4:4.2); } const src=ctx.createBufferSource(); src.buffer=b; const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=big?(150+Math.random()*240):(550+Math.random()*1500); bp.Q.value=big?1.1:2.4; const g=ctx.createGain(); g.gain.value=(big?0.06:0.028)*Math.min(1,0.5+fireLevel/7); src.connect(bp); bp.connect(g); g.connect(fireOut); src.start(t); }
   function crackleLoop(){ const base=Math.max(70, 360-fireLevel*42); setTimeout(()=>{ if(on && fireLevel>0 && !fireBuf){ crackle(); if(Math.random()<0.5) crackle(); if(fireLevel>=4 && Math.random()<0.3) crackle(); } crackleLoop(); }, base+Math.random()*base); }
   function howl(){ if(!ctx) return; const t=ctx.currentTime; const base=150+Math.random()*55;
@@ -3094,7 +3111,7 @@ const Snd=(function(){
     }catch(e){ try{ _audRestore(); }catch(e2){} }
   }
   try{ document.addEventListener('visibilitychange', function(){ if(document.hidden){ _audHide(); } else { REACT_SUPPRESS=true; _audShow(); } }); }catch(e){}
-  return { setOn, isOn:()=>on, sfx, action, playTrack, wheel, fire, offering };
+  return { setOn, isOn:()=>on, sfx, action, playTrack, wheel, fire, fireRoar, offering };
 })();
 let SOUND_ON = (function(){ try{ return localStorage.getItem('grove-sound')==='1'; }catch(e){ return false; } })();
 function updateSoundBtn(){ const b=document.getElementById('soundBtn'); if(!b) return; b.textContent=SOUND_ON?'🔊':'🔇'; b.title=SOUND_ON?'Ritual sound on — tap to silence':'Ritual sound off — tap for the rite'; b.classList.toggle('on',SOUND_ON); }
@@ -3897,7 +3914,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30w · “Share this spirit” now captures the whole soul card — every deed (no duplicate Chalice row) plus a Challenges &amp; Wagers section — with the height sized to fit so nothing overlaps the footer. The Eye Totem costs 15 ✦, the grove shows each spirit’s title &amp; rank, the standings image goes two-column for big groves, and the richer Chalice and all recent changes are intact. The Chalice is richer (ranks in the circle, the Eye on the fourth King, tap-to-report &amp; cast-out, rebalanced rewards), with Keeper-only milestone deeds, no duplicate laws or title/badge nominations, true 1-hour wager disputes, and auto-refreshing builds.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30x · Brighter rank glow on spirits (reads on any sky), the fire grows louder with each log and roars on the last one, rite/offer buttons are easier to read, and the Keeper can tend the fire directly (add/remove logs, set the blessing level). “Share this spirit” captures the whole soul card — every deed plus Challenges &amp; Wagers — sized so nothing overlaps. The Eye Totem costs 15 ✦, the grove shows each spirit’s title &amp; rank, the standings image goes two-column for big groves, and the richer Chalice and all recent changes are intact. The Chalice is richer (ranks in the circle, the Eye on the fourth King, tap-to-report &amp; cast-out, rebalanced rewards), with Keeper-only milestone deeds, no duplicate laws or title/badge nominations, true 1-hour wager disputes, and auto-refreshing builds.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -3932,8 +3949,11 @@ function detectReactions(){
 let LOG_SNAP=null;
 function logSnapshot(){ const s={}; (MEM.members||[]).forEach(m=>{ s[m.name]=(m.logs||0); }); return s; }
 function initLogSnap(){ LOG_SNAP=logSnapshot(); }
+let FIRE_BLESS_SNAP=0;
 function detectLogGains(){
-  if(!LOG_SNAP){ LOG_SNAP=logSnapshot(); return; }
+  if(!LOG_SNAP){ LOG_SNAP=logSnapshot(); FIRE_BLESS_SNAP=(MEM.fire&&MEM.fire.lastBlessed)||0; return; }
+  // the last log just caught and the grove was blessed — roar the fire (for the stoker and observers alike)
+  try{ const lb=(MEM.fire&&MEM.fire.lastBlessed)||0; if(lb>FIRE_BLESS_SNAP){ FIRE_BLESS_SNAP=lb; if(Date.now()/1000-lb<30 && typeof Snd!=='undefined' && Snd.fireRoar) Snd.fireRoar(); } }catch(e){}
   const ev=[];
   (MEM.members||[]).forEach(m=>{ const o=LOG_SNAP[m.name]; if(o===undefined) return; const d=(m.logs||0)-o; if(d>0) ev.push({name:m.name,d}); });
   LOG_SNAP=logSnapshot();
@@ -4767,6 +4787,31 @@ window.keeperAddTrialForm=function(){ if(!keeperUnlocked){ toast("Only the Keepe
     </div>`; scrim.classList.add("show"); };
 window.keeperAddChallenge=async function(){ const owner=document.getElementById('kaCo').value; const title=(document.getElementById('kaCt').value||'').trim(); const reward=Math.max(1,parseInt(document.getElementById('kaCr').value,10)||0); if(!title){ document.getElementById('kerr').textContent='Name the challenge.'; return; } MEM.challenges=MEM.challenges||[]; MEM.challenges.push({id:'c'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),owner,title,reward,accepter:null,status:'open',created:Date.now()/1000,keeperSeeded:true}); await saveData(); _trialsAfter(); toast('Challenge added.'); renderTrialsKeeper(); };
 window.keeperAddWager=async function(){ const proposer=document.getElementById('kaWp').value; const title=(document.getElementById('kaWt').value||'').trim(); const amount=Math.max(1,parseInt(document.getElementById('kaWa').value,10)||0); if(!title){ document.getElementById('kerr').textContent='Name the wager.'; return; } MEM.wagers=MEM.wagers||[]; MEM.wagers.push({id:'w'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),proposer,amount,title,taker:null,status:'open',winner:null,created:Date.now()/1000,votes:{},tie:[],keeperSeeded:true}); await saveData(); _trialsAfter(); toast('Wager added.'); renderTrialsKeeper(); };
+/* ---- Keeper: tend the shared fire directly (logs + blessing level) ---- */
+function _fireObj(){ if(!MEM.fire) MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[],lastDecay:Date.now()/1000,streak:0}; return MEM.fire; }
+function _fireFormRefresh(){ const f=_fireObj(); const goal=f.goal||6; const l=document.getElementById('fireLvlLbl'); if(l)l.textContent=(f.level||0)+' / '+goal+' logs'; const b=document.getElementById('fireBlessLbl'); if(b){ const s=f.streak||0; b.textContent='blessing level '+s+' · next blessing +'+Math.min(200,50+25*s)+' ✦'; } }
+window.fireForm=function(){
+  if(!keeperUnlocked){ toast('Only the Keeper may tend the fire.'); return; }
+  const f=_fireObj(); const goal=f.goal||6; const lvl=f.level||0; const s=f.streak||0; const nextB=Math.min(200,50+25*s);
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="kpanel">
+      <h3>Tend the Fire</h3>
+      <p class="sub">Keeper override — adjust the shared fire directly. Saves for the whole grove (no Devotion is awarded).</p>
+      <div class="field"><label>Logs on the fire</label>
+        <div class="seg"><button onclick="keeperFireLog(-1)">– Remove</button><button onclick="keeperFireLog(1)">+ Add log</button><button onclick="keeperFireClear()">Clear all</button></div>
+        <div class="sub" id="fireLvlLbl" style="margin-top:6px">${lvl} / ${goal} logs</div></div>
+      <div class="field"><label>Blessing level (sets the next blessing reward)</label>
+        <div class="seg"><button onclick="keeperBless(-1)">– Lower</button><button onclick="keeperBless(1)">+ Raise</button></div>
+        <div class="sub" id="fireBlessLbl" style="margin-top:6px">blessing level ${s} · next blessing +${nextB} ✦</div></div>
+      <button class="ghostbtn" onclick="keeperPanel()">‹ Back to the Ledger</button>
+      <div class="err" id="kerr"></div>
+    </div>`;
+  scrim.classList.add('show');
+};
+window.keeperFireLog=async function(d){ if(!keeperUnlocked)return; const f=_fireObj(); f.level=Math.max(0,Math.min(f.goal||6,(f.level||0)+d)); if(f.level===0)f.stokers=[]; await saveData(); try{ Snd.fire(f.level); }catch(e){} _fireFormRefresh(); try{ trialsRefresh(); }catch(e){} };
+window.keeperFireClear=async function(){ if(!keeperUnlocked)return; const f=_fireObj(); f.level=0; f.stokers=[]; await saveData(); try{ Snd.fire(0); }catch(e){} _fireFormRefresh(); try{ trialsRefresh(); }catch(e){} toast('The fire is cleared.'); };
+window.keeperBless=async function(d){ if(!keeperUnlocked)return; const f=_fireObj(); f.streak=Math.max(0,(f.streak||0)+d); await saveData(); _fireFormRefresh(); try{ trialsRefresh(); }catch(e){} };
 window.newChallengeForm=function(){
   if(!VOTER){ toast("Pick your name first."); return; }
   const me=memByName(VOTER); const bud=me?Math.max(0,Math.min(150, me.chalBudget!==undefined?me.chalBudget:150)):0;

@@ -2460,6 +2460,8 @@ window.awardPoints=async function(){
   const pts=mag*mult*KSIGN;
   const m=MEM.members.find(x=>x.name===name);
   const before=tierIndex(m.points);
+  // snapshot for a one-tap Undo
+  const _undo={name:m.name, pts:m.points, season:(m.season||0), histLen:(m.history||[]).length, winMult:m.winMult, lossMult:m.lossMult, logs:m.logs};
   let netPts=pts;
   if(netPts>0){ if(KBUFF){ const wm=consumeMult(m); if(wm>1){ netPts=netPts*wm; reason+=` (×${wm} wheel)`; } } if(KLOG)maybeEarnLog(m,netPts); }
   else if(netPts<0 && m.lossMult>1){ const lm=m.lossMult; delete m.lossMult; netPts=netPts*lm; reason+=` (×${lm} curse)`; }
@@ -2474,7 +2476,17 @@ window.awardPoints=async function(){
   layoutGrove(); renderLedger();
   closeSheet();
   if(after>before){ celebrateRankUp(m.name, tiers()[after].name); }
-  else { Snd.sfx('chime'); toast(`${m.name} ${pts>0?'gains':'loses'} ${Math.abs(pts)} — ${reason}`); }
+  else { Snd.sfx('chime'); }
+  actionToast(`${m.name} ${pts>0?'gains':'loses'} ${Math.abs(pts)} — ${reason}`, '↩ Undo', async ()=>{
+    const mm=memByName(_undo.name); if(!mm)return;
+    mm.points=_undo.pts; mm.season=_undo.season;
+    if(mm.history && mm.history.length>_undo.histLen) mm.history.length=_undo.histLen;
+    if(_undo.winMult>1) mm.winMult=_undo.winMult; else delete mm.winMult;
+    if(_undo.lossMult>1) mm.lossMult=_undo.lossMult; else delete mm.lossMult;
+    mm.logs=_undo.logs;
+    try{ const s=loadRankSnap(); s[mm.name]=tierIndex(mm.points); saveRankSnap(s); }catch(e){}
+    await saveData(); layoutGrove(); renderLedger(); toast('Award undone.');
+  });
 };
 window.removeDeed=async function(name,i){
   if(!keeperUnlocked){ toast("Only the Keeper may strike a deed."); return; }
@@ -2845,7 +2857,13 @@ function renderAura(){
   }).join('');
   sheet.innerHTML=`<div class="grip"></div><div class="kpanel">
     <h3>Rank aura intensity</h3>
-    <p class="sub">Tune how strongly each rank's spirit glows in the grove. 100% is the default; 0% turns a rank's aura off entirely; 200% blazes. Saved for the whole Order.</p>
+    <p class="sub">Tune how strongly each rank's spirit glows in the grove. 100% is the default; 0% turns a rank's aura off entirely; 200% blazes. Saved for the whole Order. The grove updates live as you drag.</p>
+    <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:0 0 4px">
+      <button class="lsort" onclick="auraPreset('subtle')">Subtle</button>
+      <button class="lsort" onclick="auraPreset('default')">Default</button>
+      <button class="lsort" onclick="auraPreset('blaze')">Blaze</button>
+      <button class="lsort" onclick="auraPreset('top')">Top-heavy</button>
+    </div>
     ${rows}
     <button class="gold" style="margin-top:12px" onclick="auraSave()">Save the auras</button>
     <button class="ghostbtn" onclick="auraReset()">↺ Reset all to 100%</button>
@@ -2854,7 +2872,9 @@ function renderAura(){
   </div>`;
   T.forEach((t,i)=>auraDrawPv(i));
 }
-window.auraSet=function(i,v){ if(!Array.isArray(MEM.auraScale))MEM.auraScale=[1,1,1,1,1,1,1]; MEM.auraScale[i]=Math.max(0,Math.min(3,(+v)/100)); const el=document.getElementById('auraVal'+i); if(el)el.textContent=Math.round(+v)+'%'; auraDrawPv(i); };
+let _auraLiveT=0;
+window.auraSet=function(i,v){ if(!Array.isArray(MEM.auraScale))MEM.auraScale=[1,1,1,1,1,1,1]; MEM.auraScale[i]=Math.max(0,Math.min(3,(+v)/100)); const el=document.getElementById('auraVal'+i); if(el)el.textContent=Math.round(+v)+'%'; auraDrawPv(i); clearTimeout(_auraLiveT); _auraLiveT=setTimeout(()=>{ try{ layoutGrove(); }catch(e){} },120); };
+window.auraPreset=function(kind){ const n=(MEM.tiers||[]).length||7; const arr=[]; for(let i=0;i<n;i++){ let v=1; if(kind==='subtle')v=0.5; else if(kind==='blaze')v=1.6; else if(kind==='top'){ const f=n>1?i/(n-1):1; v=0.3+f*1.7; } MEM.auraScale=MEM.auraScale||[]; arr.push(Math.round(v*100)/100); } MEM.auraScale=arr; renderAura(); try{ layoutGrove(); }catch(e){} };
 window.auraSave=async function(){ try{ await saveData(); }catch(e){} try{ layoutGrove(); }catch(e){} try{ renderLedger(); }catch(e){} toast('The auras are set.'); keeperPanel(); };
 window.auraReset=function(){ MEM.auraScale=(MEM.tiers||[]).map(()=>1); if(!MEM.auraScale.length)MEM.auraScale=[1,1,1,1,1,1,1]; renderAura(); };
 let ITEMLOCKS_EDIT=null;
@@ -2934,6 +2954,16 @@ let toastT=null;
 function toast(msg){
   const el=document.getElementById("toast");el.textContent=msg;el.classList.add("show");
   clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),2600);
+}
+// a toast that carries a single action (e.g. Undo); auto-dismisses after ~7s
+let _actT=0;
+function actionToast(msg,label,fn){
+  let el=document.getElementById('actToast');
+  if(!el){ el=document.createElement('div'); el.id='actToast'; el.style.cssText='position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:99999;display:flex;align-items:center;gap:10px;background:rgba(20,28,22,.97);border:1px solid var(--moss);border-radius:11px;padding:9px 12px;font-family:Spectral,Georgia,serif;font-size:13px;color:var(--parch);box-shadow:0 6px 24px rgba(0,0,0,.5);max-width:92vw'; document.body.appendChild(el); }
+  el.innerHTML=''; const t=document.createElement('span'); t.textContent=msg;
+  const b=document.createElement('button'); b.textContent=label; b.style.cssText="font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.08em;background:rgba(242,196,90,.16);border:1px solid rgba(242,196,90,.5);color:var(--candle);border-radius:8px;padding:5px 10px;cursor:pointer;flex:none";
+  b.onclick=()=>{ el.style.display='none'; try{ fn(); }catch(e){} };
+  el.append(t,b); el.style.display='flex'; clearTimeout(_actT); _actT=setTimeout(()=>{ if(el)el.style.display='none'; },7000);
 }
 
 /* ====================== RITUAL SOUND — original Web Audio (no sampled/▣copyrighted audio) ====================== */
@@ -3682,7 +3712,8 @@ function riteCard(r){
   const keeperRmBtn = keeperUnlocked ? `<button class="rwithdraw" style="background:rgba(150,40,40,.18);border-color:rgba(210,80,70,.6);color:#F0A090" onclick="keeperRemoveRite('${r.id}')">✕ Remove</button>` : "";
   return `<div class="ritecard">
     <div class="rbody"><div class="rdesc">${desc}</div>
-      <div class="rmeta">${countLbl} &nbsp; <span class="rby">by ${esc(r.nominator)} · ${left}</span></div></div>
+      <div class="rmeta">${countLbl} &nbsp; <span class="rby">by ${esc(r.nominator)} · ${left}</span></div>
+      ${(()=>{ const ap=(r.approvers||[]).filter(a=>a!==r.nominator); return ap.length?`<div class="rmeta" style="opacity:.62;font-size:11px;margin-top:2px">✓ ${ap.map(esc).join(', ')}</div>`:''; })()}</div>
     <div class="rbtns">${approveBtn}${withdrawBtn}${keeperRmBtn}</div>
   </div>`;
 }
@@ -4070,7 +4101,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30an · Cosmetic unlocks now match the rank ladder (top regalia needs top orders, labels are correct), and the sky can follow any location's real timezone — not just Toronto.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ao · Quality-of-life — rites show who has approved, the rank-aura panel gains presets and a live grove preview, and every Keeper award can be undone with one tap.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

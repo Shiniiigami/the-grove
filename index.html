@@ -3772,7 +3772,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30p · Chalice rebalance: draining the cup +40, each early King +5, refusing the rite −40 · Keeper-only milestone deeds now match any wording (e.g. “Made the Pilgrimage”) · you can report any spirit, including your own (single-phone games) · new builds auto-refresh on web & PWA (no stale version) · rules updated for recent changes · the Eye opens when the fourth King fills the Chalice · ranks shown in the Chalice circle · tap-to-report & tap-to-cast-out · the accused may vote on their own report/cast-out · no duplicate laws · Keeper-only milestone deeds · notifications open the right page · emoji thoughts fixed · challenge budget capped at 150</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30q · wager dispute countdown now shows the true 1-hour limit · refuse/give-up messages corrected to −40 · Chalice: draining the cup +40, each early King +5, refusing the rite −40 · Keeper-only milestone deeds now match any wording (e.g. “Made the Pilgrimage”) · you can report any spirit, including your own (single-phone games) · new builds auto-refresh on web & PWA (no stale version) · rules updated for recent changes · the Eye opens when the fourth King fills the Chalice · ranks shown in the Chalice circle · tap-to-report & tap-to-cast-out · the accused may vote on their own report/cast-out · no duplicate laws · Keeper-only milestone deeds · notifications open the right page · emoji thoughts fixed · challenge budget capped at 150</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4360,7 +4360,7 @@ function wagerMatchedCard(w){
     </div>`;
   }
   if(disputed){
-    const left = Math.max(0, 3*3600-(now-(w.disputeAt||now)));
+    const left = Math.max(0, 1*3600-(now-(w.disputeAt||now)));
     const lbl = `${Math.floor(left/3600)}h ${Math.floor((left%3600)/60)}m`;
     let voteRow="";
     if(VOTER && !party){ const mine=votes[VOTER];
@@ -5559,7 +5559,7 @@ function resolveDareSuccess(n){
 }
 function resolveDareFail(n, reason){
   const who=n.dare.who; tallyAdd(n, who, -40); n.drained=null; n.communal=false;
-  feedPush(n, reason); n.current=null; endGameState(n, who+' refused the Chalice (\u221250).');
+  feedPush(n, reason); n.current=null; endGameState(n, who+' refused the Chalice (\u221240).');
 }
 function voteDare(name, verdict){
   const g=GC(); if(!g||g.phase!=='dare'||!g.dare) return;
@@ -5576,7 +5576,7 @@ function voteDare(name, verdict){
 function dareGiveUp(){
   const g=GC(); if(!g||g.phase!=='dare'||!g.dare) return; const who=g.dare.who;
   if(!controls(who)){ toast('Only '+who+' may give up.'); return; }
-  if(!confirm('Give up the ritual? You will lose 50 Devotion.')) return;
+  if(!confirm('Give up the ritual? You will lose 40 Devotion.')) return;
   resolveDareFail(clone(g), who+' gave up the ritual \u2014 the Chalice curses them (\u221240).');
 }
 function sipChalice(name){

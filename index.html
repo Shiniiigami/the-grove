@@ -539,15 +539,15 @@ const SUPABASE = {
 };
 
 const DEFAULT_TIERS = [
-  {min:0,    name:"Initiate",     hex:"#5EEAD4"},   // teal
-  {min:100,  name:"Acolyte",      hex:"#4ADE80"},   // emerald
-  {min:350,  name:"Disciple",     hex:"#38BDF8"},   // sky blue
-  {min:750,  name:"Warden",       hex:"#FACC15"},   // gold
-  {min:1400, name:"Sage",         hex:"#FB923C"},   // orange
-  {min:2800, name:"Luminary",     hex:"#F472B6"},   // radiant rose
-  {min:5000, name:"The Ascended", hex:"#A78BFA"},   // violet
+  {min:0,    name:"Initiate",     hex:"#7C8A82"},   // stone sage grey
+  {min:100,  name:"Acolyte",      hex:"#8AA67E"},   // muted moss
+  {min:350,  name:"Disciple",     hex:"#6FA3AB"},   // weathered teal
+  {min:750,  name:"Warden",       hex:"#C5A45E"},   // antique gold
+  {min:1400, name:"Sage",         hex:"#C2855E"},   // burnt copper
+  {min:2800, name:"Luminary",     hex:"#BE869F"},   // dusk mauve
+  {min:5000, name:"The Ascended", hex:"#A99BD4"},   // faded amethyst
 ];
-const TIER_COLORS_V2 = {Initiate:"#5EEAD4",Acolyte:"#4ADE80",Disciple:"#38BDF8",Warden:"#FACC15",Sage:"#FB923C",Luminary:"#F472B6","The Ascended":"#A78BFA"};
+const TIER_COLORS_V2 = {Initiate:"#7C8A82",Acolyte:"#8AA67E",Disciple:"#6FA3AB",Warden:"#C5A45E",Sage:"#C2855E",Luminary:"#BE869F","The Ascended":"#A99BD4"};
 const DEFAULT_DEEDS = [
   ["The Pilgrimage",100],
   ["Of the First Fire",200],
@@ -577,7 +577,7 @@ function deeds(){ return (MEM && MEM.deeds && MEM.deeds.length)?MEM.deeds:DEFAUL
 // Pilgrimage", "Pilgrimage", etc.) — exact-match missed the variants people actually type.
 const KEEPER_DEED_KEYS = ['pilgrimage','first fire','rite of passage'];
 function isKeeperDeed(label){ const b=deedBase(String(label||'')).trim().toLowerCase(); return KEEPER_DEED_KEYS.some(k=>b.indexOf(k)>=0); }
-function ensureDefaults(){ if(!MEM)return; if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); if(MEM._tierMig!==1){ MEM.tiers=structuredClone(DEFAULT_TIERS); MEM._tierMig=1; } if(MEM._tierColorMig!==1){ (MEM.tiers||[]).forEach(t=>{ if(TIER_COLORS_V2[t.name]) t.hex=TIER_COLORS_V2[t.name]; }); MEM._tierColorMig=1; } if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); if(MEM._deedMig!==3){ MEM.deeds=structuredClone(DEFAULT_DEEDS); MEM._deedMig=3; } if(!MEM.rites)MEM.rites=[]; if(!MEM.challenges)MEM.challenges=[]; if(!MEM.seasonHistory)MEM.seasonHistory=[]; if(!MEM.wagers)MEM.wagers=[]; if(!MEM.itemLocks)MEM.itemLocks={}; if(!MEM.badgeColors)MEM.badgeColors={}; if(!MEM.badgeColors["Of the Eye"])MEM.badgeColors["Of the Eye"]="#E0B466"; if(!MEM.badgeColors["Drained the Chalice"])MEM.badgeColors["Drained the Chalice"]="#E0743A"; if(MEM.seasonStart===undefined)MEM.seasonStart=0;
+function ensureDefaults(){ if(!MEM)return; if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); if(MEM._tierMig!==1){ MEM.tiers=structuredClone(DEFAULT_TIERS); MEM._tierMig=1; } if(MEM._tierColorMig!==2){ (MEM.tiers||[]).forEach(t=>{ if(TIER_COLORS_V2[t.name]) t.hex=TIER_COLORS_V2[t.name]; }); MEM._tierColorMig=2; } if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); if(MEM._deedMig!==3){ MEM.deeds=structuredClone(DEFAULT_DEEDS); MEM._deedMig=3; } if(!MEM.rites)MEM.rites=[]; if(!MEM.challenges)MEM.challenges=[]; if(!MEM.seasonHistory)MEM.seasonHistory=[]; if(!MEM.wagers)MEM.wagers=[]; if(!MEM.itemLocks)MEM.itemLocks={}; if(!MEM.badgeColors)MEM.badgeColors={}; if(!MEM.badgeColors["Of the Eye"])MEM.badgeColors["Of the Eye"]="#E0B466"; if(!MEM.badgeColors["Drained the Chalice"])MEM.badgeColors["Drained the Chalice"]="#E0743A"; if(MEM.seasonStart===undefined)MEM.seasonStart=0;
   if(MEM._hatMig!==3){ const _hm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && ['crown','laurel','halo'].includes(c.hat)){ c.hat='none'; _hm.push(m); } }); MEM._hatMig=3; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _hm.length && !localStorage.getItem('grove-crownpurge3')){ _hm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-crownpurge3','1'); } }catch(e){} }
   if(MEM._fadeMig!==1){ const _fm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && c.hair_style==='fade'){ c.hair_style='short'; _fm.push(m); } }); MEM._fadeMig=1; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _fm.length && !localStorage.getItem('grove-fademig1')){ _fm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-fademig1','1'); } }catch(e){} } if(!MEM.fire)MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[]}; if(!MEM.fire.stokers)MEM.fire.stokers=[]; if(MEM.fire.lastDecay===undefined)MEM.fire.lastDecay=Date.now()/1000; if(MEM.fire.streak===undefined)MEM.fire.streak=0; if(MEM._fireTune!==2){ MEM.fire.goal=6; MEM._fireTune=2; } (MEM.members||[]).forEach(m=>{ if(m.season===undefined) m.season=0; if(m.chalBudget===undefined) m.chalBudget=150; else { const cb=m.chalBudget|0; m.chalBudget = cb>150?150 : (cb<0?0:cb); } if(m.oath===undefined) m.oath=true; if(m.lastStoke===undefined) m.lastStoke=0; if(m.logs===undefined) m.logs=0; if(m.fireLogs===undefined) m.fireLogs=0; if(!(m.points>0)) m.points=Math.max(0,m.points||0); if(!(m.season>0)) m.season=Math.max(0,m.season||0); if(m._preTop!==undefined && !(m.offered&&m.offered>Date.now()/1000)){ const c=m.sprite&&m.sprite.chibi; if(c&&c.top_style==='robes'){ const cc=structuredClone(c); cc.top_style=m._preTop||(cc.sleeves===false?'tank':'tee'); m.sprite={chibi:cc}; } delete m._preTop; } }); }
 function tierOf(p){const T=tiers();let t=T[0];for(const x of T)if(p>=x.min)t=x;return t;}
@@ -1512,19 +1512,26 @@ function drawChibiSprite(canvas,soul,scale,t,base,dpr){
   const px = scale<=4?1:(scale<=6?2:4);
   const GW=30,GH=46;
   const flick=0.5+0.5*Math.abs(Math.sin(t*0.004+soul.seed));
-  const glowR=(4+soul.ti*2.4);
+  // Aura strength rises steeply with rank: an Initiate is almost bare, the Ascended blazes.
+  // tn in 0..1 across the seven ranks, eased so the top ranks pull far ahead.
+  const TN=Math.max(1,(tiers().length-1));
+  const tn=Math.min(1,soul.ti/TN), tnE=tn*tn;
+  const glowR=(1.5+tnE*22);
   const padX=px*4, padTop=px*7, padBot=px*2;
   const cw=GW*px+padX*2, ch=GH*px+padTop+padBot;
   canvas.width=cw*dpr;canvas.height=ch*dpr;canvas.style.width=cw+"px";canvas.style.height=ch+"px";
   const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,cw,ch);
-  // Rank bloom (brighter): a soft CIRCULAR tier-coloured glow that fades fully within the
-  // sprite bounds — filled as a disc, not the whole canvas rect, so there's no boxy edge.
-  const _cx=cw/2,_cy=ch*0.46, _R=Math.min(cw,ch)*0.5;
+  // Rank bloom: a soft CIRCULAR tier-coloured glow that fades fully within the sprite bounds
+  // — filled as a disc, not the whole canvas rect, so there's no boxy edge. Both the radius
+  // and the opacity grow with rank, so the higher ranks read as genuinely more radiant.
+  const _cx=cw/2,_cy=ch*0.46, _R=Math.min(cw,ch)*(0.30+tn*0.22);
   const g=ctx.createRadialGradient(_cx,_cy,2,_cx,_cy,_R);
-  g.addColorStop(0,hexA(base,0.34+soul.ti*0.05));
-  g.addColorStop(0.5,hexA(base,0.12+soul.ti*0.025));
+  g.addColorStop(0,hexA(base,0.06+tnE*0.52));
+  g.addColorStop(0.5,hexA(base,0.02+tnE*0.20));
   g.addColorStop(1,"transparent");
   ctx.save(); ctx.beginPath(); ctx.arc(_cx,_cy,_R,0,6.28); ctx.fillStyle=g; ctx.fill(); ctx.restore();
+  // top ranks earn a faint breathing halo ring
+  if(soul.ti>=4){ ctx.save(); ctx.globalAlpha=(0.12+tnE*0.34)*flick; ctx.strokeStyle=base; ctx.lineWidth=1.5; ctx.shadowColor=base; ctx.shadowBlur=glowR*0.6; ctx.beginPath(); ctx.arc(_cx,_cy,_R*0.82,0,6.28); ctx.stroke(); ctx.restore(); }
   ctx.save();ctx.shadowColor=base;ctx.shadowBlur=glowR*flick*0.75;
   drawChibi(ctx,f,px,padX,padTop,soul.ti,tiers().length,(typeof moodExpr==='function'?moodExpr(soul.name):'neutral'));
   ctx.restore();
@@ -3918,7 +3925,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ac · The Order ranks now wear a vibrant spectrum — teal → emerald → sky → gold → orange → rose → violet — across the Ledger, soul cards and rank glows.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ad · Rank colours softened to a muted, earthen palette, and a spirit's aura now blooms stronger with each rank they climb — Initiates barely glow, the Ascended blaze.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4218,29 +4225,30 @@ function fbDraw(now){
   for(let i=_fb.flames.length-1;i>=0;i--){ const p=_fb.flames[i]; p.life+=dt; const t=p.life/p.max; if(t>=1){_fb.flames.splice(i,1);continue;} p.vy*=(1-dt*0.5); p.vy-=dt*26; p.x+=p.vx*dt+Math.sin(now/220+p.seed)*(7*dt*(0.4+I)); p.y+=p.vy*dt; const heat=1-t,r=fbL(255,150,t),g=fbL(150+95*I,40,t),b=fbL(40+90*I,12,t),a=heat*heat*0.4*(0.45+0.55*I),sz=p.sz*(0.5+0.9*heat); ctx.fillStyle='rgba('+(r|0)+','+(g|0)+','+(b|0)+','+a.toFixed(3)+')'; ctx.beginPath(); ctx.arc(p.x,p.y,sz,0,7); ctx.fill(); if(I>0.4&&heat>0.6){ ctx.fillStyle='rgba(255,230,190,'+(0.16*I*heat).toFixed(3)+')'; ctx.beginPath(); ctx.arc(p.x,p.y,sz*0.45,0,7); ctx.fill(); } }
   for(let i=_fb.embers.length-1;i>=0;i--){ const e=_fb.embers[i]; e.life+=dt; const t=e.life/e.max; if(t>=1){_fb.embers.splice(i,1);continue;} e.vy+=dt*14; e.x+=e.vx*dt+Math.sin(now/300+e.seed)*10*dt; e.y+=e.vy*dt; const tw=0.5+0.5*Math.sin(now/90+e.seed*3); ctx.fillStyle='rgba(255,'+(170+60*tw|0)+',80,'+((1-t)*0.85*tw).toFixed(3)+')'; ctx.beginPath(); ctx.arc(e.x,e.y,e.sz,0,7); ctx.fill(); }
   for(let i=_fb.sparks.length-1;i>=0;i--){ const sp=_fb.sparks[i]; sp.life+=dt; const t=sp.life/sp.max; if(t>=1){_fb.sparks.splice(i,1);continue;} sp.vy+=dt*130; sp.x+=sp.vx*dt; sp.y+=sp.vy*dt; ctx.fillStyle='rgba(255,'+(210-80*t|0)+','+(120-100*t|0)+','+((1-t)*0.95).toFixed(3)+')'; ctx.beginPath(); ctx.arc(sp.x,sp.y,sp.sz*(1-0.4*t),0,7); ctx.fill(); }
-  // The Eye forms in the flames as logs are added; fully opens (with rays) on the final log / blessing.
-  const eyeA=level<=1?0:Math.min(1,(level-1)/4.3);
-  if(eyeA>0){
-    const ex=cx, ey=groundY-46-_fb.cur*66, ew=(15+I*22)*(1+_fb.flash*0.45), flick=0.82+0.18*Math.sin(now/120);
-    ctx.save(); ctx.globalAlpha=eyeA*(0.55+0.45*flick);
+  const gy=groundY-22-_fb.cur*28, gr=fbL(40,150,I)*(0.92+0.08*Math.sin(now/120));
+  const gg=ctx.createRadialGradient(cx,gy,2,cx,gy,gr); gg.addColorStop(0,'rgba(255,180,80,'+(0.16+0.36*I).toFixed(3)+')'); gg.addColorStop(0.5,'rgba(226,138,60,'+(0.05+0.12*I).toFixed(3)+')'); gg.addColorStop(1,'rgba(226,138,60,0)');
+  ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(cx,gy,gr,0,7); ctx.fill();
+  ctx.globalCompositeOperation='source-over';
+  // The Eye forms in the flames as logs rise — drawn ON TOP of the glow so it stays visible;
+  // fully opens with rays on the final log / blessing.
+  const eyeA=level<=0?0:Math.min(1,level/Math.max(1,goal-1));
+  if(eyeA>0.04){
+    const ex=cx, ey=groundY-44-_fb.cur*60, ew=(14+I*22)*(1+_fb.flash*0.45), flick=0.82+0.18*Math.sin(now/120);
+    ctx.save(); ctx.globalAlpha=Math.min(1,eyeA)*(0.6+0.4*flick);
     ctx.globalCompositeOperation='lighter';
-    const sg=ctx.createRadialGradient(ex,ey,1,ex,ey,ew*1.6); sg.addColorStop(0,'rgba(255,235,150,'+(0.5*eyeA).toFixed(3)+')'); sg.addColorStop(1,'rgba(255,150,60,0)'); ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(ex,ey,ew*1.6,0,7); ctx.fill();
+    const sg=ctx.createRadialGradient(ex,ey,1,ex,ey,ew*1.7); sg.addColorStop(0,'rgba(255,235,150,'+(0.55*eyeA).toFixed(3)+')'); sg.addColorStop(1,'rgba(255,150,60,0)'); ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(ex,ey,ew*1.7,0,7); ctx.fill();
     ctx.globalCompositeOperation='source-over';
     const eh=ew*0.62*Math.min(1,eyeA*1.3+_fb.flash*0.3);
     ctx.beginPath(); ctx.moveTo(ex-ew,ey); ctx.quadraticCurveTo(ex,ey-eh,ex+ew,ey); ctx.quadraticCurveTo(ex,ey+eh,ex-ew,ey); ctx.closePath();
-    ctx.fillStyle='rgba(26,10,5,0.5)'; ctx.fill(); ctx.lineWidth=1.6; ctx.strokeStyle='rgba(255,210,120,'+eyeA.toFixed(3)+')'; ctx.stroke();
+    ctx.fillStyle='rgba(26,10,5,0.6)'; ctx.fill(); ctx.lineWidth=1.8; ctx.strokeStyle='rgba(255,214,128,'+Math.min(1,eyeA+0.2).toFixed(3)+')'; ctx.stroke();
     ctx.save(); ctx.clip();
-    const ir=ctx.createRadialGradient(ex,ey,1,ex,ey,ew*0.5); ir.addColorStop(0,'#FFE8A3'); ir.addColorStop(.5,'#F2C45A'); ir.addColorStop(.8,'#E0743A'); ir.addColorStop(1,'#7a2a10'); ctx.fillStyle=ir; ctx.beginPath(); ctx.arc(ex,ey,ew*0.44,0,7); ctx.fill();
-    const pw=ew*0.13, ph=ew*0.44*(0.55+0.45*eyeA); ctx.fillStyle='#0a0705'; ctx.beginPath(); ctx.ellipse(ex,ey,pw,ph,0,0,7); ctx.fill();
+    const ir=ctx.createRadialGradient(ex,ey,1,ex,ey,ew*0.5); ir.addColorStop(0,'#FFE8A3'); ir.addColorStop(.5,'#F2C45A'); ir.addColorStop(.8,'#E0743A'); ir.addColorStop(1,'#7a2a10'); ctx.fillStyle=ir; ctx.beginPath(); ctx.arc(ex,ey,ew*0.46,0,7); ctx.fill();
+    const pw=ew*0.13, ph=ew*0.46*(0.55+0.45*eyeA); ctx.fillStyle='#0a0705'; ctx.beginPath(); ctx.ellipse(ex,ey,pw,ph,0,0,7); ctx.fill();
     ctx.fillStyle='rgba(255,247,224,.85)'; ctx.beginPath(); ctx.arc(ex-pw,ey-ph*0.4,pw*0.5,0,7); ctx.fill();
     ctx.restore();
     if(level>=goal||_fb.flash>0.02){ ctx.globalAlpha=Math.min(1,eyeA)*(0.45+0.55*_fb.flash)*(0.6+0.4*Math.sin(now/60)); ctx.strokeStyle='#F2C45A'; for(let i=0;i<16;i++){ const a=i/16*7+now*0.0006; ctx.beginPath(); ctx.moveTo(ex+Math.cos(a)*ew*1.3,ey+Math.sin(a)*ew*1.3); ctx.lineTo(ex+Math.cos(a)*ew*1.95,ey+Math.sin(a)*ew*1.95); ctx.lineWidth=i%2?0.8:1.6; ctx.stroke(); } }
     ctx.restore();
   }
-  const gy=groundY-22-_fb.cur*28, gr=fbL(40,150,I)*(0.92+0.08*Math.sin(now/120));
-  const gg=ctx.createRadialGradient(cx,gy,2,cx,gy,gr); gg.addColorStop(0,'rgba(255,180,80,'+(0.16+0.36*I).toFixed(3)+')'); gg.addColorStop(0.5,'rgba(226,138,60,'+(0.05+0.12*I).toFixed(3)+')'); gg.addColorStop(1,'rgba(226,138,60,0)');
-  ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(cx,gy,gr,0,7); ctx.fill();
-  ctx.globalCompositeOperation='source-over';
   if(_fb.flash>0.01){ ctx.fillStyle='rgba(255,236,200,'+(_fb.flash*0.4).toFixed(3)+')'; ctx.fillRect(0,0,W,H); }
 }
 function mountFire(){ const cv=document.getElementById('fireCanvas'); if(!cv){ if(_fbRAF){cancelAnimationFrame(_fbRAF);_fbRAF=0;} _fbCv=null; return; } _fbCv=cv; _fbCtx=cv.getContext('2d'); if(_fbRAF) cancelAnimationFrame(_fbRAF); _fb.last=performance.now(); const loop=(now)=>{ if(!_fbCv||!_fbCv.isConnected){ _fbRAF=0; _fbCv=null; return; } try{ fbDraw(now); }catch(e){} _fbRAF=requestAnimationFrame(loop); }; _fbRAF=requestAnimationFrame(loop); }

@@ -2030,6 +2030,7 @@ function keeperPanel(){
         <button id="klogN" onclick="setKLog(0)">No</button></div></div>
       <div class="quick">${quick}</div>
       <button class="gold" style="margin-top:14px" onclick="awardPoints()">Inscribe in the ledger</button>
+      <button class="ghostbtn" onclick="bulkAwardForm()">▦ Bulk award — many spirits at once</button>
       <div class="kgroup">Spirits &amp; appearance</div>
       <button class="ghostbtn" onclick="editEpithetForm()">✎ Set a personal title</button>
       <button class="ghostbtn" onclick="creatorForm()">✦ Create / edit a chibi</button>
@@ -2181,6 +2182,50 @@ window.kBuffRefresh=function(){ const el=document.getElementById('kbuffNote'); i
   if(wm>1){ el.innerHTML=`<div style="margin:-4px 0 10px;padding:7px 10px;border-radius:9px;background:rgba(232,196,90,.1);border:1px solid rgba(232,196,90,.4);font-size:12px;color:var(--candle)">⚡ ${esc(m.name)} has a <b>×${wm}</b> wheel blessing banked. <button type="button" class="lsort ${KBUFF?'on':''}" style="margin-left:6px" onclick="setKBuff(${!KBUFF})">${KBUFF?'will apply ✓':'held back'}</button></div>`; }
   else { el.innerHTML=''; } };
 window.setKBuff=function(v){ KBUFF=!!v; kBuffRefresh(); };
+/* ---- Bulk award: same deed to many spirits at once, with a searchable list + undo ---- */
+let BULK_SEL={}, BULK_REASON='', BULK_PTS='', BULK_SIGN=1, BULK_LOG=1, BULK_Q='';
+window.bulkAwardForm=function(){ BULK_SEL={}; BULK_REASON=''; BULK_PTS=''; BULK_SIGN=1; BULK_LOG=1; BULK_Q=''; renderBulkAward(); };
+function bulkSyncInputs(){ const r=document.getElementById('bkReason'), p=document.getElementById('bkPts'); if(r)BULK_REASON=r.value; if(p)BULK_PTS=p.value; }
+function renderBulkAward(){ const q=(BULK_Q||'').toLowerCase();
+  const all=sortedMembers(); const list=all.filter(m=>!q||m.name.toLowerCase().includes(q));
+  const selN=Object.keys(BULK_SEL).filter(n=>BULK_SEL[n]).length;
+  const rows=list.map(m=>`<label style="display:flex;align-items:center;gap:9px;padding:6px 3px;border-bottom:1px solid rgba(60,80,68,.18);font-family:Spectral,serif;font-size:14px;cursor:pointer"><input type="checkbox" ${BULK_SEL[m.name]?'checked':''} onchange="bulkToggle('${m.name.replace(/'/g,"\\'")}',this.checked)" style="width:17px;height:17px;flex:none"><span style="flex:1">${esc(m.name)}</span><span style="font-family:'Silkscreen',monospace;font-size:10px;color:var(--sage)">${m.points}✦</span></label>`).join('')||`<div class="hint" style="padding:10px">No spirits match.</div>`;
+  sheet.innerHTML=`<div class="grip"></div><div class="kpanel">
+    <h3>Bulk award</h3>
+    <p class="sub">Give the same deed to many spirits at once — pick them, set the points, inscribe once. Each gets a one-tap undo.</p>
+    <div class="field"><label>Reason</label><input id="bkReason" placeholder="e.g. Attendance" value="${esc(BULK_REASON)}" style="${inp}width:100%;box-sizing:border-box"></div>
+    <div class="field"><label>Gain or lose?</label><div class="seg"><button class="${BULK_SIGN>=0?'on':''}" onclick="bulkSign(1)">+ Gain</button><button class="${BULK_SIGN<0?'on':''}" onclick="bulkSign(-1)">− Lose</button></div></div>
+    <div class="field"><label>Devotion Points</label><input id="bkPts" type="number" inputmode="numeric" value="${esc(BULK_PTS)}" placeholder="100" style="${inp}width:100%;box-sizing:border-box"></div>
+    <div class="field"><label>Fire log chance?</label><div class="seg"><button class="${BULK_LOG?'on':''}" onclick="bulkLog(1)">🪵 Yes</button><button class="${!BULK_LOG?'on':''}" onclick="bulkLog(0)">No</button></div></div>
+    <input id="bkSearch" placeholder="🔍 Filter names…" oninput="bulkFilter(this.value)" value="${esc(BULK_Q)}" style="${inp}width:100%;box-sizing:border-box;margin-bottom:6px">
+    <div style="display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:5px">
+      <span style="font-family:'Silkscreen',monospace;font-size:10px;color:var(--candle)">${selN} selected</span>
+      <span><button class="lsort" onclick="bulkAll(true)">Select shown</button> <button class="lsort" onclick="bulkAll(false)">Clear</button></span>
+    </div>
+    <div style="max-height:240px;overflow-y:auto;border:1px solid rgba(60,80,68,.3);border-radius:9px;padding:2px 9px">${rows}</div>
+    <button class="gold" style="margin-top:12px" onclick="bulkApply()">Inscribe to the selected</button>
+    <button class="ghostbtn" onclick="keeperPanel()">Back</button>
+    <div class="err" id="kerr"></div>
+  </div>`;
+  setTimeout(()=>{ const s=document.getElementById('bkSearch'); if(s && BULK_Q){ s.focus(); s.setSelectionRange(s.value.length,s.value.length); } },0);
+}
+window.bulkToggle=function(name,on){ BULK_SEL[name]=!!on; };
+window.bulkFilter=function(v){ bulkSyncInputs(); BULK_Q=v||''; renderBulkAward(); };
+window.bulkSign=function(s){ bulkSyncInputs(); BULK_SIGN=s; renderBulkAward(); };
+window.bulkLog=function(v){ bulkSyncInputs(); BULK_LOG=v?1:0; renderBulkAward(); };
+window.bulkAll=function(on){ bulkSyncInputs(); const q=(BULK_Q||'').toLowerCase(); sortedMembers().filter(m=>!q||m.name.toLowerCase().includes(q)).forEach(m=>{ BULK_SEL[m.name]=!!on; }); renderBulkAward(); };
+window.bulkApply=async function(){ bulkSyncInputs(); const names=Object.keys(BULK_SEL).filter(n=>BULK_SEL[n]); const err=document.getElementById('kerr');
+  if(!names.length){ if(err)err.textContent='Pick at least one spirit.'; return; }
+  let mag=parseInt(BULK_PTS,10); if(isNaN(mag)||mag===0){ if(err)err.textContent='Enter a Devotion Points value.'; return; }
+  mag=Math.min(100000,Math.abs(mag)); const net=mag*(BULK_SIGN<0?-1:1); const reason=(BULK_REASON||'Deed recorded').trim().slice(0,80); const tnow=Date.now()/1000;
+  const undo=[];
+  names.forEach(n=>{ const m=memByName(n); if(!m)return; undo.push({name:n,pts:m.points,season:(m.season||0),histLen:(m.history||[]).length,logs:m.logs});
+    m.points=Math.max(0,m.points+net); m.season=Math.max(0,(m.season||0)+net); m.history=m.history||[]; m.history.push({l:reason,d:net,n:1,t:tnow}); if(net>0 && BULK_LOG) maybeEarnLog(m,net); });
+  await saveData(); layoutGrove(); renderLedger(); closeSheet();
+  actionToast(`${names.length} spirit${names.length===1?'':'s'} ${net>0?'gain':'lose'} ${Math.abs(net)} — ${reason}`, '↩ Undo', async ()=>{
+    undo.forEach(u=>{ const m=memByName(u.name); if(!m)return; m.points=u.pts; m.season=u.season; if(m.history&&m.history.length>u.histLen)m.history.length=u.histLen; m.logs=u.logs; });
+    await saveData(); layoutGrove(); renderLedger(); toast('Bulk award undone.'); });
+};
 window.seasonForm=function(){
   sheet.innerHTML=`
     <div class="grip"></div>
@@ -4101,7 +4146,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ao · Quality-of-life — rites show who has approved, the rank-aura panel gains presets and a live grove preview, and every Keeper award can be undone with one tap.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ap · Bulk award (pick many spirits, searchable, one-tap undo), an "at stake" readout of your locked Devotion, and win/loss/draw notices for your wagers — plus the anti-cheat, pot-conservation and self-vote fixes are now enforced server-side too.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4150,6 +4195,13 @@ function detectLogGains(){
 /* ---- stake-bet janitor: surface silent sweep endings so refunds never feel like they vanished ---- */
 let BET_SNAP=null;
 function betSnapshot(){ const s={w:{},g:{}}; (MEM.wagers||[]).forEach(w=>{ if(w&&w.id) s.w[w.id]=w.status; }); (MEM.groups||[]).forEach(g=>{ if(g&&g.id) s.g[g.id]=g.status; }); return s; }
+// how much of a spirit's Devotion is currently locked at stake across live wagers + group wagers
+function myStaked(name){ let total=0,n=0; if(!name) return {total,n};
+  (MEM.wagers||[]).forEach(w=>{ if(!w)return; const amt=w.amount||0;
+    if(w.status==='open' && w.proposer===name){ total+=amt; n++; }
+    else if((w.status==='matched'||w.status==='disputed') && (w.proposer===name||w.taker===name)){ total+=amt; n++; } });
+  (MEM.groups||[]).forEach(g=>{ if(!g)return; if((g.status==='pending'||g.status==='active'||g.status==='disputed') && groupParts(g).includes(name)){ total+=(g.stake||0); n++; } });
+  return {total,n}; }
 function initBetSnap(){ BET_SNAP=betSnapshot(); }
 function detectBetEndings(){
   if(!BET_SNAP){ BET_SNAP=betSnapshot(); return; }
@@ -4158,13 +4210,16 @@ function detectBetEndings(){
   if(me){
     (MEM.wagers||[]).forEach(w=>{ if(!w||!w.id) return; const was=BET_SNAP.w[w.id]; if(was===undefined||was===w.status) return;
       if(w.proposer!==me && w.taker!==me) return;
-      if(w.status==='expired' && w.proposer===me) ev.push('⌛ Your wager'+(w.title?(' “'+w.title+'”'):'')+' expired unmatched — '+(w.amount||0)+'✦ returned.');
-      else if(w.status==='forfeit') ev.push('⚖ Your wager'+(w.title?(' “'+w.title+'”'):'')+' went unresolved — both forfeited '+(w.amount||0)+'✦.');
+      const _wt=(w.title?(' “'+w.title+'”'):'');
+      if(w.status==='expired' && w.proposer===me) ev.push('⌛ Your wager'+_wt+' expired unmatched — '+(w.amount||0)+'✦ returned.');
+      else if(w.status==='forfeit') ev.push('⚖ Your wager'+_wt+' went unresolved — both forfeited '+(w.amount||0)+'✦.');
+      else if(w.status==='settled'){ if(w.winner==='tie') ev.push('🤝 Your wager'+_wt+' was a draw — '+(w.amount||0)+'✦ returned.'); else if(w.winner===me) ev.push('🎲 You won your wager'+_wt+' — +'+(2*(w.amount||0))+'✦!'); else ev.push('🎲 You lost your wager'+_wt+' — '+(w.amount||0)+'✦ gone.'); }
     });
     (MEM.groups||[]).forEach(g=>{ if(!g||!g.id) return; const was=BET_SNAP.g[g.id]; if(was===undefined||was===g.status) return;
       if(!groupParts(g).includes(me)) return;
       if(g.status==='expired') ev.push('⌛ “'+(g.title||'Group wager')+'” never locked — your '+(g.stake||0)+'✦ stake returned.');
       else if(g.status==='void') ev.push('⚖ “'+(g.title||'Group wager')+'” went unsettled — your '+(g.stake||0)+'✦ stake refunded.');
+      else if(g.status==='settled'){ const myside=(g.sideA||[]).includes(me)?'A':'B'; const gt='“'+(g.title||'group wager')+'”'; if(g.winner===myside){ const pot=(g.stake||0)*groupParts(g).length; const win=(g.winner==='A'?g.sideA:g.sideB)||[]; const share=win.length?Math.floor(pot/win.length):0; ev.push('⚔ Your side won '+gt+' — about +'+share+'✦!'); } else ev.push('⚔ Your side lost '+gt+' — '+(g.stake||0)+'✦ gone.'); }
     });
   }
   BET_SNAP=betSnapshot();
@@ -4476,7 +4531,7 @@ function renderTrials(){
   const chalHTML=`
     <div class="ritehdr" style="margin-top:22px">The Challenge Board</div>
     <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Stake from your <b style="color:var(--candle)">150</b>-point challenge budget; one spirit takes it on and earns the stake once you approve it done.</p>
-    ${ me? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage);margin-bottom:8px">${VOTER} · budget <b style="color:var(--candle)">${budget}</b>/150 · committed ${commits}/3</div>`:""}
+    ${ me? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage);margin-bottom:8px">${esc(VOTER)} · budget <b style="color:var(--candle)">${budget}</b>/150 · committed ${commits}/3${(()=>{const s=myStaked(VOTER); return s.total>0?` · <b style="color:#E8C45A">${s.total}✦</b> at stake (${s.n})`:'';})()}</div>`:""}
     <div id="chalList">${cards}</div>
     <div style="text-align:center;margin-top:10px">${ me? `<button class="gold" onclick="newChallengeForm()">✦ Set a challenge</button>` : `<p class="hint">Pick your name above to set or accept challenges.</p>` }</div>`;
   const wopen=(MEM.wagers||[]).filter(w=>w.status==='open').sort((a,b)=>(b.created||0)-(a.created||0));

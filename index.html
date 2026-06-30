@@ -3762,7 +3762,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30e · lock/exit chime killed via iOS audioSession='ambient' (respects silent switch) · version banner no longer cries wolf · shorter test-ping notification · keeper passphrase hashed (bcrypt) · economy server fuzzed · (prev: Chalice anti-stall + cron · 60s nomination undo · profanity filter · stake-bet janitor · server-authoritative wheel + rite/chalice hardening)</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30f · law-break reports lapse after 30s · lock/exit chime killed via iOS audioSession='ambient' (respects silent switch) · version banner no longer cries wolf · shorter test-ping notification · keeper passphrase hashed (bcrypt) · economy server fuzzed · (prev: Chalice anti-stall + cron · 60s nomination undo · profanity filter · stake-bet janitor · server-authoritative wheel + rite/chalice hardening)</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -5118,6 +5118,8 @@ function thr(n){ return Math.max(1, Math.ceil(n/3)); }
 const TURN_SECS=120;
 const DARE_SECS=180;
 const LOBBY_SECS=900;   // a lobby that never begins dissolves after 15 min
+const REPORT_SECS=30;   // a law-break report lapses if the circle doesn't agree within 30s
+function reportLive(r){ return !!(r && r.status==='open' && (nowS()-(r.t||0) < REPORT_SECS)); }
 function isAway(n,s){ return !!((n.away&&n.away[s])||(n.kicked&&n.kicked[s])); }
 function liveSpirits(n){ return (n.spirits||[]).filter(s=>!isAway(n,s)); }
 function advanceTurn(n){ const L=(n.spirits||[]).length; for(let k=1;k<=L;k++){ const idx=(n.turn+k)%L; if(!isAway(n,n.spirits[idx])){ n.turn=idx; return true; } } return false; }
@@ -5279,7 +5281,7 @@ function report(){
 }
 function agreeReport(id){
   const g=GC(); if(!g) return; const who=me(); if(!who) return;
-  const r=(g.reports||[]).find(x=>x.id===id); if(!r||r.status!=='open') return;
+  const r=(g.reports||[]).find(x=>x.id===id); if(!r||!reportLive(r)){ toast('That report has lapsed.'); return; }
   if(r.accused===who){ toast('You cannot judge your own report.'); return; }
   if(r.agrees.indexOf(who)>=0){ toast('You already agreed.'); return; }
   const n=clone(g); const nr=n.reports.find(x=>x.id===id); nr.agrees.push(who);
@@ -5526,8 +5528,8 @@ function lawsStrip(g){
   if(!(g.laws||[]).length) return '';
   let h='<div class="chal-laws"><div class="chal-lawhdr">Active Laws</div>';
   h+=g.laws.map(l=>'<div class="chal-law">\u00a7 \u201c'+l.text+'\u201d <span>\u2014 '+l.by+'</span></div>').join('');
-  const openR=(g.reports||[]).filter(r=>r.status==='open');
-  if(openR.length){ h+=openR.map(r=>{ const can=me()&&r.accused!==me()&&r.agrees.indexOf(me())<0; return '<div class="chal-report">\u2696 '+r.by+' reports <b>'+r.accused+'</b> ('+r.agrees.length+'/'+thr(g.spirits.length)+') '+(can?'<button onclick="chalAPI.agree(\''+r.id+'\')">Agree</button>':'')+'</div>'; }).join(''); }
+  const openR=(g.reports||[]).filter(reportLive);
+  if(openR.length){ h+=openR.map(r=>{ const can=me()&&r.accused!==me()&&r.agrees.indexOf(me())<0; const left=Math.max(0,REPORT_SECS-(nowS()-(r.t||0))); return '<div class="chal-report">\u2696 '+r.by+' reports <b>'+r.accused+'</b> ('+r.agrees.length+'/'+thr(g.spirits.length)+' \u00b7 '+left+'s) '+(can?'<button onclick="chalAPI.agree(\''+r.id+'\')">Agree</button>':'')+'</div>'; }).join(''); }
   h+='<button class="chal-mini" onclick="chalAPI.report()">Report a law-breaker</button>';
   h+='</div>'; return h;
 }

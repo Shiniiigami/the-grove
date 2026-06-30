@@ -3754,7 +3754,7 @@ function renderRules(){
     <p class="rtext"><b>50 ✦</b> laid before the Eye Totem, once every 2 hours. The Eye's verdict runs from a <b>+250</b> radiance down to <b>−100</b> wrath, with returned offerings and <b>×2 / ×3</b> blessings that boost your next <b>deed or challenge</b> (never a wager), plus a <b>×2 curse</b> on your next penalty. Roughly 56% of verdicts favor you, and the Eye can never drop you below zero.</p>
     <div class="ritehdr">Trial of the Chalice</div>
     <p class="rtext">A 52-card King’s Cup for the circle — <b>4–20 spirits</b>, and one phone may hold several. The <b>host</b> opens the lobby and begins the trial; if they don’t, the right to begin passes down the join order so the circle never stalls. Each spirit’s <b>rank shows beneath their name</b>. On your turn you draw a card and the circle acts it out aloud — sending others to drink, binding a partner, decreeing a <b>law</b> (no two laws alike), or pouring into the Chalice. Devotion rides a <b>hidden tally</b> all game and commits as a single “Trial of the Chalice” line when it ends.</p>
-    <p class="rtext">The <b>fourth King</b> is the reckoning — the <b>Eye itself opens</b> over the circle: that drawer either <b>drinks the Chalice</b> (gaining Devotion and the <i>Drained the Chalice</i> badge) or <b>braves a ritual</b> the circle sets aloud — 3 minutes, half must approve. Succeed for the badge and a communal cup (up to four sip, +10 each); fail or refuse and lose <b>50</b>. Break a law and a spirit can <b>report you by tapping your name</b> — reports lapse after 30 seconds, and if enough agree you’re judged (−5); you may even own up and vote on your own report. Spirits may step away (the host passes on), be <b>cast out by tapping a name</b> and a half-vote (the named may vote too), or rejoin — and a lobby that never begins dissolves after <b>3 minutes</b>.</p>
+    <p class="rtext">The <b>fourth King</b> is the reckoning — the <b>Eye itself opens</b> over the circle: that drawer either <b>drinks the Chalice</b> (gaining Devotion and the <i>Drained the Chalice</i> badge) or <b>braves a ritual</b> the circle sets aloud — 3 minutes, half must approve. Succeed for the badge and a communal cup (up to four sip, +10 each); fail or refuse and lose <b>40</b>. Break a law and a spirit can <b>report you by tapping your name</b> — reports lapse after 30 seconds, and if enough agree you’re judged (−5); you may even own up and vote on your own report. Spirits may step away (the host passes on), be <b>cast out by tapping a name</b> and a half-vote (the named may vote too), or rejoin — and a lobby that never begins dissolves after <b>3 minutes</b>.</p>
     <div class="ritehdr">The Rites · Voting</div>
     <p class="rtext">Anyone may raise and approve rites — pick your name, then nominate or approve. Honour-based: one vote per name, and each device votes once per rite.</p>
     <div class="rulerow"><span>Award / deduct Devotion</span><span class="rmin">3–8 ✦</span></div>
@@ -3772,7 +3772,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30o · Keeper-only milestone deeds now match any wording (e.g. “Made the Pilgrimage”) · you can report any spirit, including your own (single-phone games) · new builds auto-refresh on web & PWA (no stale version) · rules updated for recent changes · the Eye opens when the fourth King fills the Chalice · ranks shown in the Chalice circle · tap-to-report & tap-to-cast-out · the accused may vote on their own report/cast-out · no duplicate laws · Keeper-only milestone deeds · notifications open the right page · emoji thoughts fixed · challenge budget capped at 150</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30p · Chalice rebalance: draining the cup +40, each early King +5, refusing the rite −40 · Keeper-only milestone deeds now match any wording (e.g. “Made the Pilgrimage”) · you can report any spirit, including your own (single-phone games) · new builds auto-refresh on web & PWA (no stale version) · rules updated for recent changes · the Eye opens when the fourth King fills the Chalice · ranks shown in the Chalice circle · tap-to-report & tap-to-cast-out · the accused may vote on their own report/cast-out · no duplicate laws · Keeper-only milestone deeds · notifications open the right page · emoji thoughts fixed · challenge budget capped at 150</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -5176,7 +5176,7 @@ const CR=[
  {r:'10',name:'The Litany',        em:'litany',  mech:'pen',  dev:'−10 loser',       kind:'loser',     conf:'nominee', pen:10, slow:true},
  {r:'J', name:'The Summons',       em:'summons', mech:'gain', dev:'+5 each',         kind:'summon',    conf:'nominee', each:5},
  {r:'Q', name:'The Anointed',      em:'anointed',mech:'gain', dev:'+5 each',         kind:'anoint',    conf:'nominee', each:5},
- {r:'K', name:'The Chalice',       em:'chalice', mech:'chal', dev:'drain +20',       kind:'king',      conf:'nominee', drain:20},
+ {r:'K', name:'The Chalice',       em:'chalice', mech:'chal', dev:'drain +40',       kind:'king',      conf:'nominee', drain:40},
 ];
 const ROMAN={'A':'A','2':'II','3':'III','4':'IV','5':'V','6':'VI','7':'VII','8':'VIII','9':'IX','10':'X','J':'J','Q':'Q','K':'K'};
 const SUITS=[
@@ -5428,7 +5428,7 @@ function confirmCard(){
   else if(R.kind==='loser'){ if(!c.loser){ toast('Name the loser first.'); return; } tallyAdd(n,c.loser,-R.pen); feedPush(n,c.loser+' lost '+R.name+' (\u2212'+R.pen+').'); }
   else if(R.kind==='summon'){ const tg=liveSpirits(n).filter(s=>tierOf(s)===c.tier); tg.forEach(s=>tallyAdd(n,s,R.each)); feedPush(n,'The Summons calls '+tierName(c.tier)+' \u2014 '+(tg.join(', ')||'none')+' drink.'); }
   else if(R.kind==='anoint'){ const tg=liveSpirits(n).filter(s=>tierOf(s)===c.tier); tg.forEach(s=>tallyAdd(n,s,R.each)); feedPush(n,c.drawer+' anoints '+tierName(c.tier)+' \u2014 '+(tg.join(', ')||'none')+' drink.'); }
-  else if(R.kind==='king'){ n.kings=(n.kings||0)+1; if(n.kings>=4){ n.phase='drain'; n.deadline=0; feedPush(n,'The fourth King! '+c.drawer+' must drink from the Chalice \u2014 or brave a ritual to suffice it.'); send(n); return; } else { feedPush(n,c.drawer+' pours into the Chalice ('+n.kings+'/4).'); } }
+  else if(R.kind==='king'){ n.kings=(n.kings||0)+1; if(n.kings>=4){ n.phase='drain'; n.deadline=0; feedPush(n,'The fourth King! '+c.drawer+' must drink from the Chalice \u2014 or brave a ritual to suffice it.'); send(n); return; } else { tallyAdd(n,c.drawer,5); feedPush(n,c.drawer+' pours into the Chalice ('+n.kings+'/4) \u2014 +5.'); } }
   resolveDone(n); send(n);
 }
 function resolveDone(n){
@@ -5533,7 +5533,7 @@ function endGame(reason){
   if(!confirm('End the Trial of the Chalice now? Each spirit\u2019s Devotion will commit.')) return;
   endGameState(clone(g), reason||'The nominee ends the trial.', true);
 }
-function drainPts(){ const k=CR.find(R=>R.kind==='king'); return (k&&k.drain)||20; }
+function drainPts(){ const k=CR.find(R=>R.kind==='king'); return (k&&k.drain)||40; }
 var CHAL_BADGE='Drained the Chalice';
 function drinkChalice(){
   const g=GC(); if(!g||g.phase!=='drain'||!g.current) return; const drainer=g.current.drawer;
@@ -5558,7 +5558,7 @@ function resolveDareSuccess(n){
   send(n);
 }
 function resolveDareFail(n, reason){
-  const who=n.dare.who; tallyAdd(n, who, -50); n.drained=null; n.communal=false;
+  const who=n.dare.who; tallyAdd(n, who, -40); n.drained=null; n.communal=false;
   feedPush(n, reason); n.current=null; endGameState(n, who+' refused the Chalice (\u221250).');
 }
 function voteDare(name, verdict){
@@ -5569,7 +5569,7 @@ function voteDare(name, verdict){
   const n=clone(g); n.dare.votes=n.dare.votes||{}; n.dare.votes[name]=verdict;
   const t=dareThresh(n), cnt=dareCount(n);
   if(cnt.done>=t) return resolveDareSuccess(n);
-  if(cnt.fail>=t) return resolveDareFail(n, n.dare.who+' failed the ritual \u2014 the Chalice curses them (\u221250).');
+  if(cnt.fail>=t) return resolveDareFail(n, n.dare.who+' failed the ritual \u2014 the Chalice curses them (\u221240).');
   feedPush(n, name+' judges \u201c'+(verdict==='done'?'done':'failed')+'\u201d ('+cnt.done+' done \u00b7 '+cnt.fail+' failed \u00b7 need '+t+').');
   send(n);
 }
@@ -5577,7 +5577,7 @@ function dareGiveUp(){
   const g=GC(); if(!g||g.phase!=='dare'||!g.dare) return; const who=g.dare.who;
   if(!controls(who)){ toast('Only '+who+' may give up.'); return; }
   if(!confirm('Give up the ritual? You will lose 50 Devotion.')) return;
-  resolveDareFail(clone(g), who+' gave up the ritual \u2014 the Chalice curses them (\u221250).');
+  resolveDareFail(clone(g), who+' gave up the ritual \u2014 the Chalice curses them (\u221240).');
 }
 function sipChalice(name){
   const g=GC(); if(!g||g.phase!=='communal') return; const who=g.dare?g.dare.who:null;
@@ -5654,7 +5654,7 @@ function startPoll(){ if(POLL) return; POLL=setInterval(async()=>{
     const iAmJanitor=!!live0 && controls(live0);
     const iCanAdvance=(g.nominee===me()||controls(g.nominee)) || (g.spirits||[]).some(s=>!isAway(g,s)&&controls(s));
     if(g.phase==='dare' && g.dare && g.deadline && nowS()>g.deadline){
-      if(iAmJanitor){ resolveDareFail(clone(g), g.dare.who+'\u2019s ritual time ran out \u2014 the Chalice curses them (\u221250).'); return; }
+      if(iAmJanitor){ resolveDareFail(clone(g), g.dare.who+'\u2019s ritual time ran out \u2014 the Chalice curses them (\u221240).'); return; }
     } else if(iCanAdvance){
       const drawerAway=(g.phase==='draw') && isAway(g, g.spirits[g.turn]);
       const cardSlow=!!(g.current && CR[g.current.ri] && CR[g.current.ri].slow);
@@ -5779,7 +5779,7 @@ function deckBack(){ return '<div class="chal-deckback"><svg viewBox="0 0 100 10
 function resolveControls(g,R,c,drawer){
   if(g.phase==='drain' && g.current){
     const dn=g.current.drawer;
-    if(controls(dn)) return '<div class="chal-conf"><div class="chal-q">The fourth King \u2014 the Chalice is yours</div><button class="chal-btn gold" onclick="chalAPI.drink()">Drink from the Chalice (+'+drainPts()+')</button><button class="chal-btn" onclick="chalAPI.dare()">Complete a ritual instead\u2026</button><p class="chal-hint">Drink it and the badge is yours. Or forgo the cup for a ritual the circle sets aloud \u2014 3 minutes, half must approve. Succeed for the badge and a communal cup (up to 4 sip, +10 each). Fail or refuse both and you lose 50.</p></div>';
+    if(controls(dn)) return '<div class="chal-conf"><div class="chal-q">The fourth King \u2014 the Chalice is yours</div><button class="chal-btn gold" onclick="chalAPI.drink()">Drink from the Chalice (+'+drainPts()+')</button><button class="chal-btn" onclick="chalAPI.dare()">Complete a ritual instead\u2026</button><p class="chal-hint">Drink it and the badge is yours. Or forgo the cup for a ritual the circle sets aloud \u2014 3 minutes, half must approve. Succeed for the badge and a communal cup (up to 4 sip, +10 each). Fail or refuse both and you lose 40.</p></div>';
     return '<div class="chal-turn"><b>'+dn+'</b> faces the Chalice \u2014 to drink, or to brave a ritual\u2026</div>';
   }
   if(g.phase==='dare' && g.dare){

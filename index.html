@@ -2011,13 +2011,14 @@ function keeperPanel(){
     const neg=q[1]<0, lbl=String(q[0]).replace(/['"]/g,"");
     return `<button onclick="setQuick('${lbl}',${q[1]})" ${neg?'style="border-color:rgba(199,90,51,.45);color:#E8A88F"':''}>${q[0]} ${q[1]>=0?'+':''}${q[1]}</button>`;
   }).join("");
-  KMULT=1; KSIGN=1; KLOG=1;
+  KMULT=1; KSIGN=1; KLOG=1; KBUFF=true;
   sheet.innerHTML=`
     <div class="grip"></div>
     <div class="kpanel">
       <h3>Keeper's Ledger</h3>
       <p class="sub">Award deeds at the closing ceremony. All spirits update at once.</p>
-      <div class="field"><label>Member</label><select id="kmem">${opts}</select></div>
+      <div class="field"><label>Member</label><select id="kmem" onchange="kBuffRefresh()">${opts}</select></div>
+      <div id="kbuffNote"></div>
       <div class="field"><label>Reason</label><input id="kreason" placeholder="e.g. Completed the portage"></div>
       <div class="field"><label>Gain or lose?</label><div class="seg" id="ksignseg">
         <button id="ksgnP" class="on" onclick="setKSign(1)">+ Gain</button>
@@ -2059,6 +2060,7 @@ function keeperPanel(){
       <button class="ghostbtn" onclick="closeSheet()">Close</button>
       <div class="err" id="kerr"></div>
     </div>`;
+  try{ kBuffRefresh(); }catch(e){}
 }
 function roman(n){ return ['','I','II','III','IV','V','VI','VII','VIII','IX','X'][n]||String(n); }
 function garmentForPoints(p){ if(p>=2500)return'ascend'; if(p>=2000)return'luminary'; if(p>=1500)return'robes'; if(p>=1000)return'sage'; if(p>=600)return'mantle'; if(p>=300)return'tunic'; if(p>=100)return'sash'; return null; }
@@ -2170,10 +2172,15 @@ window.summonsRobes=async function(){
   await saveData(); layoutGrove(); renderLedger(); if(typeof renderRules==='function')renderRules(); closeSheet();
   toast(`The Order is robed — ${n} spirit${n===1?'':'s'} answered the summons.`);
 };
-let KMULT=1, KSIGN=1, KLOG=1;
+let KMULT=1, KSIGN=1, KLOG=1, KBUFF=true;
 window.setMult=function(n){ KMULT=n; };
 window.setKSign=function(s){ KSIGN=s; const p=document.getElementById('ksgnP'),n=document.getElementById('ksgnN'); if(p)p.classList.toggle('on',s===1); if(n)n.classList.toggle('on',s===-1); };
 window.setKLog=function(v){ KLOG=v; const y=document.getElementById('klogY'),n=document.getElementById('klogN'); if(y)y.classList.toggle('on',v===1); if(n)n.classList.toggle('on',v===0); };
+// Surface a banked wheel buff for the selected member so it's never consumed by an unrelated award.
+window.kBuffRefresh=function(){ const el=document.getElementById('kbuffNote'); if(!el)return; const sel=document.getElementById('kmem'); const m=sel?MEM.members.find(x=>x.name===sel.value):null; const wm=(m&&m.winMult)||1;
+  if(wm>1){ el.innerHTML=`<div style="margin:-4px 0 10px;padding:7px 10px;border-radius:9px;background:rgba(232,196,90,.1);border:1px solid rgba(232,196,90,.4);font-size:12px;color:var(--candle)">⚡ ${esc(m.name)} has a <b>×${wm}</b> wheel blessing banked. <button type="button" class="lsort ${KBUFF?'on':''}" style="margin-left:6px" onclick="setKBuff(${!KBUFF})">${KBUFF?'will apply ✓':'held back'}</button></div>`; }
+  else { el.innerHTML=''; } };
+window.setKBuff=function(v){ KBUFF=!!v; kBuffRefresh(); };
 window.seasonForm=function(){
   sheet.innerHTML=`
     <div class="grip"></div>
@@ -2454,7 +2461,7 @@ window.awardPoints=async function(){
   const m=MEM.members.find(x=>x.name===name);
   const before=tierIndex(m.points);
   let netPts=pts;
-  if(netPts>0){ const wm=consumeMult(m); if(wm>1){ netPts=netPts*wm; reason+=` (×${wm} wheel)`; } if(KLOG)maybeEarnLog(m,netPts); }
+  if(netPts>0){ if(KBUFF){ const wm=consumeMult(m); if(wm>1){ netPts=netPts*wm; reason+=` (×${wm} wheel)`; } } if(KLOG)maybeEarnLog(m,netPts); }
   else if(netPts<0 && m.lossMult>1){ const lm=m.lossMult; delete m.lossMult; netPts=netPts*lm; reason+=` (×${lm} curse)`; }
   m.points=Math.max(0,m.points+netPts);
   m.season=Math.max(0,(m.season||0)+netPts);
@@ -4063,7 +4070,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30al · Hardening pass — user text is HTML-escaped everywhere, rank auras survive custom rank counts, rank thresholds must strictly rise, migrations no longer clobber restored backups, and a clutch of small fixes (rank-up double-fire, ledger timestamps, polar skies, rank-name caps).</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30am · Trials hardening — gaming a maxed trial with a wheel buff now backfires (−100, the Eye disfavours cheaters), group pots split with no points lost to rounding, wager-dispute parties can no longer vote on themselves, and a banked wheel buff is shown (and held back) before a Keeper award spends it.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4221,7 +4228,7 @@ const GROUP_CAP=100, GROUP_SIDE_MAX=6, GROUP_LOCK_SEC=3600, GROUP_ACTIVE_SEC=864
 function groupById(id){ return (MEM.groups||[]).find(g=>g.id===id); }
 function groupParts(g){ return [...(g.sideA||[]),...(g.sideB||[])]; }
 function groupPot(g){ return (g.stake||0)*groupParts(g).length; }
-function groupPayout(g,side){ const all=groupParts(g); const pot=(g.stake||0)*all.length; const winners=(side==='A')?(g.sideA||[]):(g.sideB||[]); if(winners.length){ const share=Math.floor(pot/winners.length); winners.forEach(nm=>{ const m=memByName(nm); if(m){ adjPts(m,share); maybeEarnLog(m,share); } }); } g.winner=side; g.status='settled'; }
+function groupPayout(g,side){ const all=groupParts(g); const pot=(g.stake||0)*all.length; const winners=(side==='A')?(g.sideA||[]):(g.sideB||[]); if(winners.length){ const share=Math.floor(pot/winners.length); let rem=pot-share*winners.length; winners.forEach(nm=>{ const m=memByName(nm); if(m){ const pay=share+(rem>0?1:0); if(rem>0)rem--; adjPts(m,pay); maybeEarnLog(m,pay); } }); } g.winner=side; g.status='settled'; }
 function sweepGroups(now){ let ch=false; (MEM.groups||[]).forEach(g=>{
   if(g.status==='pending' && now-(g.created||now)>=GROUP_LOCK_SEC){ groupParts(g).forEach(nm=>{const m=memByName(nm); if(m)adjPts(m,g.stake||0);}); g.status='expired'; ch=true; }
   else if(g.status==='active' && now-(g.lockedAt||now)>=GROUP_ACTIVE_SEC){ g.status='disputed'; g.disputeAt=now; ch=true; }
@@ -4235,7 +4242,11 @@ function applyAction(a){
   else if(a.t==='chal_accept'){ const c=chalById(a.id); if(!c||c.status!=='open')return; if(a.name===c.owner)return; if(activeCommitments(a.name)>=3)return; c.accepter=a.name; c.status='accepted'; }
   else if(a.t==='chal_remove'){ const c=chalById(a.id); if(!c)return; if(a.by!==c.owner && !a.keeper)return; if(c.status==='open' || (a.keeper && c.status==='accepted')){ refundBudget(memByName(c.owner),c.reward||0); MEM.challenges=(MEM.challenges||[]).filter(x=>x.id!==a.id); } else if(a.keeper){ /* done/expired: the reward is already settled (paid out or already refunded by the sweep) — remove the record without refunding again, else Devotion inflates */ MEM.challenges=(MEM.challenges||[]).filter(x=>x.id!==a.id); } else if(c.status==='accepted' && !c.removeReq){ c.removeReq=now; } }
   else if(a.t==='chal_remove_resolve'){ const c=chalById(a.id); if(!c||c.status!=='accepted'||!c.removeReq)return; if(a.name!==c.accepter)return; if(a.choice==='accept'){ refundBudget(memByName(c.owner),c.reward||0); MEM.challenges=(MEM.challenges||[]).filter(x=>x.id!==a.id); } else { c.deadline=now+3600; delete c.removeReq; } }
-  else if(a.t==='chal_approve'){ const c=chalById(a.id); if(!c||c.status!=='accepted')return; if(a.approver!==c.owner && !a.keeper)return; const w=memByName(c.accepter); if(w){ const mult=consumeMult(w); adjPts(w,(c.reward||0)*mult); maybeEarnLog(w,(c.reward||0)*mult); } c.status='done'; }
+  else if(a.t==='chal_approve'){ const c=chalById(a.id); if(!c||c.status!=='accepted')return; if(a.approver!==c.owner && !a.keeper)return; const w=memByName(c.accepter); if(w){ const mult=consumeMult(w); const base=(c.reward||0);
+      // Gaming the cap: a ×2/×3 wheel buff stacked on a MAXED (150) trial. The Eye is not fooled —
+      // instead of the inflated payout, the cheat costs the doer 100 Devotion.
+      if(mult>1 && base>=150){ adjPts(w,-100); w.history=w.history||[]; w.history.push({l:"Cheated the Eye — gamed a maxed trial with a wheel buff",d:-100,n:1,t:Date.now()/1000}); c.cheated=true; }
+      else { adjPts(w,base*mult); maybeEarnLog(w,base*mult); } } c.status='done'; }
   else if(a.t==='oath'){ const m=memByName(a.name); if(!m)return; m.oath=true; m.badges=m.badges||[]; if(!m.badges.includes('Initiated'))m.badges.push('Initiated'); }
   else if(a.t==='thought'){ const m=memByName(a.name); if(!m)return; const txt=clampThought(a.text); if(txt){ m.thought={text:txt, at:Date.now()/1000}; } else { delete m.thought; } }
   else if(a.t==='wager_new'){ const m=memByName(a.proposer); if(!m)return; const amt=Math.max(1,Math.min(WAGER_CAP,a.amount|0)); if((m.points||0)<amt)return; adjPts(m,-amt); MEM.wagers=MEM.wagers||[]; MEM.wagers.push({id:'w'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),proposer:a.proposer,amount:amt,title:a.title,taker:null,status:'open',winner:null,created:now,votes:{},tie:[]}); }
@@ -4245,7 +4256,7 @@ function applyAction(a){
   else if(a.t==='wager_concede'){ const w=wagerById(a.id); if(!w||(w.status!=='matched'&&w.status!=='disputed'))return; if(a.name!==w.proposer && a.name!==w.taker)return; const winnerName=(a.name===w.proposer)?w.taker:w.proposer; const win=memByName(winnerName); if(win){ adjPts(win,2*(w.amount||0)); maybeEarnLog(win,w.amount||0); } w.status='settled'; w.winner=winnerName; }
   else if(a.t==='wager_resolve'){ const w=wagerById(a.id); if(!w||(w.status!=='matched'&&w.status!=='disputed')||!a.keeper)return; if(a.winner!==w.proposer && a.winner!==w.taker)return; const win=memByName(a.winner); if(win){ adjPts(win,2*(w.amount||0)); maybeEarnLog(win,w.amount||0); } w.status='settled'; w.winner=a.winner; }
   else if(a.t==='wager_void'){ const w=wagerById(a.id); if(!w||(w.status!=='matched'&&w.status!=='disputed')||!a.keeper)return; const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); MEM.wagers=(MEM.wagers||[]).filter(x=>x.id!==a.id); }
-  else if(a.t==='wager_vote'){ const w=wagerById(a.id); if(!w||w.status!=='disputed')return; if(a.side!=='proposer'&&a.side!=='taker')return; w.votes=w.votes||{}; if(w.votes[a.voter])return; w.votes[a.voter]=a.side; let pv=0,tv=0; for(const k in w.votes){ if(w.votes[k]==='proposer')pv++; else if(w.votes[k]==='taker')tv++; } if(pv>=5||tv>=5){ const winnerName=(pv>=5)?w.proposer:w.taker; const win=memByName(winnerName); if(win){ adjPts(win,2*(w.amount||0)); maybeEarnLog(win,w.amount||0); } w.status='settled'; w.winner=winnerName; } }
+  else if(a.t==='wager_vote'){ const w=wagerById(a.id); if(!w||w.status!=='disputed')return; if(a.side!=='proposer'&&a.side!=='taker')return; if(a.voter===w.proposer||a.voter===w.taker)return; /* parties can't vote in their own dispute (matches group_vote) */ w.votes=w.votes||{}; if(w.votes[a.voter])return; w.votes[a.voter]=a.side; let pv=0,tv=0; for(const k in w.votes){ if(w.votes[k]==='proposer')pv++; else if(w.votes[k]==='taker')tv++; } if(pv>=5||tv>=5){ const winnerName=(pv>=5)?w.proposer:w.taker; const win=memByName(winnerName); if(win){ adjPts(win,2*(w.amount||0)); maybeEarnLog(win,w.amount||0); } w.status='settled'; w.winner=winnerName; } }
   else if(a.t==='wager_tie'){ const w=wagerById(a.id); if(!w||(w.status!=='matched'&&w.status!=='disputed'))return; if(a.keeper){ const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); w.status='settled'; w.winner='tie'; return; } if(a.name!==w.proposer&&a.name!==w.taker)return; w.tie=w.tie||[]; if(!w.tie.includes(a.name))w.tie.push(a.name); if(w.tie.includes(w.proposer)&&w.tie.includes(w.taker)){ const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); w.status='settled'; w.winner='tie'; } }
   else if(a.t==='wheel_spin'){ const m=memByName(a.name); if(!m)return; if(now-(m.lastSpin||0)<2*3600)return; if((m.points||0)<15)return; const o=a.outcome||{}; adjPts(m,-15); m.lastSpin=now; if(o.special==='free'){ adjPts(m,15); m.lastSpin=0; } else if(o.special==='x2'){ m.winMult=2; } else if(o.special==='x3'){ m.winMult=3; } else if(o.special==='x2neg'){ m.lossMult=2; } else if(typeof o.pts==='number'){ adjPts(m,o.pts); if(o.pts>0)maybeEarnLog(m,o.pts); } }
   else if(a.t==='group_new'){ const m=memByName(a.starter); if(!m)return; const amt=Math.max(1,Math.min(GROUP_CAP,a.stake|0)); if((m.points||0)<amt)return; if(a.side!=='A'&&a.side!=='B')return; adjPts(m,-amt); MEM.groups=MEM.groups||[]; const g={id:'g'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),starter:a.starter,title:a.title,stake:amt,sideA:[],sideB:[],status:'pending',created:now,lockedAt:null,claims:{},votes:{},winner:null}; (a.side==='A'?g.sideA:g.sideB).push(a.starter); MEM.groups.push(g); }
@@ -4936,7 +4947,7 @@ window.keeperVoidWager=async function(id){ if(!keeperUnlocked)return; if(!confir
 window.keeperWithdrawWager=async function(id){ if(!keeperUnlocked)return; if(!confirm("Withdraw this wager and refund the stake?"))return; applyAction({t:'wager_cancel',id,keeper:true}); await saveData(); _trialsAfter(); toast("Wager withdrawn — stake refunded."); };
 window.keeperGroupWin=async function(id,side){ if(!keeperUnlocked)return; if(!confirm(`Award the whole pot to Side ${side}?`))return; applyAction({t:'group_resolve',id,side,keeper:true}); await saveData(); _trialsAfter(); toast(`Side ${side} takes the pot.`); };
 window.keeperGroupVoid=async function(id){ if(!keeperUnlocked)return; if(!confirm("Refund and dissolve this group wager?"))return; applyAction({t:'group_void',id,keeper:true}); await saveData(); _trialsAfter(); toast("Group wager voided — all stakes refunded."); };
-window.keeperApproveChal=async function(id){ if(!keeperUnlocked)return; if(!confirm("Approve this challenge as done? The reward passes to the doer."))return; applyAction({t:'chal_approve',id,keeper:true}); await saveData(); _trialsAfter(); toast("Challenge approved."); };
+window.keeperApproveChal=async function(id){ if(!keeperUnlocked)return; if(!confirm("Approve this challenge as done? The reward passes to the doer."))return; applyAction({t:'chal_approve',id,keeper:true}); await saveData(); _trialsAfter(); const cc=chalById(id); toast((cc&&cc.cheated)?"The Eye looks unfavourably on cheaters — the doer is cast down −100.":"Challenge approved."); };
 window.keeperVetoChallenge=async function(id){ if(!keeperUnlocked)return; if(!confirm("Withdraw this challenge and refund the budget?"))return; applyAction({t:'chal_remove',id,keeper:true}); await saveData(); _trialsAfter(); toast("Challenge withdrawn — budget refunded."); };
 window.keeperDeleteWager=async function(id){ if(!keeperUnlocked)return; if(!confirm("Remove this wager entirely? Any live stake is refunded first."))return; const w=wagerById(id); if(w && (w.status==='open'||w.status==='matched'||w.status==='disputed')){ applyAction({t:(w.status==='open'?'wager_cancel':'wager_void'),id,keeper:true}); } MEM.wagers=(MEM.wagers||[]).filter(x=>x.id!==id); await saveData(); _trialsAfter(); toast("Wager removed."); };
 window.keeperDeleteGroup=async function(id){ if(!keeperUnlocked)return; if(!confirm("Remove this group wager entirely? Stakes are refunded first."))return; const g=groupById(id); if(g && (g.status==='pending'||g.status==='active'||g.status==='disputed')){ applyAction({t:'group_void',id,keeper:true}); } MEM.groups=(MEM.groups||[]).filter(x=>x.id!==id); await saveData(); _trialsAfter(); toast("Group wager removed."); };
@@ -5046,8 +5057,9 @@ window.resolveChalRemoval=async function(id,choice){
 };
 window.approveChallenge=async function(id){
   const c=chalById(id); if(!c) return;
-  if(keeperUnlocked && !(VOTER&&VOTER===c.owner)){ applyAction({t:'chal_approve',id,approver:c.owner,keeper:true}); await saveData(); trialsRefresh(); toast("Challenge approved — points awarded."); return; }
-  if(VOTER && VOTER===c.owner){ const ok=await communityAction({t:'chal_approve',id,approver:VOTER}); if(!ok)return; trialsRefresh(); toast("Challenge approved — points awarded."); return; }
+  const _chalToast=()=>{ const cc=chalById(id); return (cc&&cc.cheated)?"The Eye looks unfavourably on cheaters — the doer is cast down −100.":"Challenge approved — points awarded."; };
+  if(keeperUnlocked && !(VOTER&&VOTER===c.owner)){ applyAction({t:'chal_approve',id,approver:c.owner,keeper:true}); await saveData(); trialsRefresh(); toast(_chalToast()); return; }
+  if(VOTER && VOTER===c.owner){ const ok=await communityAction({t:'chal_approve',id,approver:VOTER}); if(!ok)return; trialsRefresh(); toast(_chalToast()); return; }
   toast("Only the owner or the Keeper can approve.");
 };
 window.takeOath=async function(name){

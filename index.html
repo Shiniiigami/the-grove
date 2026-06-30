@@ -1652,13 +1652,22 @@ function renderLedger(){
                 `<button onclick="setLedgerSort('lifetime')" class="lsort ${!bySeason?'on':''}">Lifetime</button>`;
   rowsEl.appendChild(tog);
   // sky toggle — Day / Night freeze the sky at the middle of day/night; Auto follows Toronto (EST)
+  const skyWrap=document.createElement("div");
+  skyWrap.style.cssText="margin:-4px 0 14px";
   const sky=document.createElement("div");
-  sky.style.cssText="display:flex;gap:6px;justify-content:center;align-items:center;margin:-4px 0 14px";
+  sky.style.cssText="display:flex;gap:6px;justify-content:center;align-items:center";
   sky.innerHTML=`<span style="font-family:'Silkscreen',monospace;font-size:8px;letter-spacing:.1em;color:var(--sage);opacity:.7;margin-right:2px">SKY</span>`+
     `<button onclick="setSky('day')" class="lsort ${SKY_OVR==='day'?'on':''}">☀ Day</button>`+
     `<button onclick="setSky('night')" class="lsort ${SKY_OVR==='night'?'on':''}">☾ Night</button>`+
     `<button onclick="setSky(null)" class="lsort ${!SKY_OVR?'on':''}">⟳ Auto</button>`;
-  rowsEl.appendChild(sky);
+  skyWrap.appendChild(sky);
+  // the real sunrise / sunset for the grove's location (Toronto by default), so Auto makes sense
+  try{ const st=sunTimes(); const sun=document.createElement("div");
+    sun.style.cssText="text-align:center;font-family:'Silkscreen',monospace;font-size:8px;letter-spacing:.08em;color:var(--sage);opacity:.6;margin-top:5px";
+    sun.innerHTML=`☀ rises ${fmtH(st.sunrise)} · ☾ sets ${fmtH(st.sunset)}`;
+    skyWrap.appendChild(sun);
+  }catch(e){}
+  rowsEl.appendChild(skyWrap);
   list.forEach((m,i)=>{
     const soul=buildSoul(m.name,m.points,m.sprite);
     const tier=tierOf(m.points);
@@ -2829,6 +2838,7 @@ function syncRanks(){ if(!RANKS_EDIT)return; RANKS_EDIT.forEach((t,i)=>{ const n
 window.rankColor=function(i,c){ syncRanks(); RANKS_EDIT[i].hex=c; renderRanks(); };
 window.rankAdd=function(){ syncRanks(); const mx=RANKS_EDIT.length?Math.max(...RANKS_EDIT.map(t=>t.min)):0; RANKS_EDIT.push({name:"New Order",min:mx+200,hex:"#6FB39A"}); renderRanks(); };
 window.rankDel=function(i){ syncRanks(); if(RANKS_EDIT.length<=1)return; RANKS_EDIT.splice(i,1); renderRanks(); };
+window.ranksDefault=function(){ if(!confirm('Reset all orders to the seven default ranks — their names, thresholds and muted colours?\n\n(Nothing is saved until you press “Redraw the orders”.)')) return; RANKS_EDIT=structuredClone(DEFAULT_TIERS); renderRanks(); toast('Default orders restored — redraw to keep them.'); };
 window.ranksSave=async function(){ syncRanks(); RANKS_EDIT.sort((a,b)=>a.min-b.min); RANKS_EDIT[0].min=0; MEM.tiers=RANKS_EDIT; await saveData(); layoutGrove(); renderLedger(); closeSheet(); toast("The orders are redrawn."); };
 function renderRanks(){
   const rows=RANKS_EDIT.map((t,i)=>`
@@ -2847,6 +2857,7 @@ function renderRanks(){
       <p class="sub">Name each rank, set the Devotion Points to reach it, choose its aura. The first order always starts at 0.</p>
       ${rows}
       <button class="ghostbtn" onclick="rankAdd()">+ Add a rank</button>
+      <button class="ghostbtn" onclick="ranksDefault()">↺ Reset to the default orders</button>
       <button class="gold" style="margin-top:10px" onclick="ranksSave()">Redraw the orders</button>
       <button class="ghostbtn" onclick="keeperPanel()">Back</button>
     </div>`;
@@ -4002,7 +4013,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30af · Ledgers now sort by greatest Devotion (and scroll when long), share cards are roomier with a top-5/top-3 summary, the Keeper's panel is grouped, the soul-card ring is gone, and the Keeper can tune each rank's aura intensity.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ag · The Orders form gains a one-tap reset to the seven defaults, and the Ledger's sky toggle now shows the grove's real sunrise and sunset.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

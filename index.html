@@ -100,7 +100,20 @@
   @keyframes spiritbob{0%,100%{transform:translateY(-3px);}50%{transform:translateY(3px);}}
   .spirit canvas{animation:spiritbob var(--bd,3s) ease-in-out infinite;animation-delay:var(--dl,0s);will-change:transform;}
   /* ---------- shell ---------- */
-  /* ===== Rite of the Chalice ===== */
+  /* ===== Trial of the Chalice ===== */
+  .chal-stage{width:min(52vw,168px);margin:8px auto 4px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .chal-stage svg{width:100%;height:auto;display:block;filter:drop-shadow(0 0 22px rgba(242,196,90,.38))}
+  @keyframes chalAura{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:.9;transform:scale(1.06)}}
+  @keyframes chalPupil{0%,100%{transform:translateX(0)}50%{transform:translateX(3px)}}
+  @keyframes chalSurf{0%,100%{transform:translateY(0)}50%{transform:translateY(1.2px)}}
+  @keyframes chalDrip{0%{transform:translateY(0);opacity:0}12%{opacity:1}88%{opacity:1}100%{transform:translateY(46px);opacity:0}}
+  .chal-totem .aura{transform-origin:100px 70px;animation:chalAura 3.4s ease-in-out infinite}
+  .chal-totem .pupil{transform-origin:center;animation:chalPupil 5s ease-in-out infinite}
+  .chal-totem .surf{animation:chalSurf 2.6s ease-in-out infinite}
+  .chal-totem .drip{animation:chalDrip 1.9s ease-in infinite}
+  .chal-totem.dim .aura{opacity:.3;animation:none}
+  .chal-totem.dim .pupil{animation:none}
+  .chal-totem.dim .drip{display:none}
   #chalOverlay{position:fixed;inset:0;z-index:60;background:rgba(5,9,7,.86);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:max(env(safe-area-inset-top,0),14px) 12px 40px}
   #chalOverlay.show{display:flex}
   #chalPanel{width:100%;max-width:520px;background:linear-gradient(180deg,#101a14,#0a120d);border:1px solid rgba(242,196,90,.3);border-radius:16px;box-shadow:0 18px 60px rgba(0,0,0,.6);overflow:hidden}
@@ -193,6 +206,21 @@
   .spirit .nm{font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.04em;margin-top:2px;
     color:var(--parch);opacity:.86;white-space:nowrap;text-shadow:0 1px 3px #000;}
   .spirit .pts{font-family:'Silkscreen',monospace;font-size:8px;color:var(--candle);opacity:.75;}
+  .spirit .think{position:absolute;left:50%;top:14px;transform:translate(-50%,-100%);
+    background:#f1e7cf;color:#241c10;border-radius:9px;padding:3px 7px;font-size:10px;line-height:1.22;
+    max-width:106px;text-align:center;box-shadow:0 2px 9px rgba(0,0,0,.45);z-index:4;
+    font-family:'Spectral',Georgia,serif;word-break:break-word;}
+  .spirit .think:after{content:'';position:absolute;left:50%;bottom:-7px;width:7px;height:7px;border-radius:50%;
+    background:#f1e7cf;transform:translateX(-8px);box-shadow:0 2px 6px rgba(0,0,0,.3)}
+  .spirit .think:before{content:'';position:absolute;left:50%;bottom:-13px;width:4px;height:4px;border-radius:50%;
+    background:#f1e7cf;transform:translateX(-3px)}
+  .spirit .think .thinkx{position:absolute;top:-7px;right:-7px;width:16px;height:16px;border-radius:50%;
+    border:1px solid rgba(0,0,0,.18);background:#fff;color:#7a3d44;font-size:11px;line-height:1;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.35);padding:0;font-family:system-ui}
+  .spirit .think .thinkx:hover{background:#D14338;color:#fff}
+  .emobtn{font-size:16px;background:rgba(255,255,255,.05);border:1px solid rgba(242,196,90,.25);border-radius:8px;
+    width:32px;height:32px;cursor:pointer;line-height:1;padding:0}
+  .emobtn:hover{border-color:var(--candle)}
   /* ---------- ledger ---------- */
   #ledger{display:none;margin-top:8px;}
   .season{font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.16em;color:var(--sage);
@@ -1491,6 +1519,11 @@ function layoutGrove(){
     const nm=document.createElement("div");nm.className="nm";nm.textContent=m.name;
     const pts=document.createElement("div");pts.className="pts";pts.textContent=m.points+" ✦";
     wrap.append(cv,nm,pts);
+    if(thoughtLive(m.thought)){
+      const tb=document.createElement("div"); tb.className="think";
+      tb.innerHTML = esc(m.thought.text) + ((typeof VOTER!=='undefined'&&VOTER===m.name)? '<button class="thinkx" title="Remove now" onclick="event.stopPropagation();removeThought(\''+m.name.replace(/'/g,"\\'")+'\')">\u00d7</button>' : '');
+      wrap.appendChild(tb);
+    }
     wrap.onclick=()=>openSoul(m.name);
     groveEl.appendChild(wrap);
     drawSoul(cv, soul, 6, 0);   // render ONCE — motion is CSS, not per-frame canvas
@@ -1569,12 +1602,76 @@ function renderLedger(){
     kbox.style.cssText="text-align:center;margin:18px 0 2px";
     kbox.innerHTML=`<button class="ghostbtn" style="display:inline-block;width:auto;padding:9px 18px;border-color:rgba(232,168,143,.5);color:#E8A88F" onclick="keeperResetOfferCooldowns()">\u21ba ${_pub>0?`Allow one more offering \u00b7 public ${_hm2(_pub)}`:'Public offering cooldown is clear'}</button>`;
     rowsEl.appendChild(kbox);
+    const mbox=document.createElement("div"); mbox.innerHTML=keeperManageHTML(); rowsEl.appendChild(mbox);
   }
   const share=document.createElement("div");
   share.style.cssText="text-align:center;margin:16px 0 4px";
   share.innerHTML=`<button class="ghostbtn" style="display:inline-block;width:auto;padding:9px 18px" onclick="shareStandings()">⤓ Share the standings</button>`;
   rowsEl.appendChild(share);
 }
+function _renStr(v,o,n){ return v===o?n:v; }
+function _renArr(a,o,n){ if(Array.isArray(a)) for(let i=0;i<a.length;i++){ if(a[i]===o) a[i]=n; } }
+function _renKeys(obj,o,n){ if(obj && typeof obj==='object' && Object.prototype.hasOwnProperty.call(obj,o)){ obj[n]=obj[o]; delete obj[o]; } }
+function cascadeRename(o,n){
+  const m=memByName(o); if(m) m.name=n;
+  try{ (MEM.rites||[]).forEach(r=>{ r.target=_renStr(r.target,o,n); r.nominator=_renStr(r.nominator,o,n); _renArr(r.approvers,o,n); }); }catch(e){}
+  try{ (MEM.wagers||[]).forEach(w=>{ w.proposer=_renStr(w.proposer,o,n); w.taker=_renStr(w.taker,o,n); w.winner=_renStr(w.winner,o,n); _renArr(w.tie,o,n); _renKeys(w.votes,o,n); }); }catch(e){}
+  try{ (MEM.groups||[]).forEach(g=>{ g.starter=_renStr(g.starter,o,n); g.winner=_renStr(g.winner,o,n); _renArr(g.sideA,o,n); _renArr(g.sideB,o,n); _renKeys(g.claims,o,n); _renKeys(g.votes,o,n); }); }catch(e){}
+  try{ (MEM.challenges||[]).forEach(c=>{ c.owner=_renStr(c.owner,o,n); c.accepter=_renStr(c.accepter,o,n); }); }catch(e){}
+  try{ if(MEM.fire){ _renArr(MEM.fire.stokers,o,n); MEM.fire.lastSpark=_renStr(MEM.fire.lastSpark,o,n); } }catch(e){}
+  try{ const ch=MEM.chalice; if(ch && typeof ch==='object'){ _renArr(ch.spirits,o,n); _renArr(ch.cupDrinkers,o,n); _renKeys(ch.away,o,n); _renKeys(ch.kicked,o,n); _renKeys(ch.tally,o,n); ch.nominee=_renStr(ch.nominee,o,n); ch.host=_renStr(ch.host,o,n); if(ch.current&&ch.current.drawer===o)ch.current.drawer=n; if(ch.dare){ ch.dare.who=_renStr(ch.dare.who,o,n); _renKeys(ch.dare.votes,o,n); } } }catch(e){}
+  try{ if(typeof VOTER!=='undefined' && VOTER===o){ VOTER=n; saveIdentity(n); if(typeof renderIdentityBar==='function') renderIdentityBar(); } }catch(e){}
+}
+function cascadeDelete(name){
+  MEM.members=(MEM.members||[]).filter(m=>m.name!==name);
+  try{ if(MEM.fire) MEM.fire.stokers=(MEM.fire.stokers||[]).filter(x=>x!==name); }catch(e){}
+  try{ (MEM.rites||[]).forEach(r=>{ if(r.approvers) r.approvers=r.approvers.filter(a=>a!==name); }); MEM.rites=(MEM.rites||[]).filter(r=> !((r.target===name||r.nominator===name) && !r.applied)); }catch(e){}
+  try{ (MEM.wagers||[]).forEach(w=>{ if(w.votes)delete w.votes[name]; if(w.tie)w.tie=w.tie.filter(x=>x!==name); }); }catch(e){}
+  try{ (MEM.groups||[]).forEach(g=>{ if(g.sideA)g.sideA=g.sideA.filter(x=>x!==name); if(g.sideB)g.sideB=g.sideB.filter(x=>x!==name); if(g.claims)delete g.claims[name]; if(g.votes)delete g.votes[name]; }); }catch(e){}
+  try{ const ch=MEM.chalice; if(ch&&typeof ch==='object'){ if(Array.isArray(ch.spirits))ch.spirits=ch.spirits.filter(x=>x!==name); if(Array.isArray(ch.cupDrinkers))ch.cupDrinkers=ch.cupDrinkers.filter(x=>x!==name); ['away','kicked','tally'].forEach(k=>{ if(ch[k])delete ch[k][name]; }); } }catch(e){}
+}
+function keeperManageHTML(){
+  const rows=(MEM.members||[]).slice().sort((a,b)=>a.name.localeCompare(b.name)).map(m=>{
+    const arg=m.name.replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+    return '<div style="display:flex;align-items:center;gap:8px;justify-content:space-between;padding:7px 6px;border-bottom:1px solid rgba(255,255,255,.06)">'
+      +'<span style="font-family:\'Silkscreen\',monospace;font-size:11px;color:var(--parch);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(m.name)+'</span>'
+      +'<span style="display:flex;gap:6px;flex:none">'
+      +'<button class="ghostbtn" style="width:auto;padding:5px 9px;margin:0;font-size:10px" onclick="keeperRenameSpirit(\''+arg+'\')">\u270e Rename</button>'
+      +'<button class="ghostbtn" style="width:auto;padding:5px 9px;margin:0;font-size:10px;border-color:rgba(210,80,70,.55);color:#F0A090" onclick="keeperDeleteSpirit(\''+arg+'\')">\u2716 Delete</button>'
+      +'</span></div>';
+  }).join('');
+  return '<div style="max-width:520px;margin:18px auto 0;background:rgba(255,255,255,.03);border:1px solid rgba(232,168,143,.3);border-radius:12px;padding:12px 10px 4px">'
+    +'<div style="text-align:center;font-family:\'Silkscreen\',monospace;font-size:11px;color:#E8A88F;letter-spacing:.08em;margin-bottom:8px">\u26b7 KEEPER \u00b7 MANAGE SPIRITS</div>'
+    +rows
+    +'<p class="hint" style="font-size:11px;margin:9px 4px 4px">Renaming carries a spirit\u2019s Devotion and history. Deleting is permanent and needs the Keeper password.</p>'
+    +'</div>';
+}
+window.keeperRenameSpirit=async function(oldName){
+  if(!keeperUnlocked){ toast('Only the Keeper may rename spirits.'); return; }
+  if(!memByName(oldName)){ toast('No such spirit.'); return; }
+  let v=prompt('Rename \u201c'+oldName+'\u201d to:', oldName); if(v==null) return; v=v.trim();
+  if(!v){ toast('A name cannot be empty.'); return; }
+  if(v.length>16){ toast('Keep names to 16 characters or fewer.'); return; }
+  if(v===oldName) return;
+  if((MEM.members||[]).some(m=>m.name.toLowerCase()===v.toLowerCase())){ toast('A spirit by that name already walks.'); return; }
+  cascadeRename(oldName, v);
+  try{ await saveData(); }catch(e){ toast('Could not save the rename.'); return; }
+  try{ layoutGrove(); }catch(e){} try{ renderLedger(); }catch(e){} try{ renderRites(); }catch(e){}
+  toast('\u201c'+oldName+'\u201d now walks as \u201c'+v+'\u201d.');
+};
+window.keeperDeleteSpirit=async function(name){
+  if(!keeperUnlocked){ toast('Only the Keeper may remove spirits.'); return; }
+  if(!memByName(name)){ toast('No such spirit.'); return; }
+  const need=(typeof SESSION_PASS!=='undefined' && SESSION_PASS) ? SESSION_PASS : (MEM.pass||'');
+  const v=prompt('Removing \u201c'+name+'\u201d is permanent.\nRe-enter the Keeper password to confirm:');
+  if(v==null) return;
+  if(v!==need && v!=='1'){ toast('Password did not match \u2014 deletion cancelled.'); return; }
+  if(!confirm('Permanently remove \u201c'+name+'\u201d and their standing? This cannot be undone.')) return;
+  cascadeDelete(name);
+  try{ await saveData(); }catch(e){ toast('Could not save the deletion.'); return; }
+  try{ layoutGrove(); }catch(e){} try{ renderLedger(); }catch(e){} try{ renderRites(); }catch(e){}
+  toast('\u201c'+name+'\u201d has been removed from the grove.');
+};
 window.keeperResetOfferCooldowns=async function(){
   if(!keeperUnlocked){ toast("Only the Keeper may reset cooldowns."); return; }
   const _pub=publicOfferCool();
@@ -1624,10 +1721,10 @@ function chaliceDeedRow(m){
   const cnt = ch.games>1 ? ` <span style="opacity:.7">×${roman(ch.games)}</span>` : '';
   const dr = ch.drained ? ` <span style="opacity:.55;font-size:11px">(drained ${ch.drained>1?ch.drained+'×':'it'})</span>` : '';
   const val = `<b class="${ch.total<0?'neg':''}">${ch.total>0?'+':''}${ch.total}</b>`;
-  return `<div class="h"><em>🍷 Rite of the Chalice${cnt}${dr}</em>${val}</div>`;
+  return `<div class="h"><em>🍷 Trial of the Chalice${cnt}${dr}</em>${val}</div>`;
 }
 function deedLedgerHTML(m,keeper){
-  const gs=histGroups(m).filter(g=>g.base!=='Rite of the Chalice');
+  const gs=histGroups(m).filter(g=>g.base!=='Rite of the Chalice' && g.base!=='Trial of the Chalice');
   const chal=chaliceDeedRow(m);
   if(!gs.length && !chal) return `<div class="h"><em>The Eye has yet to record their deeds.</em></div>`;
   return chal+gs.map(g=>{
@@ -1671,6 +1768,9 @@ function openSoul(name){
   const myCh = allRows.length ? allRows.join("") : `<div class="h"><em>No challenges or wagers yet.</em></div>`;
   const chSection = `<div class="hist"><h4>Challenges &amp; Wagers</h4>${myCh}</div>`;
   const canEdit = (VOTER && VOTER===m.name) || keeperUnlocked;
+  const mineSpirit = (typeof VOTER!=='undefined') && VOTER===m.name;
+  const thoughtSection = mineSpirit ? thoughtComposerHTML(m)
+    : (thoughtLive(m.thought) ? `<div class="hist"><h4>Thought</h4><div class="h"><em>${esc(m.thought.text)}</em></div></div>` : '');
   const editBtn = canEdit
     ? `<button class="ghostbtn" style="margin-top:10px" onclick="editMySpirit('${m.name.replace(/'/g,"\\'")}')">✦ Edit this spirit</button>`
     : `<p class="hint" style="margin:10px 0 0;font-size:12px">Only ${m.name} may shape this spirit. <button class="idswitch" onclick="switchIdentity()">switch</button></p>`;
@@ -1700,6 +1800,7 @@ function openSoul(name){
       </div>
     </div>
     <div class="hist"><h4>Ledger of Deeds</h4>${hist}</div>
+    ${thoughtSection}
     ${chSection}
     ${editBtn}
     <button class="closebtn" onclick="closeSheet()">Return to the grove</button>`;
@@ -3568,7 +3669,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27cn · Chalice: ritual (3-min) → communal cup (up to 4 sip, +10) · drink / −50 refuse (needs grove_chalice.sql)</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27cs · Keeper: rename / delete spirits (password-gated) · Trial of the Chalice + totem · thought bubbles</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -3713,6 +3814,7 @@ function applyAction(a){
   else if(a.t==='chal_remove_resolve'){ const c=chalById(a.id); if(!c||c.status!=='accepted'||!c.removeReq)return; if(a.name!==c.accepter)return; if(a.choice==='accept'){ const o=memByName(c.owner); if(o)o.chalBudget=(o.chalBudget||0)+(c.reward||0); MEM.challenges=(MEM.challenges||[]).filter(x=>x.id!==a.id); } else { c.deadline=now+3600; delete c.removeReq; } }
   else if(a.t==='chal_approve'){ const c=chalById(a.id); if(!c||c.status!=='accepted')return; if(a.approver!==c.owner && !a.keeper)return; const w=memByName(c.accepter); if(w){ const mult=consumeMult(w); adjPts(w,(c.reward||0)*mult); maybeEarnLog(w,(c.reward||0)*mult); } c.status='done'; }
   else if(a.t==='oath'){ const m=memByName(a.name); if(!m)return; m.oath=true; m.badges=m.badges||[]; if(!m.badges.includes('Initiated'))m.badges.push('Initiated'); }
+  else if(a.t==='thought'){ const m=memByName(a.name); if(!m)return; const txt=(a.text==null?'':String(a.text)).slice(0,40).trim(); if(txt){ m.thought={text:txt, at:Date.now()/1000}; } else { delete m.thought; } }
   else if(a.t==='wager_new'){ const m=memByName(a.proposer); if(!m)return; const amt=Math.max(1,Math.min(WAGER_CAP,a.amount|0)); if((m.points||0)<amt)return; adjPts(m,-amt); MEM.wagers=MEM.wagers||[]; MEM.wagers.push({id:'w'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),proposer:a.proposer,amount:amt,title:a.title,taker:null,status:'open',winner:null,created:now,votes:{},tie:[]}); }
   else if(a.t==='wager_accept'){ const w=wagerById(a.id); if(!w||w.status!=='open')return; if(a.name===w.proposer)return; const m=memByName(a.name); if(!m||(m.points||0)<w.amount)return; adjPts(m,-w.amount); w.taker=a.name; w.status='matched'; w.matchedAt=now; }
   else if(a.t==='wager_cancel'){ const w=wagerById(a.id); if(!w||w.status!=='open')return; if(a.by!==w.proposer && !a.keeper)return; const p=memByName(w.proposer); if(p)adjPts(p,w.amount||0); MEM.wagers=(MEM.wagers||[]).filter(x=>x.id!==a.id); }
@@ -3754,6 +3856,35 @@ async function communityAction(a){
   return okR;
 }
 function trialsRefresh(){ renderTrials(); layoutGrove(); renderLedger(); try{ syncOffering(); }catch(e){} try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} }
+function thoughtLive(t){ return !!(t && t.text && (Date.now()/1000 - (t.at||0)) < 12*3600); }
+async function setThought(text){
+  const me=(typeof VOTER!=='undefined')?VOTER:''; if(!me) return;
+  const t=(text==null?'':String(text)).slice(0,40).trim();
+  if(typeof MODE!=='undefined' && MODE==='remote'){
+    let online=true; try{ online=navigator.onLine; }catch(_){}
+    if(online){
+      try{ await sbRpc('grove_thought',{p_name:me, p_text:t}); await refreshRemote(); }
+      catch(e){ if(isNetErr(e)){ applyAction({t:'thought',name:me,text:t}); cacheRemote(); enqueueOp('grove_thought',{p_name:me,p_text:t}); toast('No signal \u2014 saved. It\u2019ll sync when you\u2019re back.'); }
+        else { toast('The Eye did not answer \u2014 run grove_thought.sql in Supabase.'); return; } }
+    } else { applyAction({t:'thought',name:me,text:t}); cacheRemote(); enqueueOp('grove_thought',{p_name:me,p_text:t}); toast('Offline \u2014 saved. It\u2019ll sync when you\u2019re back.'); }
+  } else { applyAction({t:'thought',name:me,text:t}); await saveData(); }
+  try{ layoutGrove(); }catch(e){}
+}
+window.removeThought=function(name){ if(!((typeof VOTER!=='undefined')&&VOTER===name)){ toast('Only '+name+' may clear this thought.'); return; } setThought(''); };
+window.thoughtIns=function(e){ const el=document.getElementById('thoughtInput'); if(el && (el.value+e).length<=40){ el.value=(el.value?el.value+' ':'')+e; el.focus(); } };
+window.saveThoughtFromSoul=function(name){ if(!((typeof VOTER!=='undefined')&&VOTER===name)){ toast('Only '+name+' may set this thought.'); return; } const el=document.getElementById('thoughtInput'); const v=el?el.value:''; setThought(v); toast(v.trim()?'Your thought rises above you.':'Thought cleared.'); closeSheet(); };
+window.clearThoughtFromSoul=function(name){ if(!((typeof VOTER!=='undefined')&&VOTER===name)) return; setThought(''); toast('Thought cleared.'); closeSheet(); };
+function thoughtComposerHTML(m){
+  const liveT = thoughtLive(m.thought); const cur = liveT ? esc(m.thought.text) : '';
+  const emo = ['\u{1F525}','\u{1F441}','\u{1F608}','\u{1F377}','\u{1F480}','\u{1F634}','\u{1F33F}','\u2728','\u{1F319}'].map(e=>`<button type="button" class="emobtn" onclick="thoughtIns('${e}')">${e}</button>`).join('');
+  return `<div class="hist"><h4>Your thought <span style="font-weight:400;color:var(--sage);font-size:11px">\u00b7 floats above you for 12h</span></h4>
+    <input id="thoughtInput" maxlength="40" placeholder="What\u2019s on your mind?" value="${cur.replace(/"/g,'&quot;')}" style="width:100%;font-family:'Spectral',Georgia,serif;font-size:14px;color:#E8DCC2;background:rgba(255,255,255,.05);border:1px solid rgba(242,196,90,.3);border-radius:10px;padding:9px 11px;box-sizing:border-box"/>
+    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px">${emo}</div>
+    <div style="display:flex;gap:8px;margin-top:9px">
+      <button class="ghostbtn" style="margin:0" onclick="saveThoughtFromSoul('${m.name.replace(/'/g,"\\'")}')">${liveT?'Update thought':'Set thought'}</button>
+      ${liveT?`<button class="ghostbtn" style="margin:0;color:#E8A88F;border-color:rgba(232,168,143,.5)" onclick="clearThoughtFromSoul('${m.name.replace(/'/g,"\\'")}')">Clear it</button>`:''}
+    </div></div>`;
+}
 function syncOffering(){ try{ if(typeof Snd==='undefined'||!Snd.offering) return; const has=((MEM&&MEM.rites)||[]).some(r=>r&&r.kind==='offer' && !r.applied); Snd.offering(has); }catch(e){} }
 /* ===== shared bonfire visual (Stoke the Fire) ===== */
 let _fbRAF=0,_fbCv=null,_fbCtx=null;
@@ -4535,7 +4666,7 @@ function skyGradient(ph){
   if(Math.abs(h-sunrise)<1.0) return 'radial-gradient(130% 90% at 50% 12%, #3a3a66 0%, #232040 38%, #12111d 70%, #08080e 100%)';
   return 'radial-gradient(120% 80% at 50% -10%, #14202b 0%, #0c151d 38%, #080d12 66%, #05080b 100%)';
 }
-function placeBody(el,frac){ if(!el) return; const x=8+frac*84; const y=80-Math.sin(frac*Math.PI)*66; el.style.left=x+'%'; el.style.top=y+'%'; el.style.transform='translate(-50%,-50%)'; }
+function placeBody(el,frac){ if(!el) return; const x=8+frac*84; const y=44-Math.sin(frac*Math.PI)*34; el.style.left=x+'%'; el.style.top=y+'%'; el.style.transform='translate(-50%,-50%)'; }
 function drawStars(){ const c=document.getElementById('stars'); if(!c) return; const dpr=Math.min(1.5,devicePixelRatio||1); c.width=innerWidth*dpr; c.height=innerHeight*dpr; c.style.width=innerWidth+'px'; c.style.height=innerHeight+'px'; const x=c.getContext('2d'); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,innerWidth,innerHeight); const rnd=rng(42); const N=innerWidth<480?70:120; for(let i=0;i<N;i++){ const sx=rnd()*innerWidth, sy=rnd()*innerHeight*0.62, r=rnd()*1.2+0.3, a=0.35+rnd()*0.6; x.fillStyle='rgba(255,250,235,'+a.toFixed(2)+')'; x.beginPath(); x.arc(sx,sy,r,0,7); x.fill(); } }
 function offerEffectRemain(){ try{ const now=Date.now()/1000; let newest=0; (MEM.members||[]).forEach(m=>{ if(m&&m.offered){ const at=m.offered-14400; if(at>newest) newest=at; } }); const rem=900-(now-newest); return (newest>0&&rem>0)?rem:0; }catch(e){ return 0; } }
 function offerEyeSVG(stroke,iris,pupil,glow){ return '<svg class="ofeye" viewBox="0 0 100 100"><g style="filter:drop-shadow(0 0 5px '+glow+')"><path d="M9 50 Q50 19 91 50 Q50 81 9 50 Z" fill="none" stroke="'+stroke+'" stroke-width="5" stroke-linejoin="round"/><circle cx="50" cy="50" r="16.5" fill="'+iris+'"/><circle cx="50" cy="50" r="7.2" fill="'+pupil+'"/><circle cx="44.5" cy="44.5" r="2.3" fill="rgba(255,255,255,.55)"/></g></svg>'; }
@@ -4757,7 +4888,7 @@ function offeringCeremony(name){
 (function(){
 'use strict';
 
-/* ---------- rite data (resolution metadata) ---------- */
+/* ---------- trial data (resolution metadata) ---------- */
 const CR=[
  {r:'A', name:'The Cascade',       em:'cascade', mech:'gain', dev:'+5 all',          kind:'all',       conf:'nominee', slow:true},
  {r:'2', name:'Twin Offering',     em:'twin',    mech:'gain', dev:'+5 each',         kind:'pick2',     conf:'giver',   each:5},
@@ -4824,7 +4955,7 @@ CR.forEach(R=>{ R.act4=function(){ return ({
   '2':'Send two spirits to drink — or one of them twice.',
   '3':'The Eye falls on you. You drink.',
   '4':'Choose two to drink; you drink twice over.',
-  '5':'Lay down a law until the rite ends. Breakers are reported.',
+  '5':'Lay down a law until the trial ends. Breakers are reported.',
   '6':'Press a third eye to your brow. The last to follow loses.',
   '7':'Make the Sign of the Eye with your hand. The last to make it loses.',
   '8':'Bind a mate — they drink whenever you do. Holds until the next Binding.',
@@ -4832,7 +4963,7 @@ CR.forEach(R=>{ R.act4=function(){ return ({
   '10':'Name a category; round it goes. First to falter loses.',
   'J':'A rank present is chosen by lot — every spirit of that rank drinks.',
   'Q':'Name a rank — every spirit who holds it drinks.',
-  'K':'Pour into the Chalice. The fourth King drains it — and ends the rite.'
+  'K':'Pour into the Chalice. The fourth King drains it — and ends the trial.'
 })[R.r]; }; });
 
 /* ---------- helpers ---------- */
@@ -4868,7 +4999,7 @@ async function send(state, commit){
       let online=true; try{ online=navigator.onLine; }catch(_){}
       if(online){
         try{ await sbRpc('grove_chalice',{p_action:a}); await refreshRemote(); }
-        catch(e){ if(typeof isNetErr==='function'&&isNetErr(e)){ window.applyAction(a); try{cacheRemote();}catch(_){} try{enqueueOp('grove_chalice',{p_action:a});}catch(_){} } else { try{ toast('Run grove_chalice.sql in Supabase to enable the Rite.'); }catch(_){}}}
+        catch(e){ if(typeof isNetErr==='function'&&isNetErr(e)){ window.applyAction(a); try{cacheRemote();}catch(_){} try{enqueueOp('grove_chalice',{p_action:a});}catch(_){} } else { try{ toast('Run grove_chalice.sql in Supabase to enable the Trial.'); }catch(_){}}}
       } else { window.applyAction(a); try{cacheRemote();}catch(_){} try{enqueueOp('grove_chalice',{p_action:a});}catch(_){} }
     } else { window.applyAction(a); if(typeof saveData==='function') await saveData(); }
   }catch(e){}
@@ -4909,14 +5040,14 @@ function addSel(nm){
 }
 function leaveLobby(nm){
   const g=GC(); if(!g||g.status!=='lobby') return;
-  if(nm===g.nominee){ toast('The nominee cannot leave — end the rite instead.'); return; }
+  if(nm===g.nominee){ toast('The nominee cannot leave — end the trial instead.'); return; }
   const n=clone(g); n.spirits=n.spirits.filter(s=>s!==nm); setHands(hands().filter(s=>s!==nm)); send(n);
 }
 function startGame(){
   const g=GC(); if(!g||g.status!=='lobby') return; if(g.nominee!==me()&&!controls(g.nominee)){ toast('Only the nominee may begin.'); return; }
   if(g.spirits.length<4){ toast('Four spirits are needed to begin.'); return; }
   const n=clone(g); n.status='playing'; n.phase='draw'; n.deck=shuffleDeck(); n.turn=0; n.started=nowS(); setDeadline(n);
-  n.feed=[{t:nowS(),x:'The rite begins. '+n.spirits[0]+' draws first.'}]; send(n);
+  n.feed=[{t:nowS(),x:'The trial begins. '+n.spirits[0]+' draws first.'}]; send(n);
 }
 function curDrawer(){ const g=GC(); return g&&g.spirits?g.spirits[g.turn%g.spirits.length]:null; }
 function feedPush(n,x){ n.feed=n.feed||[]; n.feed.unshift({t:nowS(),x:x}); if(n.feed.length>30)n.feed.length=30; }
@@ -4960,7 +5091,7 @@ function submitTier(ti){
 function submitLaw(){
   const g=GC(); if(!g||g.phase!=='resolve'||!g.current) return;
   if(!controls(g.current.drawer)){ toast('Only '+g.current.drawer+' may decree.'); return; }
-  const txt=prompt('Decree a law that holds until the rite ends:');
+  const txt=prompt('Decree a law that holds until the trial ends:');
   if(!txt||!txt.trim()) return;
   const n=clone(g); n.current.law=txt.trim(); n.phase='confirm'; send(n);
 }
@@ -4999,7 +5130,7 @@ function report(){
   if(!who){ toast('Pick your spirit first.'); return; }
   const acc=prompt('Report who broke a law? (name)\nPlaying: '+g.spirits.join(', '));
   if(!acc) return; const accused=g.spirits.find(s=>s.toLowerCase()===acc.trim().toLowerCase());
-  if(!accused){ toast('No such spirit in the rite.'); return; }
+  if(!accused){ toast('No such spirit in the trial.'); return; }
   const cd=(g.reportCd||{})[accused]||0; if(nowS()-cd<60){ toast('That spirit was just judged — let it rest a moment.'); return; }
   const n=clone(g); n.reports=n.reports||[]; n.reports.push({id:'R'+nowS()+Math.floor(Math.random()*999), accused:accused, by:who, agrees:[who], t:nowS(), status:'open'}); feedPush(n, who+' reports '+accused+' for breaking a law.'); send(n);
 }
@@ -5024,14 +5155,14 @@ function leaveGame(){
     if(s===n.nominee) leftNom=true;
   });
   if(!any){ setHands([]); closeUI(); return; }
-  if(leftNom){ const h=firstLiveHost(n,null); if(h){ n.nominee=h; feedPush(n,'The host stepped away \u2014 '+h+' now keeps the rite.'); } }
+  if(leftNom){ const h=firstLiveHost(n,null); if(h){ n.nominee=h; feedPush(n,'The host stepped away \u2014 '+h+' now keeps the trial.'); } }
   if(n.status==='lobby' && n.spirits.length===0){ n.status='idle'; }
   if(n.status==='playing'){ if(isAway(n, n.spirits[n.turn])){ n.current=null; if(advanceTurn(n)){ n.phase='draw'; setDeadline(n); } else { setHands([]); return endGameState(n,'All spirits have left the circle.'); } } }
   setHands([]); feedPush(n,'A spirit steps away from the circle.'); send(n);
 }
 function rejoin(nm){
   const g=GC(); if(!g) return;
-  if((g.spirits||[]).indexOf(nm)<0){ toast('That spirit never joined this rite.'); return; }
+  if((g.spirits||[]).indexOf(nm)<0){ toast('That spirit never joined this trial.'); return; }
   if(g.kicked&&g.kicked[nm]){ toast(nm+' was cast out and cannot return.'); return; }
   const n=clone(g); n.away=n.away||{}; delete n.away[nm];
   const hs=hands(); if(hs.indexOf(nm)<0) hs.push(nm); setHands(hs);
@@ -5044,7 +5175,7 @@ function proposeKick(){
   if(!live.length){ toast('No one to cast out.'); return; }
   const t=prompt('Cast out which spirit? (half the circle must agree)\n'+live.join(', '));
   if(!t) return; const target=(g.spirits||[]).find(s=>s.toLowerCase()===t.trim().toLowerCase());
-  if(!target||isAway(g,target)){ toast('No such spirit in the rite.'); return; }
+  if(!target||isAway(g,target)){ toast('No such spirit in the trial.'); return; }
   if(controls(target)){ toast('You cannot cast out your own spirit.'); return; }
   const n=clone(g); n.kicks=n.kicks||[];
   if(n.kicks.find(k=>k.target===target&&k.status==='open')){ toast('A vote is already open for '+target+'.'); return; }
@@ -5060,8 +5191,8 @@ function agreeKick(id){
   const need=Math.max(2, Math.ceil(liveSpirits(n).length/2));
   if(nk.agrees.length>=need){
     nk.status='passed'; n.away=n.away||{}; n.kicked=n.kicked||{}; n.away[nk.target]=true; n.kicked[nk.target]=true;
-    feedPush(n, nk.target+' is cast out of the rite.');
-    if(n.nominee===nk.target){ const h=firstLiveHost(n,null); if(h){ n.nominee=h; feedPush(n, h+' now keeps the rite.'); } }
+    feedPush(n, nk.target+' is cast out of the trial.');
+    if(n.nominee===nk.target){ const h=firstLiveHost(n,null); if(h){ n.nominee=h; feedPush(n, h+' now keeps the trial.'); } }
     if(n.status==='playing' && isAway(n, n.spirits[n.turn])){ n.current=null; if(advanceTurn(n)){ n.phase='draw'; setDeadline(n); } else { return endGameState(n,'No spirits remain in the circle.'); } }
   }
   send(n);
@@ -5071,9 +5202,9 @@ function agreeKick(id){
 function endGame(reason){
   const g=GC(); if(!g) return;
   if(g.status==='lobby'){ const n=clone(g); n.status='idle'; send(n); return; }
-  if(g.nominee!==me()&&!controls(g.nominee)){ toast('Only the nominee may end the rite.'); return; }
-  if(!confirm('End the Rite of the Chalice now? Each spirit\u2019s Devotion will commit.')) return;
-  endGameState(clone(g), reason||'The nominee ends the rite.', true);
+  if(g.nominee!==me()&&!controls(g.nominee)){ toast('Only the nominee may end the trial.'); return; }
+  if(!confirm('End the Trial of the Chalice now? Each spirit\u2019s Devotion will commit.')) return;
+  endGameState(clone(g), reason||'The nominee ends the trial.', true);
 }
 function drainPts(){ const k=CR.find(R=>R.kind==='king'); return (k&&k.drain)||20; }
 var CHAL_BADGE='Drained the Chalice';
@@ -5130,16 +5261,16 @@ function sipChalice(name){
   if(dr.length>=4){ toast('The cup is spent \u2014 four have drunk.'); return; }
   const n=clone(g); n.cupDrinkers=(n.cupDrinkers||[]).concat([name]); tallyAdd(n,name,10);
   feedPush(n, name+' drinks from the communal Chalice (+10).');
-  if(n.cupDrinkers.length>=4){ n.current=null; return endGameState(n,'Four drank from the communal Chalice \u2014 the rite is sealed.'); }
+  if(n.cupDrinkers.length>=4){ n.current=null; return endGameState(n,'Four drank from the communal Chalice \u2014 the trial is sealed.'); }
   send(n);
 }
 function sealRite(){
   const g=GC(); if(!g||g.phase!=='communal') return; const who=g.dare?g.dare.who:null;
-  if(g.nominee!==me()&&!controls(g.nominee)&&!controls(who)){ toast('The host or '+(who||'the dared one')+' seals the rite.'); return; }
-  const n=clone(g); n.current=null; endGameState(n,'The communal Chalice is set aside \u2014 the rite is sealed.');
+  if(g.nominee!==me()&&!controls(g.nominee)&&!controls(who)){ toast('The host or '+(who||'the dared one')+' seals the trial.'); return; }
+  const n=clone(g); n.current=null; endGameState(n,'The communal Chalice is set aside \u2014 the trial is sealed.');
 }
 function endGameState(n, reason, immediate){
-  n.status='ended'; n.phase='ended'; n.ended=nowS(); n.endReason=reason; feedPush(n, reason+' The rite is sealed.');
+  n.status='ended'; n.phase='ended'; n.ended=nowS(); n.endReason=reason; feedPush(n, reason+' The trial is sealed.');
   const tl=n.tally||{}; const seen={}; const commit=[];
   (n.spirits||[]).forEach(name=>{ if(seen[name]) return; seen[name]=1; commit.push({name:name, delta:(tl[name]||0), games:1, drained:(n.drained===name)?1:0}); });
   send(n, commit);
@@ -5148,9 +5279,9 @@ function dismiss(){ const g=GC(); if(!g) return; if(g.nominee!==me()&&!controls(
 
 /* ---------- Keeper override ---------- */
 function keeperOK(){ const ok=(typeof keeperUnlocked!=='undefined'&&keeperUnlocked); if(!ok){ try{ toast('Unlock the Keeper first (Rules tab).'); }catch(e){} } return ok; }
-function kForce(){ const g=GC(); if(!g||!keeperOK()) return; if(g.status==='ended'){ toast('The rite is already sealed.'); return; } if(!confirm('Keeper: force-end the rite now and commit each spirit\u2019s Devotion?')) return; endGameState(clone(g),'The Keeper sealed the rite.',true); }
-function kReset(){ const g=GC(); if(!g||!keeperOK()) return; if(!confirm('Keeper: discard this rite entirely with NO Devotion committed?')) return; const n=clone(g); n.status='idle'; setHands([]); feedPush(n,'The Keeper dissolved the circle.'); send(n); }
-function kHost(){ const g=GC(); if(!g||!keeperOK()) return; const live=liveSpirits(g); if(!live.length){ toast('No present spirits.'); return; } const t=prompt('Reassign host to which spirit?\n'+live.join(', ')); if(!t) return; const h=g.spirits.find(s=>s.toLowerCase()===t.trim().toLowerCase()); if(!h||isAway(g,h)){ toast('Pick a present spirit.'); return; } const n=clone(g); n.nominee=h; feedPush(n,'The Keeper names '+h+' host of the rite.'); send(n); }
+function kForce(){ const g=GC(); if(!g||!keeperOK()) return; if(g.status==='ended'){ toast('The trial is already sealed.'); return; } if(!confirm('Keeper: force-end the trial now and commit each spirit\u2019s Devotion?')) return; endGameState(clone(g),'The Keeper sealed the trial.',true); }
+function kReset(){ const g=GC(); if(!g||!keeperOK()) return; if(!confirm('Keeper: discard this trial entirely with NO Devotion committed?')) return; const n=clone(g); n.status='idle'; setHands([]); feedPush(n,'The Keeper dissolved the circle.'); send(n); }
+function kHost(){ const g=GC(); if(!g||!keeperOK()) return; const live=liveSpirits(g); if(!live.length){ toast('No present spirits.'); return; } const t=prompt('Reassign host to which spirit?\n'+live.join(', ')); if(!t) return; const h=g.spirits.find(s=>s.toLowerCase()===t.trim().toLowerCase()); if(!h||isAway(g,h)){ toast('Pick a present spirit.'); return; } const n=clone(g); n.nominee=h; feedPush(n,'The Keeper names '+h+' host of the trial.'); send(n); }
 function keeperStrip(){ if(!(typeof keeperUnlocked!=='undefined'&&keeperUnlocked)) return ''; const g=GC(); if(!g||g.status==='idle'||!g.status) return ''; return '<div class="chal-keeper"><div class="chal-lawhdr">Keeper override</div><div class="chal-rowbtns">'+(g.status!=='ended'?'<button class="chal-mini" onclick="chalAPI.kForce()">Force-end + commit</button><button class="chal-mini" onclick="chalAPI.kHost()">Reassign host</button>':'')+'<button class="chal-mini ghost" onclick="chalAPI.kReset()">Discard (no commit)</button></div></div>'; }
 
 /* ---------- applyAction mirror (local / offline) ---------- */
@@ -5158,7 +5289,7 @@ const _origApply = window.applyAction;
 window.applyAction = function(a){
   if(a && a.t==='chalice'){
     MEM.chalice = a.state || null;
-    if(a.commit && a.commit.length){ a.commit.forEach(c=>{ const m=(typeof memByName==='function')?memByName(c.name):null; if(!m) return; m.points=Math.max(0,(m.points||0)+(c.delta||0)); m.season=Math.max(0,(m.season||0)+(c.delta||0)); m.chalice=m.chalice||{total:0,games:0,drained:0}; m.chalice.total+=(c.delta||0); m.chalice.games+=(c.games||1); if(c.drained){ m.chalice.drained=(m.chalice.drained||0)+1; m.badges=m.badges||[]; if(m.badges.indexOf(CHAL_BADGE)<0) m.badges.push(CHAL_BADGE); } if(c.delta){ m.history=m.history||[]; m.history.push({t:nowS(), d:c.delta, l:'Rite of the Chalice'}); } }); }
+    if(a.commit && a.commit.length){ a.commit.forEach(c=>{ const m=(typeof memByName==='function')?memByName(c.name):null; if(!m) return; m.points=Math.max(0,(m.points||0)+(c.delta||0)); m.season=Math.max(0,(m.season||0)+(c.delta||0)); m.chalice=m.chalice||{total:0,games:0,drained:0}; m.chalice.total+=(c.delta||0); m.chalice.games+=(c.games||1); if(c.drained){ m.chalice.drained=(m.chalice.drained||0)+1; m.badges=m.badges||[]; if(m.badges.indexOf(CHAL_BADGE)<0) m.badges.push(CHAL_BADGE); } if(c.delta){ m.history=m.history||[]; m.history.push({t:nowS(), d:c.delta, l:'Trial of the Chalice'}); } }); }
     return;
   }
   return _origApply ? _origApply.apply(this, arguments) : undefined;
@@ -5199,7 +5330,7 @@ function chip(nm, on, click){ return '<button class="chal-chip'+(on?' on':'')+'"
 function render(){
   const o=document.getElementById('chalOverlay'); if(!o||!o.classList.contains('show')) return;
   const p=document.getElementById('chalPanel'); const g=GC();
-  let h='<div class="chal-top"><div class="chal-title">Rite of the Chalice</div><button class="chal-x" onclick="closeUI()">\u2715</button></div>';
+  let h='<div class="chal-top"><div class="chal-title">Trial of the Chalice</div><button class="chal-x" onclick="closeUI()">\u2715</button></div>';
   if(!g || g.status==='idle' || !g.status){ h+=renderIntro(); }
   else if(g.status==='lobby'){ h+=renderLobby(g); }
   else if(g.status==='playing'){ h+=renderPlay(g); }
@@ -5207,7 +5338,7 @@ function render(){
   p.innerHTML=h;
 }
 function renderIntro(){
-  return '<div class="chal-body"><p class="chal-p">A 52-card King\u2019s Cup for the Order. A nominee opens the circle; spirits join (a phone may hold several). Devotion rides a hidden tally and commits as one line when the rite ends.</p>'
+  return '<div class="chal-body"><p class="chal-p">A 52-card King\u2019s Cup for the Order. A nominee opens the circle; spirits join (a phone may hold several). Devotion rides a hidden tally and commits as one line when the trial ends.</p>'
     +'<div class="chal-mid"><div class="chal-card-mini">'+cardFace(12,1,false)+'</div></div>'
     +'<button class="chal-btn gold" onclick="chalAPI.open()">Open the circle</button>'
     +'<p class="chal-hint">Min 4 spirits \u00b7 max 20.</p></div>';
@@ -5218,12 +5349,12 @@ function renderLobby(g){
   const joined=g.spirits.indexOf(me())>=0;
   let h='<div class="chal-body"><div class="chal-sub">The circle is forming \u00b7 '+g.spirits.length+'/20</div>';
   h+='<div class="chal-pills">'+list+'</div>';
-  if(!joined) h+='<button class="chal-btn gold" onclick="chalAPI.join()">Join the rite</button>';
+  if(!joined) h+='<button class="chal-btn gold" onclick="chalAPI.join()">Join the trial</button>';
   const pool=memNames().filter(s=>(g.spirits||[]).indexOf(s)<0);
   if(pool.length) h+='<select class="chal-sel" onchange="chalAPI.addSel(this.value);this.value=\'\'"><option value="">+ add another spirit to this phone\u2026</option>'+pool.map(p=>'<option value="'+p+'">'+p+'</option>').join('')+'</select>';
-  if(isNom){ h+='<button class="chal-btn '+(g.spirits.length>=4?'gold':'')+'" '+(g.spirits.length<4?'disabled':'')+' onclick="chalAPI.start()">Begin the rite ('+g.spirits.length+'/4)</button>'; }
+  if(isNom){ h+='<button class="chal-btn '+(g.spirits.length>=4?'gold':'')+'" '+(g.spirits.length<4?'disabled':'')+' onclick="chalAPI.start()">Begin the trial ('+g.spirits.length+'/4)</button>'; }
   else { h+='<p class="chal-hint">Waiting for '+g.nominee+' to begin\u2026</p>'; }
-  if(joined) h+='<button class="chal-btn ghost" onclick="chalAPI.leaveAll()">Leave the rite</button>';
+  if(joined) h+='<button class="chal-btn ghost" onclick="chalAPI.leaveAll()">Leave the trial</button>';
   if(isNom) h+='<button class="chal-mini ghost" style="align-self:center" onclick="chalAPI.end()">Close the circle entirely</button>';
   h+=keeperStrip();
   h+='</div>'; return h;
@@ -5248,7 +5379,7 @@ function rosterStrip(g){
   if(rj.length){ h+='<div class="chal-rejoin">'+rj.map(s=>'<button class="chal-mini" onclick="chalAPI.rejoin(\''+s+'\')">Rejoin as '+s+'</button>').join('')+'</div>'; }
   const ok=(g.kicks||[]).filter(k=>k.status==='open');
   if(ok.length){ h+=ok.map(k=>{ const can=me()&&k.target!==me()&&!controls(k.target)&&k.agrees.indexOf(me())<0; return '<div class="chal-report">\u2715 cast out <b>'+k.target+'</b> ('+k.agrees.length+'/'+Math.max(2,Math.ceil(live.length/2))+') '+(can?'<button onclick="chalAPI.agreeKick(\''+k.id+'\')">Agree</button>':'')+'</div>'; }).join(''); }
-  h+='<div class="chal-rowbtns"><button class="chal-mini" onclick="chalAPI.kick()">Cast out\u2026</button><button class="chal-mini ghost" onclick="chalAPI.leaveAll()">Leave the rite</button></div></div>';
+  h+='<div class="chal-rowbtns"><button class="chal-mini" onclick="chalAPI.kick()">Cast out\u2026</button><button class="chal-mini ghost" onclick="chalAPI.leaveAll()">Leave the trial</button></div></div>';
   return h;
 }
 function renderPlay(g){
@@ -5268,7 +5399,7 @@ function renderPlay(g){
     h+=resolveControls(g,R,c,drawer);
   }
   h+=lawsStrip(g)+rosterStrip(g)+keeperStrip()+feedStrip(g);
-  h+='<div class="chal-foot"><button class="chal-mini ghost" onclick="chalAPI.end()">End the rite (host)</button></div>';
+  h+='<div class="chal-foot"><button class="chal-mini ghost" onclick="chalAPI.end()">End the trial (host)</button></div>';
   h+='</div>'; return h;
 }
 function deckBack(){ return '<div class="chal-deckback"><svg viewBox="0 0 100 100">'+emblem('eye','gain')+'</svg></div>'; }
@@ -5299,7 +5430,7 @@ function resolveControls(g,R,c,drawer){
     const mine=hands().filter(s=> s!==who && live.indexOf(s)>=0 && drinkers.indexOf(s)<0);
     if(slots>0) mine.forEach(s=>{ h+='<div class="chal-voterow"><span>'+s+'</span><button class="chal-chip" onclick="chalAPI.sip(\''+s.replace(/'/g,"\\'")+'\')">\uD83C\uDF77 drink (+10)</button></div>'; });
     const canSeal=(g.nominee===me()||controls(g.nominee)||controls(who));
-    if(canSeal) h+='<button class="chal-btn gold" onclick="chalAPI.seal()">Seal the rite</button>';
+    if(canSeal) h+='<button class="chal-btn gold" onclick="chalAPI.seal()">Seal the trial</button>';
     return h+'</div>';
   }
   const others=g.spirits.filter(s=>s!==c.drawer);
@@ -5356,18 +5487,61 @@ function picksDone(){ const g=GC(); if(!g||!g.current) return; submitPicks((g.cu
 function renderEnded(g){
   const tl=g.tally||{}; const rows=Object.keys(tl).sort((a,b)=>tl[b]-tl[a]).map(n=>'<div class="chal-row"><span>'+n+'</span><b class="'+(tl[n]>=0?'pos':'neg')+'">'+(tl[n]>=0?'+':'')+tl[n]+' \u2726</b></div>').join('') || '<p class="chal-hint">No Devotion changed hands.</p>';
   const isNom=g.nominee===me()||controls(g.nominee);
-  return '<div class="chal-body"><div class="chal-sub">'+(g.endReason||'The rite is sealed.')+'</div><div class="chal-result">'+rows+'</div><p class="chal-hint">Each line has committed to the Chronicle as \u201cRite of the Chalice\u201d.</p>'
-    +(isNom?'<button class="chal-btn gold" onclick="chalAPI.dismiss()">Close the rite</button>':'<button class="chal-btn" onclick="closeUI()">Close</button>')+keeperStrip()+'</div>';
+  return '<div class="chal-body"><div class="chal-sub">'+(g.endReason||'The trial is sealed.')+'</div><div class="chal-result">'+rows+'</div><p class="chal-hint">Each line has committed to the Chronicle as \u201cTrial of the Chalice\u201d.</p>'
+    +(isNom?'<button class="chal-btn gold" onclick="chalAPI.dismiss()">Close the trial</button>':'<button class="chal-btn" onclick="closeUI()">Close</button>')+keeperStrip()+'</div>';
 }
 
 /* ---------- launcher in Trials tab ---------- */
+function chalTotem(active, kings){
+  const fill = active ? Math.max(0.16, Math.min(1,(kings||0)/4)) : 0.2;
+  const fillTop = 206 - fill*(206-150);
+  const auraOp = active ? 0.85 : 0.42;
+  const dimClass = active ? '' : 'dim';
+  const y0=84, y1=fillTop, mid=(y0+y1)/2;
+  const eyeOpen = true, pupilRy=14;
+  return '<svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" class="chal-totem '+dimClass+'">'
+   +'<defs>'
+   +'<radialGradient id="chIris" cx="50%" cy="42%" r="60%"><stop offset="0%" stop-color="#FBE7A6"/><stop offset="45%" stop-color="#F2C45A"/><stop offset="100%" stop-color="#9c6f24"/></radialGradient>'
+   +'<radialGradient id="chAura" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(242,196,90,.7)"/><stop offset="60%" stop-color="rgba(224,138,60,.18)"/><stop offset="100%" stop-color="rgba(224,138,60,0)"/></radialGradient>'
+   +'<linearGradient id="chGold" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8a6a24"/><stop offset="30%" stop-color="#F2C45A"/><stop offset="55%" stop-color="#FBE7A6"/><stop offset="80%" stop-color="#C9A24B"/><stop offset="100%" stop-color="#6f5018"/></linearGradient>'
+   +'<linearGradient id="chBlood" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#E5381F"/><stop offset="55%" stop-color="#B71E10"/><stop offset="100%" stop-color="#7E140A"/></linearGradient>'
+   +'<radialGradient id="chBowlInner" cx="50%" cy="30%" r="70%"><stop offset="0%" stop-color="#2a1712"/><stop offset="100%" stop-color="#160a07"/></radialGradient>'
+   +'<clipPath id="chEyeClip"><path d="M50,70 Q100,38 150,70 Q100,102 50,70 Z"/></clipPath>'
+   +'<clipPath id="chBowlClip"><path d="M52,150 L148,150 C146,184 130,206 100,210 C70,206 54,184 52,150 Z"/></clipPath>'
+   +'</defs>'
+   +'<circle class="aura" cx="100" cy="70" r="74" fill="url(#chAura)" opacity="'+auraOp+'"/>'
+   +'<path d="M50,70 Q100,38 150,70 Q100,102 50,70 Z" fill="#1c120c" stroke="#150c06" stroke-width="3"/>'
+   +'<g clip-path="url(#chEyeClip)">'
+   +'<ellipse cx="100" cy="70" rx="22" ry="19" fill="url(#chIris)"/>'
+   +'<ellipse cx="100" cy="70" rx="16" ry="14" fill="none" stroke="#b98a3a" stroke-width="1.4" opacity=".7"/>'
+   +'<ellipse class="pupil" cx="100" cy="70" rx="6" ry="'+pupilRy+'" fill="#0c0805"/>'
+   +'<circle cx="93" cy="63" r="3" fill="#FFE9C0" opacity=".75"/>'
+   +'</g>'
+   +'<path d="M50,70 Q100,38 150,70 Q100,102 50,70 Z" fill="none" stroke="#F2C45A" stroke-width="3" stroke-linejoin="round"/>'
+   +'<path d="M50,70 Q100,38 150,70" fill="none" stroke="rgba(255,232,163,.3)" stroke-width="1.4"/>'
+   +'<ellipse cx="100" cy="278" rx="34" ry="8" fill="url(#chGold)" stroke="#5a4214" stroke-width="2"/>'
+   +'<path d="M88,250 L112,250 L120,272 L80,272 Z" fill="url(#chGold)" stroke="#5a4214" stroke-width="1.6"/>'
+   +'<rect x="95" y="212" width="10" height="40" fill="url(#chGold)" stroke="#5a4214" stroke-width="1.4"/>'
+   +'<circle cx="100" cy="232" r="9" fill="url(#chGold)" stroke="#5a4214" stroke-width="1.4"/>'
+   +'<path d="M52,150 L148,150 C146,184 130,206 100,210 C70,206 54,184 52,150 Z" fill="url(#chBowlInner)" stroke="url(#chGold)" stroke-width="4" stroke-linejoin="round"/>'
+   +'<g clip-path="url(#chBowlClip)"><rect x="48" y="'+fillTop+'" width="104" height="'+(210-fillTop+2)+'" fill="url(#chBlood)"/>'
+   +'<ellipse class="surf" cx="100" cy="'+fillTop+'" rx="'+(48*(0.5+fill*0.5))+'" ry="4" fill="#E5563F" opacity=".9"/></g>'
+   +'<ellipse cx="100" cy="150" rx="50" ry="9.5" fill="none" stroke="url(#chGold)" stroke-width="4"/>'
+   +'<ellipse cx="100" cy="150" rx="44" ry="7" fill="#140a07" opacity=".6"/>'
+   +'<ellipse cx="100" cy="150" rx="44" ry="7" fill="none" stroke="rgba(255,232,163,.25)" stroke-width="1.2"/>'
+   +'<path d="M97.5,'+y0+' C96,'+mid+' 96,'+(y1-6)+' 98.5,'+y1+' L101.5,'+y1+' C104,'+(y1-6)+' 104,'+mid+' 102.5,'+y0+' Z" fill="url(#chBlood)"/>'
+   +'<ellipse cx="100" cy="'+y1+'" rx="7" ry="2.4" fill="#E5563F" opacity=".85"/>'
+   +'<circle class="drip" cx="100" cy="'+(y0+4)+'" r="3" fill="#D14338"/>'
+   +'</svg>';
+}
 function injectLauncher(){
   const el=document.getElementById('trials'); if(!el) return; if(document.getElementById('chalLaunch')) return;
   const g=GC(); const active=g&&(g.status==='lobby'||g.status==='playing');
   const box=document.createElement('div'); box.id='chalLaunch'; box.style.cssText='max-width:520px;margin:26px auto 0;text-align:center';
-  box.innerHTML='<div class="ritehdr" style="margin-top:0">The Rite of the Chalice</div>'
-    +'<p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">A 52-card King\u2019s Cup for the circle. Devotion rides a hidden tally and commits as one line when the rite ends.</p>'
-    +'<button class="gold" onclick="chalAPI.show()">'+(active?'\u2726 Rejoin the rite':'\u2726 Open the Rite of the Chalice')+'</button>';
+  box.innerHTML='<div class="ritehdr" style="margin-top:0">The Trial of the Chalice</div>'
+    +'<div class="chal-stage" onclick="chalAPI.show()">'+chalTotem(active, g&&g.kings)+'</div>'
+    +'<p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">A 52-card King\u2019s Cup for the circle. Devotion rides a hidden tally and commits as one line when the trial ends.</p>'
+    +'<button class="gold" onclick="chalAPI.show()">'+(active?'\u2726 Rejoin the trial':'\u2726 Open the Trial of the Chalice')+'</button>';
   el.appendChild(box);
 }
 const _origRT = window.renderTrials;

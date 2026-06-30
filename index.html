@@ -2600,8 +2600,8 @@ function isUnlocked(name,val){
   return !!(m && Array.isArray(m.unlocks) && m.unlocks.includes(val));
 }
 const GATED_ITEMS={
-  top_style:[['Tank','tank',0],['Tee','tee',0],['Shirt','shirt',0],['Hoodie','hoodie',0],['Long-sleeve','longsleeve',0],['Flannel','flannel',0],['Puffer vest','puffer',0],['Dress','dress',0],['Acolyte sash','sash',100],['Disciple tunic','tunic',300],['Disciple · Eye','discipleeye',300],['Warden mantle','mantle',600],['Sage robe','sage',1000],['Offering robe','robes',1500],['Starlit robe','luminary',2000],['Radiant cloak','ascend',2500]],
-  hat:[['None','none',0],['Beanie','beanie',0],['Cap','cap',0],['Bandana','bandana',0],['Headband','headband',0],['Antlers','antlers',100],['Ram horns','horns',300],['Witch hat','witch',300],['Animal skull','skull',600],['Laurel','laurel',600],['Crown','crown',1500],['Halo','halo',2500],['Third eye','thirdeye',2500]],
+  top_style:[['Tank','tank',0],['Tee','tee',0],['Shirt','shirt',0],['Hoodie','hoodie',0],['Long-sleeve','longsleeve',0],['Flannel','flannel',0],['Puffer vest','puffer',0],['Dress','dress',0],['Acolyte sash','sash',100],['Disciple tunic','tunic',350],['Disciple · Eye','discipleeye',350],['Warden mantle','mantle',750],['Sage robe','sage',1400],['Offering robe','robes',1400],['Starlit robe','luminary',2800],['Radiant cloak','ascend',5000]],
+  hat:[['None','none',0],['Beanie','beanie',0],['Cap','cap',0],['Bandana','bandana',0],['Headband','headband',0],['Antlers','antlers',100],['Ram horns','horns',350],['Witch hat','witch',350],['Animal skull','skull',750],['Laurel','laurel',1400],['Crown','crown',2800],['Halo','halo',5000],['Third eye','thirdeye',5000]],
   held:[['None','none',0],['Beer','beer',0],['Coffee','mug',0],['Bottle','bottle',0],['Frisbee','frisbee',0],['Joint','joint',0],['Kebab','kebab',0],['Flashlight','flashlight',0],['Binoculars','binoculars',100],['Boombox','boombox',300],['Guitar','guitar',300],['Marshmallow','marsh',100],['Fishing rod','rod',300],['Axe','axe',300],['Cult tome','book',600],['Paddle','paddle',600],['Staff','staff',1000],['Lantern','lantern',1000]],
   accent:[['None','none',0],['Necklace','necklace',0],['Tie','tie',0],['Scarf','scarf',0],['Bolo tie','bolo',100],['Cult badge · bronze','cultbronze',300],['Cult badge · silver','cultsilver',600],['Cult badge · gold','cultgold',1000],['Ankh','ankh',600],['Bone charm','bonecharm',1000]]
 };
@@ -4070,7 +4070,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30am · Trials hardening — gaming a maxed trial with a wheel buff now backfires (−100, the Eye disfavours cheaters), group pots split with no points lost to rounding, wager-dispute parties can no longer vote on themselves, and a banked wheel buff is shown (and held back) before a Keeper award spends it.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30an · Cosmetic unlocks now match the rank ladder (top regalia needs top orders, labels are correct), and the sky can follow any location's real timezone — not just Toronto.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -5144,7 +5144,11 @@ function initEmbers(){
 const GEO_DEFAULT={lat:43.6532,lng:-79.3832}; /* Toronto */
 function geo(){ const g=(MEM&&MEM.geo)||{}; const lat=(typeof g.lat==='number')?g.lat:GEO_DEFAULT.lat; const lng=(typeof g.lng==='number')?g.lng:GEO_DEFAULT.lng; return {lat,lng}; }
 function tzOffsetHours(tz){ try{ const d=new Date(); const u=new Date(d.toLocaleString('en-US',{timeZone:'UTC'})); const l=new Date(d.toLocaleString('en-US',{timeZone:tz})); return Math.round((l-u)/3600000); }catch(e){ return -5; } }
-function torontoHours(){ try{ const f=new Intl.DateTimeFormat('en-US',{timeZone:'America/Toronto',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}); const p={}; f.formatToParts(new Date()).forEach(x=>p[x.type]=x.value); let hh=+p.hour; if(hh===24)hh=0; return hh+(+p.minute)/60+(+p.second)/3600; }catch(e){ const d=new Date(); return d.getHours()+d.getMinutes()/60; } }
+// current wall-clock hour (with DST) in any IANA timezone; the grove's sky follows the
+// configured location's own timezone, defaulting to Toronto.
+function localHours(tz){ try{ const f=new Intl.DateTimeFormat('en-US',{timeZone:tz||'America/Toronto',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}); const p={}; f.formatToParts(new Date()).forEach(x=>p[x.type]=x.value); let hh=+p.hour; if(hh===24)hh=0; return hh+(+p.minute)/60+(+p.second)/3600; }catch(e){ const d=new Date(); return d.getHours()+d.getMinutes()/60; } }
+function geoTz(){ try{ const g=(MEM&&MEM.geo)||{}; return (typeof g.tz==='string'&&g.tz)?g.tz:'America/Toronto'; }catch(e){ return 'America/Toronto'; } }
+function torontoHours(){ return localHours(geoTz()); }
 function dayOfYear(){ const n=new Date(); const s=Date.UTC(n.getUTCFullYear(),0,0); return Math.floor((Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate())-s)/86400000); }
 function sunTimes(){
   const {lat,lng}=geo(); const N=dayOfYear(); const D2R=Math.PI/180,R2D=180/Math.PI; const zen=90.833*D2R;
@@ -5160,7 +5164,7 @@ function sunTimes(){
     let H=rise? 360-R2D*Math.acos(cosH) : R2D*Math.acos(cosH); H/=15;
     const T=H+RA-(0.06571*t)-6.622; let UT=((T-lngHour)%24+24)%24; return UT;
   }
-  const off=tzOffsetHours('America/Toronto');
+  const off=tzOffsetHours(geoTz());
   let sr=calc(true), ss=calc(false);
   sr=(sr==null)?6:(((sr+off)%24)+24)%24;
   ss=(ss==null)?20:(((ss+off)%24)+24)%24;
@@ -5278,16 +5282,17 @@ window.geoForm=function(){ const g=geo(); const st=sunTimes(); sheet.innerHTML=`
   <div class="grip"></div>
   <div class="kpanel">
     <h3>🌅 Sky &amp; Sunrise</h3>
-    <p class="sub">The grove's sky follows the real sun and moon at this spot, in Toronto time. Today: sunrise ${fmtH(st.sunrise)}, sunset ${fmtH(st.sunset)}. Default is Toronto.</p>
+    <p class="sub">The grove's sky follows the real sun and moon at this spot, in the chosen timezone. Today: sunrise ${fmtH(st.sunrise)}, sunset ${fmtH(st.sunset)}. Default is Toronto.</p>
     <div class="field"><label>Latitude (−90 to 90)</label><input id="geoLat" type="number" step="0.0001" value="${g.lat}" style="${inp}"></div>
     <div class="field"><label>Longitude (−180 to 180)</label><input id="geoLng" type="number" step="0.0001" value="${g.lng}" style="${inp}"></div>
+    <div class="field"><label>Timezone</label><select id="geoTzSel" style="${inp}">${['America/Toronto','America/New_York','America/Chicago','America/Denver','America/Los_Angeles','America/Vancouver','America/Halifax','America/St_Johns','Europe/London','Europe/Paris','Europe/Istanbul','Asia/Dubai','Asia/Karachi','Asia/Kolkata','Asia/Shanghai','Asia/Tokyo','Australia/Sydney','Pacific/Auckland'].map(z=>`<option value="${z}" ${geoTz()===z?'selected':''}>${z.replace(/_/g,' ')}</option>`).join('')}</select></div>
     <button class="gold" onclick="geoSave()">Set the sky</button>
     <button class="ghostbtn" onclick="geoReset()">↺ Reset to Toronto</button>
     <button class="ghostbtn" onclick="deedsForm()">Back</button>
     <div class="err" id="kerr"></div>
   </div>`; scrim.classList.add("show"); };
-window.geoSave=async function(){ const lat=parseFloat(document.getElementById('geoLat').value), lng=parseFloat(document.getElementById('geoLng').value); if(isNaN(lat)||isNaN(lng)||lat<-90||lat>90||lng<-180||lng>180){ document.getElementById('kerr').textContent='Enter a valid latitude (−90…90) and longitude (−180…180).'; return; } MEM.geo={lat,lng}; await saveData(); try{ atmoUpdate(); }catch(e){} const st=sunTimes(); toast(`Sky set — sunrise ${fmtH(st.sunrise)}, sunset ${fmtH(st.sunset)}.`); deedsForm(); };
-window.geoReset=async function(){ MEM.geo={lat:43.6532,lng:-79.3832}; await saveData(); try{ atmoUpdate(); }catch(e){} const la=document.getElementById('geoLat'),lo=document.getElementById('geoLng'); if(la)la.value=43.6532; if(lo)lo.value=-79.3832; const st=sunTimes(); toast(`Sky reset to Toronto — sunrise ${fmtH(st.sunrise)}, sunset ${fmtH(st.sunset)}.`); };
+window.geoSave=async function(){ const lat=parseFloat(document.getElementById('geoLat').value), lng=parseFloat(document.getElementById('geoLng').value); const tzEl=document.getElementById('geoTzSel'); const tz=(tzEl&&tzEl.value)||'America/Toronto'; if(isNaN(lat)||isNaN(lng)||lat<-90||lat>90||lng<-180||lng>180){ document.getElementById('kerr').textContent='Enter a valid latitude (−90…90) and longitude (−180…180).'; return; } MEM.geo={lat,lng,tz}; await saveData(); try{ atmoUpdate(); }catch(e){} const st=sunTimes(); toast(`Sky set — sunrise ${fmtH(st.sunrise)}, sunset ${fmtH(st.sunset)}.`); deedsForm(); };
+window.geoReset=async function(){ MEM.geo={lat:43.6532,lng:-79.3832,tz:'America/Toronto'}; await saveData(); try{ atmoUpdate(); }catch(e){} const la=document.getElementById('geoLat'),lo=document.getElementById('geoLng'); if(la)la.value=43.6532; if(lo)lo.value=-79.3832; const st=sunTimes(); toast(`Sky reset to Toronto — sunrise ${fmtH(st.sunrise)}, sunset ${fmtH(st.sunset)}.`); };
 
 
 /* ====================== THE OFFERING — ceremony overlay ====================== */

@@ -3834,7 +3834,7 @@ function sweepWagers(now){ let changed=false; (MEM.wagers||[]).forEach(w=>{
   else if(w.status==='disputed' && now-(w.disputeAt||now)>=1*3600){ w.status='forfeit'; w.winner='forfeit'; changed=true; }
 }); return changed; }
 /* ---------- multi-person GROUP WAGERS ---------- */
-const GROUP_CAP=100, GROUP_SIDE_MAX=6, GROUP_LOCK_SEC=3600, GROUP_ACTIVE_SEC=86400, GROUP_DISPUTE_VOTES=5;
+const GROUP_CAP=100, GROUP_SIDE_MAX=6, GROUP_LOCK_SEC=3600, GROUP_ACTIVE_SEC=86400, GROUP_DISPUTE_VOTES=5, GROUP_DISPUTE_SEC=3600;
 function groupById(id){ return (MEM.groups||[]).find(g=>g.id===id); }
 function groupParts(g){ return [...(g.sideA||[]),...(g.sideB||[])]; }
 function groupPot(g){ return (g.stake||0)*groupParts(g).length; }
@@ -3842,6 +3842,7 @@ function groupPayout(g,side){ const all=groupParts(g); const pot=(g.stake||0)*al
 function sweepGroups(now){ let ch=false; (MEM.groups||[]).forEach(g=>{
   if(g.status==='pending' && now-(g.created||now)>=GROUP_LOCK_SEC){ groupParts(g).forEach(nm=>{const m=memByName(nm); if(m)adjPts(m,g.stake||0);}); g.status='expired'; ch=true; }
   else if(g.status==='active' && now-(g.lockedAt||now)>=GROUP_ACTIVE_SEC){ g.status='disputed'; g.disputeAt=now; ch=true; }
+  else if(g.status==='disputed' && now-(g.disputeAt||now)>=GROUP_DISPUTE_SEC){ groupParts(g).forEach(nm=>{const m=memByName(nm); if(m)adjPts(m,g.stake||0);}); g.status='void'; g.winner='void'; ch=true; }
 }); return ch; }
 function sweepRites(now){ const b=(MEM.rites||[]).length; MEM.rites=(MEM.rites||[]).filter(r=> r.applied || (now-(r.created||now) < 3*3600)); return (MEM.rites||[]).length!==b; }
 function applyAction(a){
@@ -4301,7 +4302,7 @@ window.concedeWager=async function(id){ const w=wagerById(id); if(!w)return; con
 window.resolveWager=async function(id,winner){ if(!keeperUnlocked)return; if(!confirm(`Award the ${2*(wagerById(id)?.amount||0)} pot to ${winner}?`))return; applyAction({t:'wager_resolve',id,winner,keeper:true}); await saveData(); trialsRefresh(); toast(`${winner} takes the pot.`); };
 window.voidWager=async function(id){ if(!keeperUnlocked)return; if(!confirm("Void this wager and refund both stakes?"))return; applyAction({t:'wager_void',id,keeper:true}); await saveData(); trialsRefresh(); toast("Wager voided — stakes refunded."); };
 window.voteWager=async function(id,side){ if(!VOTER){ toast("Choose your spirit first."); return; } const w=wagerById(id); if(!w)return; const ok=await communityAction({t:'wager_vote',id,voter:VOTER,side}); if(!ok)return; trialsRefresh(); toast("Your vote is cast."); };
-window.disputeWager=async function(id){ if(!VOTER)return; if(!confirm("Raise a dispute? The grove will vote (5 settles it). If no verdict in 3 hours, BOTH of you forfeit the pot."))return; const ok=await communityAction({t:'wager_dispute',id,by:VOTER}); if(!ok)return; trialsRefresh(); toast("Dispute raised — the grove decides."); };
+window.disputeWager=async function(id){ if(!VOTER)return; if(!confirm("Raise a dispute? The grove will vote (5 settles it). If no verdict in 1 hour, BOTH of you forfeit the pot."))return; const ok=await communityAction({t:'wager_dispute',id,by:VOTER}); if(!ok)return; trialsRefresh(); toast("Dispute raised — the grove decides."); };
 /* ---------- GROUP WAGER UI ---------- */
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 const GROUP_STATUS={pending:'forming',active:'live',disputed:'disputed',settled:'settled',expired:'expired',void:'void'};
@@ -4337,8 +4338,9 @@ function groupCard(g){
                    : `<button class="rapprove" onclick="voteGroup('${g.id}','A')">Side A</button><button class="rapprove" onclick="voteGroup('${g.id}','B')">Side B</button>`;
     } else acts=`<span class="rmeta">players can't vote their own dispute</span>`;
     let av=0,bv=0; const vv=g.votes||{}; for(const k in vv){ if(vv[k]==='A')av++; else if(vv[k]==='B')bv++; }
-    body+=`<div class="rmeta" style="color:#E8A88F">⚖ disputed — grove votes (A ${av} · B ${bv}, ${GROUP_DISPUTE_VOTES} settles it)</div>`;
+    body+=`<div class="rmeta" style="color:#E8A88F">⚖ disputed — grove votes (A ${av} · B ${bv}, ${GROUP_DISPUTE_VOTES} settles it) · unsettled in 1h → voided & refunded</div>`;
   } else if(g.status==='settled'){ body+=`<div class="rmeta" style="color:var(--candle)">Side ${g.winner} split the pot of ${pot} ✦</div>`; }
+  else if(g.status==='void'){ body+=`<div class="rmeta" style="color:var(--sage)">No verdict in time — the dispute was voided and every stake refunded.</div>`; }
   if(keeperUnlocked && g.status!=='settled' && g.status!=='expired'){ acts+=`<div style="width:100%;margin-top:6px;text-align:center;font-size:11px">Keeper · <a onclick="keeperGroup('${g.id}','A')" style="cursor:pointer;color:var(--sage)">A wins</a> · <a onclick="keeperGroup('${g.id}','B')" style="cursor:pointer;color:var(--sage)">B wins</a> · <a onclick="keeperGroup('${g.id}','void')" style="cursor:pointer;color:#E8A88F">void</a></div>`; }
   return `<div class="ritecard" style="flex-direction:column;align-items:stretch"><div class="rbody">${head}${body}</div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:6px">${acts}</div></div>`;
 }

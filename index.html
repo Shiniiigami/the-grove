@@ -555,12 +555,12 @@ const DEFAULT_TIERS = [
   {min:0,    name:"Initiate",     hex:"#7C8A82"},   // stone sage grey
   {min:100,  name:"Acolyte",      hex:"#8AA67E"},   // muted moss
   {min:350,  name:"Disciple",     hex:"#6FA3AB"},   // weathered teal
-  {min:750,  name:"Warden",       hex:"#C5A45E"},   // antique gold
+  {min:750,  name:"Warden",       hex:"#357A4C"},   // forest green
   {min:1400, name:"Sage",         hex:"#C2855E"},   // burnt copper
   {min:2800, name:"Luminary",     hex:"#BE869F"},   // dusk mauve
   {min:5000, name:"The Ascended", hex:"#A99BD4"},   // faded amethyst
 ];
-const TIER_COLORS_V2 = {Initiate:"#7C8A82",Acolyte:"#8AA67E",Disciple:"#6FA3AB",Warden:"#C5A45E",Sage:"#C2855E",Luminary:"#BE869F","The Ascended":"#A99BD4"};
+const TIER_COLORS_V2 = {Initiate:"#7C8A82",Acolyte:"#8AA67E",Disciple:"#6FA3AB",Warden:"#357A4C",Sage:"#C2855E",Luminary:"#BE869F","The Ascended":"#A99BD4"};
 const DEFAULT_DEEDS = [
   ["The Pilgrimage",100],
   ["Of the First Fire",200],
@@ -590,7 +590,7 @@ function deeds(){ return (MEM && MEM.deeds && MEM.deeds.length)?MEM.deeds:DEFAUL
 // Pilgrimage", "Pilgrimage", etc.) — exact-match missed the variants people actually type.
 const KEEPER_DEED_KEYS = ['pilgrimage','first fire','rite of passage'];
 function isKeeperDeed(label){ const b=deedBase(String(label||'')).trim().toLowerCase(); return KEEPER_DEED_KEYS.some(k=>b.indexOf(k)>=0); }
-function ensureDefaults(){ if(!MEM)return; if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); if(MEM._tierMig!==1){ MEM.tiers=structuredClone(DEFAULT_TIERS); MEM._tierMig=1; } if(MEM._tierColorMig!==2){ (MEM.tiers||[]).forEach(t=>{ if(TIER_COLORS_V2[t.name]) t.hex=TIER_COLORS_V2[t.name]; }); MEM._tierColorMig=2; } if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); if(MEM._deedMig!==3){ MEM.deeds=structuredClone(DEFAULT_DEEDS); MEM._deedMig=3; } if(!MEM.rites)MEM.rites=[]; if(!MEM.challenges)MEM.challenges=[]; if(!MEM.seasonHistory)MEM.seasonHistory=[]; if(!MEM.wagers)MEM.wagers=[]; if(!MEM.itemLocks)MEM.itemLocks={}; if(!Array.isArray(MEM.auraScale)||MEM.auraScale.length!==7)MEM.auraScale=[1,1,1,1,1,1,1]; if(!MEM.badgeColors)MEM.badgeColors={}; if(!MEM.badgeColors["Of the Eye"])MEM.badgeColors["Of the Eye"]="#E0B466"; if(!MEM.badgeColors["Drained the Chalice"])MEM.badgeColors["Drained the Chalice"]="#E0743A"; if(MEM.seasonStart===undefined)MEM.seasonStart=0;
+function ensureDefaults(){ if(!MEM)return; if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); if(MEM._tierMig!==1){ MEM.tiers=structuredClone(DEFAULT_TIERS); MEM._tierMig=1; } if(MEM._tierColorMig!==3){ (MEM.tiers||[]).forEach(t=>{ if(TIER_COLORS_V2[t.name]) t.hex=TIER_COLORS_V2[t.name]; }); MEM._tierColorMig=3; } if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); if(MEM._deedMig!==3){ MEM.deeds=structuredClone(DEFAULT_DEEDS); MEM._deedMig=3; } if(!MEM.rites)MEM.rites=[]; if(!MEM.challenges)MEM.challenges=[]; if(!MEM.seasonHistory)MEM.seasonHistory=[]; if(!MEM.wagers)MEM.wagers=[]; if(!MEM.itemLocks)MEM.itemLocks={}; if(!Array.isArray(MEM.auraScale)||MEM.auraScale.length!==7)MEM.auraScale=[1,1,1,1,1,1,1]; if(!MEM.badgeColors)MEM.badgeColors={}; if(!MEM.badgeColors["Of the Eye"])MEM.badgeColors["Of the Eye"]="#E0B466"; if(!MEM.badgeColors["Drained the Chalice"])MEM.badgeColors["Drained the Chalice"]="#E0743A"; if(MEM.seasonStart===undefined)MEM.seasonStart=0;
   if(MEM._hatMig!==3){ const _hm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && ['crown','laurel','halo'].includes(c.hat)){ c.hat='none'; _hm.push(m); } }); MEM._hatMig=3; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _hm.length && !localStorage.getItem('grove-crownpurge3')){ _hm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-crownpurge3','1'); } }catch(e){} }
   if(MEM._fadeMig!==1){ const _fm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && c.hair_style==='fade'){ c.hair_style='short'; _fm.push(m); } }); MEM._fadeMig=1; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _fm.length && !localStorage.getItem('grove-fademig1')){ _fm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-fademig1','1'); } }catch(e){} } if(!MEM.fire)MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[]}; if(!MEM.fire.stokers)MEM.fire.stokers=[]; if(MEM.fire.lastDecay===undefined)MEM.fire.lastDecay=Date.now()/1000; if(MEM.fire.streak===undefined)MEM.fire.streak=0; if(MEM._fireTune!==2){ MEM.fire.goal=6; MEM._fireTune=2; } (MEM.members||[]).forEach(m=>{ if(m.season===undefined) m.season=0; if(m.chalBudget===undefined) m.chalBudget=150; else { const cb=m.chalBudget|0; m.chalBudget = cb>150?150 : (cb<0?0:cb); } if(m.oath===undefined) m.oath=true; if(m.lastStoke===undefined) m.lastStoke=0; if(m.logs===undefined) m.logs=0; if(m.fireLogs===undefined) m.fireLogs=0; if(!(m.points>0)) m.points=Math.max(0,m.points||0); if(!(m.season>0)) m.season=Math.max(0,m.season||0); if(m._preTop!==undefined && !(m.offered&&m.offered>Date.now()/1000)){ const c=m.sprite&&m.sprite.chibi; if(c&&c.top_style==='robes'){ const cc=structuredClone(c); cc.top_style=m._preTop||(cc.sleeves===false?'tank':'tee'); m.sprite={chibi:cc}; } delete m._preTop; } }); }
 function tierOf(p){const T=tiers();let t=T[0];for(const x of T)if(p>=x.min)t=x;return t;}
@@ -2647,7 +2647,7 @@ window.commitChibi=async function(){
 };
 
 /* ====================== DEEDS & RANKS EDITORS ====================== */
-const RANKCOLORS=["#5E6F6B","#6FB39A","#46C2C9","#F2C45A","#F0853E","#FFE8A3","#C75A33","#9A6BB0","#E0607A","#8FA89B"];
+const RANKCOLORS=["#5E6F6B","#357A4C","#6FB39A","#46C2C9","#F2C45A","#F0853E","#FFE8A3","#C75A33","#9A6BB0","#E0607A","#8FA89B"];
 const inp="padding:9px;border-radius:8px;background:rgba(8,14,11,.85);border:1px solid var(--moss);color:var(--parch);";
 
 /* --- deeds --- */
@@ -4013,7 +4013,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ah · On a shared spirit card the chibi is now the hero — half again as large — and the season / lifetime numbers are smaller beneath it.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ai · A forest green joins the rank colour palette, and the Warden order now wears it by default.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

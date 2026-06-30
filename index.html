@@ -328,6 +328,19 @@
   .hist .h em{font-style:italic;color:var(--parch);}
   .hist .h b{font-family:'Silkscreen',monospace;font-size:11px;color:var(--candle);}
   .hist .h b.neg{color:var(--ember);}
+  /* scrollable ledger when a spirit has a long history — keeps the soul card compact */
+  .ledscroll{max-height:330px;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding-right:6px;margin-right:-4px;
+    -webkit-mask:linear-gradient(180deg,#000,#000 calc(100% - 18px),transparent);
+    mask:linear-gradient(180deg,#000,#000 calc(100% - 18px),transparent);}
+  .ledscroll.cw{max-height:198px;}
+  .ledscroll::-webkit-scrollbar{width:6px;}
+  .ledscroll::-webkit-scrollbar-thumb{background:rgba(242,196,90,.25);border-radius:4px;}
+  .ledhint{font-size:9px;color:var(--sage);opacity:.6;text-align:center;margin-top:5px;font-family:'Silkscreen',monospace;letter-spacing:.08em;}
+  /* keeper panel section grouping */
+  .kgroup{font-family:'Silkscreen',monospace;font-size:8.5px;letter-spacing:.16em;color:var(--candle);
+    opacity:.62;text-transform:uppercase;margin:16px 0 5px;padding-bottom:4px;border-bottom:1px solid rgba(242,196,90,.14);}
+  .kgroup:first-of-type{margin-top:8px;}
   .closebtn{display:block;width:100%;margin-top:18px;padding:12px;border-radius:11px;cursor:pointer;
     font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
     background:rgba(38,53,44,.5);border:1px solid var(--moss);color:var(--sage);}
@@ -577,7 +590,7 @@ function deeds(){ return (MEM && MEM.deeds && MEM.deeds.length)?MEM.deeds:DEFAUL
 // Pilgrimage", "Pilgrimage", etc.) — exact-match missed the variants people actually type.
 const KEEPER_DEED_KEYS = ['pilgrimage','first fire','rite of passage'];
 function isKeeperDeed(label){ const b=deedBase(String(label||'')).trim().toLowerCase(); return KEEPER_DEED_KEYS.some(k=>b.indexOf(k)>=0); }
-function ensureDefaults(){ if(!MEM)return; if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); if(MEM._tierMig!==1){ MEM.tiers=structuredClone(DEFAULT_TIERS); MEM._tierMig=1; } if(MEM._tierColorMig!==2){ (MEM.tiers||[]).forEach(t=>{ if(TIER_COLORS_V2[t.name]) t.hex=TIER_COLORS_V2[t.name]; }); MEM._tierColorMig=2; } if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); if(MEM._deedMig!==3){ MEM.deeds=structuredClone(DEFAULT_DEEDS); MEM._deedMig=3; } if(!MEM.rites)MEM.rites=[]; if(!MEM.challenges)MEM.challenges=[]; if(!MEM.seasonHistory)MEM.seasonHistory=[]; if(!MEM.wagers)MEM.wagers=[]; if(!MEM.itemLocks)MEM.itemLocks={}; if(!MEM.badgeColors)MEM.badgeColors={}; if(!MEM.badgeColors["Of the Eye"])MEM.badgeColors["Of the Eye"]="#E0B466"; if(!MEM.badgeColors["Drained the Chalice"])MEM.badgeColors["Drained the Chalice"]="#E0743A"; if(MEM.seasonStart===undefined)MEM.seasonStart=0;
+function ensureDefaults(){ if(!MEM)return; if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); if(MEM._tierMig!==1){ MEM.tiers=structuredClone(DEFAULT_TIERS); MEM._tierMig=1; } if(MEM._tierColorMig!==2){ (MEM.tiers||[]).forEach(t=>{ if(TIER_COLORS_V2[t.name]) t.hex=TIER_COLORS_V2[t.name]; }); MEM._tierColorMig=2; } if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); if(MEM._deedMig!==3){ MEM.deeds=structuredClone(DEFAULT_DEEDS); MEM._deedMig=3; } if(!MEM.rites)MEM.rites=[]; if(!MEM.challenges)MEM.challenges=[]; if(!MEM.seasonHistory)MEM.seasonHistory=[]; if(!MEM.wagers)MEM.wagers=[]; if(!MEM.itemLocks)MEM.itemLocks={}; if(!Array.isArray(MEM.auraScale)||MEM.auraScale.length!==7)MEM.auraScale=[1,1,1,1,1,1,1]; if(!MEM.badgeColors)MEM.badgeColors={}; if(!MEM.badgeColors["Of the Eye"])MEM.badgeColors["Of the Eye"]="#E0B466"; if(!MEM.badgeColors["Drained the Chalice"])MEM.badgeColors["Drained the Chalice"]="#E0743A"; if(MEM.seasonStart===undefined)MEM.seasonStart=0;
   if(MEM._hatMig!==3){ const _hm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && ['crown','laurel','halo'].includes(c.hat)){ c.hat='none'; _hm.push(m); } }); MEM._hatMig=3; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _hm.length && !localStorage.getItem('grove-crownpurge3')){ _hm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-crownpurge3','1'); } }catch(e){} }
   if(MEM._fadeMig!==1){ const _fm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && c.hair_style==='fade'){ c.hair_style='short'; _fm.push(m); } }); MEM._fadeMig=1; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _fm.length && !localStorage.getItem('grove-fademig1')){ _fm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-fademig1','1'); } }catch(e){} } if(!MEM.fire)MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[]}; if(!MEM.fire.stokers)MEM.fire.stokers=[]; if(MEM.fire.lastDecay===undefined)MEM.fire.lastDecay=Date.now()/1000; if(MEM.fire.streak===undefined)MEM.fire.streak=0; if(MEM._fireTune!==2){ MEM.fire.goal=6; MEM._fireTune=2; } (MEM.members||[]).forEach(m=>{ if(m.season===undefined) m.season=0; if(m.chalBudget===undefined) m.chalBudget=150; else { const cb=m.chalBudget|0; m.chalBudget = cb>150?150 : (cb<0?0:cb); } if(m.oath===undefined) m.oath=true; if(m.lastStoke===undefined) m.lastStoke=0; if(m.logs===undefined) m.logs=0; if(m.fireLogs===undefined) m.fireLogs=0; if(!(m.points>0)) m.points=Math.max(0,m.points||0); if(!(m.season>0)) m.season=Math.max(0,m.season||0); if(m._preTop!==undefined && !(m.offered&&m.offered>Date.now()/1000)){ const c=m.sprite&&m.sprite.chibi; if(c&&c.top_style==='robes'){ const cc=structuredClone(c); cc.top_style=m._preTop||(cc.sleeves===false?'tank':'tee'); m.sprite={chibi:cc}; } delete m._preTop; } }); }
 function tierOf(p){const T=tiers();let t=T[0];for(const x of T)if(p>=x.min)t=x;return t;}
@@ -1524,19 +1537,21 @@ function drawChibiSprite(canvas,soul,scale,t,base,dpr){
   // Rank bloom: a soft CIRCULAR tier-coloured glow that fades fully within the sprite bounds
   // — filled as a disc, not the whole canvas rect, so there's no boxy edge. Both the radius
   // and the opacity grow with rank, so the higher ranks read as genuinely more radiant.
-  const _cx=cw/2,_cy=ch*0.46, _R=Math.min(cw,ch)*(0.30+tn*0.22);
+  // per-rank intensity multiplier the Keeper can tune (1 = default). Soft bloom only — no ring.
+  const aI=auraScaleFor(soul.ti);
+  const _cx=cw/2,_cy=ch*0.46, _R=Math.min(cw,ch)*(0.30+tn*0.22)*(0.62+0.38*aI);
   const g=ctx.createRadialGradient(_cx,_cy,2,_cx,_cy,_R);
-  g.addColorStop(0,hexA(base,0.06+tnE*0.52));
-  g.addColorStop(0.5,hexA(base,0.02+tnE*0.20));
+  g.addColorStop(0,hexA(base,(0.06+tnE*0.52)*aI));
+  g.addColorStop(0.5,hexA(base,(0.02+tnE*0.20)*aI));
   g.addColorStop(1,"transparent");
   ctx.save(); ctx.beginPath(); ctx.arc(_cx,_cy,_R,0,6.28); ctx.fillStyle=g; ctx.fill(); ctx.restore();
-  // top ranks earn a faint breathing halo ring
-  if(soul.ti>=4){ ctx.save(); ctx.globalAlpha=(0.12+tnE*0.34)*flick; ctx.strokeStyle=base; ctx.lineWidth=1.5; ctx.shadowColor=base; ctx.shadowBlur=glowR*0.6; ctx.beginPath(); ctx.arc(_cx,_cy,_R*0.82,0,6.28); ctx.stroke(); ctx.restore(); }
-  ctx.save();ctx.shadowColor=base;ctx.shadowBlur=glowR*flick*0.75;
+  ctx.save();ctx.shadowColor=base;ctx.shadowBlur=glowR*flick*0.75*aI;
   drawChibi(ctx,f,px,padX,padTop,soul.ti,tiers().length,(typeof moodExpr==='function'?moodExpr(soul.name):'neutral'));
   ctx.restore();
 }
 function hexA(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${n>>16},${(n>>8)&255},${n&255},${a})`;}
+// Keeper-tunable aura intensity per rank (tier index → multiplier, 0..3, default 1).
+function auraScaleFor(ti){ try{ const a=MEM&&MEM.auraScale; if(a&&a[ti]!=null){ const v=+a[ti]; if(v>=0) return Math.min(3,v); } }catch(e){} return 1; }
 
 /* ====================== RENDER ====================== */
 const groveEl=document.getElementById("grove");
@@ -1812,12 +1827,20 @@ function deedLedgerHTML(m,keeper){
   const gs=histGroups(m).filter(g=>g.base!=='Rite of the Chalice' && g.base!=='Trial of the Chalice');
   const chal=chaliceDeedRow(m);
   if(!gs.length && !chal) return `<div class="h"><em>The Eye has yet to record their deeds.</em></div>`;
-  return chal+gs.map(g=>{
+  // greatest Devotion first, least last
+  const rows=[];
+  if(chal) rows.push({sum:(m.chalice&&m.chalice.total)||0, html:chal});
+  gs.forEach(g=>{
     const label = g.count>1 ? `${g.base} <span style="opacity:.7">×${roman(g.count)}</span>` : g.base;
     const val = `<b class="${g.sum<0?'neg':''}">${g.sum>0?'+':''}${g.sum}</b>`;
     const x = keeper ? `<button onclick="removeDeed('${m.name.replace(/'/g,"\\'")}',${g.maxi})" title="Undo one — ${esc(g.base)}" style="background:none;border:none;color:var(--ember);font-size:14px;cursor:pointer;margin-left:6px;padding:0 2px">✕</button>` : '';
-    return `<div class="h"><em>${label}</em>${val}${x}</div>`;
-  }).join('');
+    rows.push({sum:g.sum, html:`<div class="h"><em>${label}</em>${val}${x}</div>`});
+  });
+  rows.sort((a,b)=>b.sum-a.sum);
+  const body=rows.map(r=>r.html).join('');
+  // long ledgers scroll in place so the card stays compact, every deed still reachable
+  if(rows.length>10) return `<div class="ledscroll">${body}</div><div class="ledhint">↕ scroll · ${rows.length} deeds, greatest first</div>`;
+  return body;
 }
 function openSoul(name){
   const m=MEM.members.find(x=>x.name===name);if(!m)return;
@@ -1834,23 +1857,25 @@ function openSoul(name){
   const offMark = _off>0 ? `<div style="display:inline-block;margin:4px 0 2px;padding:3px 9px;border-radius:8px;background:rgba(232,168,143,.14);border:1px solid rgba(232,168,143,.55);color:#E8A88F;font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.06em">▲ THE OFFERED · ${Math.floor(_off/3600)}h ${Math.floor((_off%3600)/60)}m left</div>` : "";
   const _OFCOOL=12*3600; const _ocd=(m.lastOffer && (m.lastOffer+_OFCOOL)>_now)?(m.lastOffer+_OFCOOL-_now):0;
   const cdMark = "";
-  const myChArr=(MEM.challenges||[]).filter(c=>c.accepter===name && c.status!=='expired').sort((a,b)=>(b.created||0)-(a.created||0));
-  const chRows = myChArr.map(c=>{
+  const cwItems=[];
+  (MEM.challenges||[]).filter(c=>c.accepter===name && c.status!=='expired').forEach(c=>{
     const self=VOTER&&VOTER===name; const who=self?'you':name;
     const role = (c.status==='done') ? 'completed' : `${who} committed`;
-    return `<div class="h"><em>${c.title} <span style="opacity:.55;font-size:11px">(${role})</span></em><b>+${c.reward}</b></div>`;
+    cwItems.push({val:+(c.reward||0), html:`<div class="h"><em>${c.title} <span style="opacity:.55;font-size:11px">(${role})</span></em><b>+${c.reward}</b></div>`});
   });
-  const myWag=(MEM.wagers||[]).filter(w=>(w.proposer===name||w.taker===name)&&(w.status==='settled'||w.status==='forfeit')).sort((a,b)=>(b.created||0)-(a.created||0));
-  const wagRows = myWag.map(w=>{
-    let res,col;
-    if(w.status==='forfeit'){ res=`lost · forfeit`; col=`<b style="color:#E8A88F">−${w.amount}</b>`; }
-    else if(w.winner==='tie'){ res=`tie · returned`; col=`<b style="opacity:.6">±0</b>`; }
-    else if(w.winner===name){ res=`won the wager`; col=`<b>+${w.amount}</b>`; }
-    else { res=`lost the wager`; col=`<b style="color:#E8A88F">−${w.amount}</b>`; }
-    return `<div class="h"><em>${w.title} <span style="opacity:.55;font-size:11px">(${res})</span></em>${col}</div>`;
+  (MEM.wagers||[]).filter(w=>(w.proposer===name||w.taker===name)&&(w.status==='settled'||w.status==='forfeit')).forEach(w=>{
+    let res,col,val;
+    if(w.status==='forfeit'){ res=`lost · forfeit`; col=`<b style="color:#E8A88F">−${w.amount}</b>`; val=-(w.amount||0); }
+    else if(w.winner==='tie'){ res=`tie · returned`; col=`<b style="opacity:.6">±0</b>`; val=0; }
+    else if(w.winner===name){ res=`won the wager`; col=`<b>+${w.amount}</b>`; val=(w.amount||0); }
+    else { res=`lost the wager`; col=`<b style="color:#E8A88F">−${w.amount}</b>`; val=-(w.amount||0); }
+    cwItems.push({val, html:`<div class="h"><em>${w.title} <span style="opacity:.55;font-size:11px">(${res})</span></em>${col}</div>`});
   });
-  const allRows=[...chRows,...wagRows];
-  const myCh = allRows.length ? allRows.join("") : `<div class="h"><em>No challenges or wagers yet.</em></div>`;
+  cwItems.sort((a,b)=>b.val-a.val);   // greatest first
+  let myCh;
+  if(!cwItems.length) myCh=`<div class="h"><em>No challenges or wagers yet.</em></div>`;
+  else if(cwItems.length>5) myCh=`<div class="ledscroll cw">${cwItems.map(r=>r.html).join("")}</div><div class="ledhint">↕ scroll · ${cwItems.length} total, greatest first</div>`;
+  else myCh=cwItems.map(r=>r.html).join("");
   const chSection = `<div class="hist"><h4>Challenges &amp; Wagers</h4>${myCh}</div>`;
   const canEdit = (VOTER && VOTER===m.name) || keeperUnlocked;
   const mineSpirit = (typeof VOTER!=='undefined') && VOTER===m.name;
@@ -1959,23 +1984,32 @@ function keeperPanel(){
         <button id="klogN" onclick="setKLog(0)">No</button></div></div>
       <div class="quick">${quick}</div>
       <button class="gold" style="margin-top:14px" onclick="awardPoints()">Inscribe in the ledger</button>
+      <div class="kgroup">Spirits &amp; appearance</div>
       <button class="ghostbtn" onclick="editEpithetForm()">✎ Set a personal title</button>
-      <button class="ghostbtn" onclick="badgeForm()">✦ Manage badges (add · change · remove)</button>
-      <button class="ghostbtn" onclick="badgeIdeasForm()">✦ Edit preset badges (the quick-pick list)</button>
       <button class="ghostbtn" onclick="creatorForm()">✦ Create / edit a chibi</button>
+      <button class="ghostbtn" onclick="badgeForm()">✦ Manage badges (add · change · remove)</button>
+      <button class="ghostbtn" onclick="badgeIdeasForm()">✦ Edit preset badges (quick-pick list)</button>
       <button class="ghostbtn" onclick="summonsRobes()">✶ Summons — robe all by rank</button>
-      <button class="ghostbtn" onclick="keeperOfferForm()">▲ Offer / release a spirit</button>
-      <button class="ghostbtn" style="border-color:rgba(232,168,143,.5);color:#E8A88F" onclick="keeperResetOfferCooldowns()">\u21ba Allow one more offering${(function(){var _p=publicOfferCool();return _p>0?(' \u00b7 public '+Math.floor(_p/3600)+'h '+Math.floor((_p%3600)/60)+'m'):' \u00b7 clear';})()}</button>
-      <button class="ghostbtn" onclick="deedsForm()">✎ Manage deeds & Devotion Points</button>
-      <button class="ghostbtn" onclick="ranksForm()">✎ Manage ranks</button>
-      <button class="ghostbtn" onclick="itemLocksForm()">🔒 Item rank-locks</button>
+
+      <div class="kgroup">Rites · fire · the offering</div>
       <button class="ghostbtn" onclick="trialsKeeperForm()">⚖ Trials override · wagers · groups · challenges</button>
       <button class="ghostbtn" onclick="fireForm()">🔥 Tend the fire · logs &amp; blessing level</button>
+      <button class="ghostbtn" onclick="keeperOfferForm()">▲ Offer / release a spirit</button>
+      <button class="ghostbtn" style="border-color:rgba(232,168,143,.5);color:#E8A88F" onclick="keeperResetOfferCooldowns()">\u21ba Allow one more offering${(function(){var _p=publicOfferCool();return _p>0?(' \u00b7 public '+Math.floor(_p/3600)+'h '+Math.floor((_p%3600)/60)+'m'):' \u00b7 clear';})()}</button>
+      <div class="kgroup">Members &amp; oaths</div>
       <button class="ghostbtn" onclick="addMemberForm()">+ Initiate a new member</button>
-      <button class="ghostbtn" onclick="sinceForm()">✎ Set member-since years</button>
       <button class="ghostbtn" onclick="oathStatusForm()">⚖ Oath status (swear / unswear)</button>
-      <button class="ghostbtn" onclick="changePass()">Change passphrase</button>
+      <button class="ghostbtn" onclick="sinceForm()">✎ Set member-since years</button>
+
+      <div class="kgroup">Rules of the Order</div>
+      <button class="ghostbtn" onclick="deedsForm()">✎ Manage deeds & Devotion Points</button>
+      <button class="ghostbtn" onclick="ranksForm()">✎ Manage ranks</button>
+      <button class="ghostbtn" onclick="auraForm()">✦ Rank aura intensity</button>
+      <button class="ghostbtn" onclick="itemLocksForm()">🔒 Item rank-locks</button>
       <button class="ghostbtn" onclick="seasonForm()">◈ Manage season</button>
+
+      <div class="kgroup">Keeper &amp; data</div>
+      <button class="ghostbtn" onclick="changePass()">Change passphrase</button>
       <button class="ghostbtn" onclick="exportForm()">⤓ Export &amp; backup</button>
       <button class="ghostbtn" onclick="closeSheet()">Close</button>
       <div class="err" id="kerr"></div>
@@ -2731,6 +2765,37 @@ function renderLedgerEdit(){
 /* --- ranks --- */
 let RANKS_EDIT=null;
 window.ranksForm=function(){ RANKS_EDIT=structuredClone(tiers()); renderRanks(); };
+/* ---- Rank aura intensity: tune how strongly each rank glows in the grove ---- */
+const AURA_SAMPLE_CHIBI={skin:"#D9A06A",hair:"#1A1612",hair_style:"short",beard:null,glasses:false,ears:"none",top:"#5C6646",sleeves:true,jacket:null,pants:"#2A2620",boots:"#3A2A22",accent:"none"};
+function auraSampleSoul(i){ const T=tiers(); const hex=(T[i]||T[T.length-1]).hex; return {chibi:AURA_SAMPLE_CHIBI, grid:null, W:30, H:46, tier:{hex}, ti:i, seed:i*5+3, base:hex, imgUrl:null, name:'_aura'+i}; }
+function auraDrawPv(i){ try{ const T=tiers(); drawChibiSprite(document.getElementById('auraPv'+i), auraSampleSoul(i), 5, 0, (T[i]||{}).hex, Math.min(2,window.devicePixelRatio||1)); }catch(e){} }
+window.auraForm=function(){ if(!Array.isArray(MEM.auraScale)||MEM.auraScale.length!==7) MEM.auraScale=[1,1,1,1,1,1,1]; renderAura(); };
+function renderAura(){
+  const T=tiers();
+  const rows=T.map((t,i)=>{ const v=Math.round(auraScaleFor(i)*100);
+    return `<div style="display:flex;align-items:center;gap:12px;margin:10px 0">
+      <div style="flex:none;width:46px;text-align:center;background:rgba(0,0,0,.25);border-radius:9px;padding:3px 0"><canvas id="auraPv${i}"></canvas></div>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;font-family:'Silkscreen',monospace;font-size:10px;margin-bottom:3px">
+          <span style="color:${t.hex}">${t.name}</span><span id="auraVal${i}" style="color:var(--sage)">${v}%</span>
+        </div>
+        <input type="range" min="0" max="200" step="10" value="${v}" oninput="auraSet(${i},this.value)" style="width:100%;accent-color:${t.hex}">
+      </div></div>`;
+  }).join('');
+  sheet.innerHTML=`<div class="grip"></div><div class="kpanel">
+    <h3>Rank aura intensity</h3>
+    <p class="sub">Tune how strongly each rank's spirit glows in the grove. 100% is the default; 0% turns a rank's aura off entirely; 200% blazes. Saved for the whole Order.</p>
+    ${rows}
+    <button class="gold" style="margin-top:12px" onclick="auraSave()">Save the auras</button>
+    <button class="ghostbtn" onclick="auraReset()">↺ Reset all to 100%</button>
+    <button class="ghostbtn" onclick="keeperPanel()">Back</button>
+    <div class="err" id="kerr"></div>
+  </div>`;
+  T.forEach((t,i)=>auraDrawPv(i));
+}
+window.auraSet=function(i,v){ if(!Array.isArray(MEM.auraScale))MEM.auraScale=[1,1,1,1,1,1,1]; MEM.auraScale[i]=Math.max(0,Math.min(3,(+v)/100)); const el=document.getElementById('auraVal'+i); if(el)el.textContent=Math.round(+v)+'%'; auraDrawPv(i); };
+window.auraSave=async function(){ try{ await saveData(); }catch(e){} try{ layoutGrove(); }catch(e){} try{ renderLedger(); }catch(e){} toast('The auras are set.'); keeperPanel(); };
+window.auraReset=function(){ MEM.auraScale=[1,1,1,1,1,1,1]; renderAura(); };
 let ITEMLOCKS_EDIT=null;
 window.itemLocksForm=function(){ ITEMLOCKS_EDIT=Object.assign({}, MEM.itemLocks||{}); renderItemLocks(); };
 function renderItemLocks(){
@@ -3342,7 +3407,14 @@ window.shareSpirit=async function(name){
       .forEach(c=>cwItems.push({label:'⚔ '+c.title+(c.status==='done'?' (done)':' (committed)'), val:+(c.reward||0)}));
     (MEM.wagers||[]).filter(w=>(w.proposer===name||w.taker===name)&&(w.status==='settled'||w.status==='forfeit')).sort((a,b)=>(b.created||0)-(a.created||0))
       .forEach(w=>{ let v,sub; if(w.status==='forfeit'){v=-(w.amount||0);sub='lost';} else if(w.winner==='tie'){v=0;sub='tie';} else if(w.winner===name){v=(w.amount||0);sub='won';} else {v=-(w.amount||0);sub='lost';} cwItems.push({label:'🎲 '+w.title+' ('+sub+')', val:v}); });
-    const W=600, M=34;                         // width + side margin
+    // a shareable card stays clean: greatest first, then the top 5 deeds / top 3 trials,
+    // with a quiet "…and N more" line so nothing feels hidden.
+    deedItems.sort((a,b)=>b.val-a.val); cwItems.sort((a,b)=>b.val-a.val);
+    const deedMore=Math.max(0,deedItems.length-5), cwMore=Math.max(0,cwItems.length-3);
+    const deedShown=deedItems.slice(0,5), cwShown=cwItems.slice(0,3);
+    if(deedMore>0) deedShown.push({label:'…and '+deedMore+' more deed'+(deedMore>1?'s':''), val:null});
+    if(cwMore>0)  cwShown.push({label:'…and '+cwMore+' more', val:null});
+    const W=600, M=36;                         // width + side margin
     const rr=(c,X,Y,w,h,r)=>{ r=Math.min(r,h/2,w/2); c.beginPath(); c.moveTo(X+r,Y); c.arcTo(X+w,Y,X+w,Y+h,r); c.arcTo(X+w,Y+h,X,Y+h,r); c.arcTo(X,Y+h,X,Y,r); c.arcTo(X,Y,X+w,Y,r); c.closePath(); };
     // ---- measure pass: wrap badges into pill rows ----
     const meas=document.createElement("canvas").getContext("2d");
@@ -3353,14 +3425,14 @@ window.shareSpirit=async function(name){
     pills.forEach(p=>{ const add=(cur.length?GAP:0)+p.w; if(cw+add>maxRow && cur.length){ rows.push(cur); cur=[]; cw=0; } cur.push(p); cw+=(cur.length>1?GAP:0)+p.w; });
     if(cur.length) rows.push(cur);
     const badgeBlockH = badges.length ? (28 + rows.length*(PILLH+GAP)) : 0;
-    const RH=30, SECHEAD=40;                    // row height, section-heading block
-    const deedBlockH = deedItems.length ? (SECHEAD + deedItems.length*RH) : 0;
-    const cwBlockH   = cwItems.length   ? (SECHEAD + cwItems.length*RH)   : 0;
-    // ---- total height: header/identity block runs to the bottom of the point boxes
-    // (420 with a title, 400 without), then each section adds exactly its own height,
-    // so the footer always sits just below the final row — never overlapping it. ----
-    const topH = m.epithet?420:400;
-    const H = topH + badgeBlockH + deedBlockH + cwBlockH + 36;
+    const RH=36, SECHEAD=46;                    // row height, section-heading block (roomier)
+    const deedBlockH = deedShown.length ? (SECHEAD + deedShown.length*RH) : 0;
+    const cwBlockH   = cwShown.length   ? (SECHEAD + cwShown.length*RH)   : 0;
+    // ---- total height: header/identity block runs to the bottom of the point boxes,
+    // then each section adds exactly its own height, so the footer always sits just below
+    // the final row — never overlapping it. ----
+    const topH = m.epithet?440:420;
+    const H = topH + badgeBlockH + deedBlockH + cwBlockH + 44;
     const cv=document.createElement("canvas"); const DPR=2; cv.width=W*DPR; cv.height=H*DPR;
     const x=cv.getContext("2d"); x.scale(DPR,DPR);
     const g=x.createLinearGradient(0,0,0,H); g.addColorStop(0,"#0C140F"); g.addColorStop(1,"#070B09");
@@ -3373,7 +3445,7 @@ window.shareSpirit=async function(name){
     x.textAlign="center";
     x.fillStyle="#7E8C82"; x.font="11px Silkscreen, monospace"; x.fillText("ORDER OF THE EYE", gx, 38);
     // chibi — drawSoul sizes its own canvas; draw it into a fixed square box (this was the bug)
-    try{ const soul=buildSoul(m.name,m.points,m.sprite); const sc=document.createElement("canvas"); drawSoul(sc,soul,8,0); const box=132; x.drawImage(sc, gx-box/2, 70, box, box); }catch(e){}
+    try{ const soul=buildSoul(m.name,m.points,m.sprite); const sc=document.createElement("canvas"); drawSoul(sc,soul,8,0); const box=140; x.drawImage(sc, gx-box/2, 66, box, box); }catch(e){}
     let y=270;
     x.fillStyle="#EFE7D6"; x.font="700 36px Cinzel, serif"; x.fillText(m.name, gx, y); y+=8;
     if(m.epithet){ y+=20; x.fillStyle="#9DB0A4"; x.font="italic 17px Spectral, Georgia, serif"; x.fillText('"'+m.epithet+'"', gx, y); }
@@ -3385,8 +3457,8 @@ window.shareSpirit=async function(name){
     y+=22; const bw=(W-M*2-14)/2, bh=66;
     x.fillStyle="rgba(242,196,90,.08)"; rr(x,M,y,bw,bh,9); x.fill(); x.strokeStyle="rgba(242,196,90,.25)"; x.lineWidth=1; rr(x,M,y,bw,bh,9); x.stroke();
     x.fillStyle="rgba(143,168,155,.08)"; rr(x,M+bw+14,y,bw,bh,9); x.fill(); x.strokeStyle="rgba(143,168,155,.25)"; rr(x,M+bw+14,y,bw,bh,9); x.stroke();
-    x.font="700 22px Silkscreen, monospace"; x.fillStyle="#F2C45A"; x.fillText(String(m.season||0), M+bw/2, y+28);
-    x.fillStyle="#ECE3CC"; x.fillText(String(m.points), M+bw+14+bw/2, y+28);
+    x.font="700 17px Silkscreen, monospace"; x.fillStyle="#F2C45A"; x.fillText(String(m.season||0), M+bw/2, y+27);
+    x.fillStyle="#ECE3CC"; x.fillText(String(m.points), M+bw+14+bw/2, y+27);
     x.font="9px Silkscreen, monospace"; x.fillStyle="#8FA89B"; x.fillText("✦ THIS SEASON", M+bw/2, y+50); x.fillText("✦ LIFETIME", M+bw+14+bw/2, y+50);
     y+=bh;
     // badges as colored pills
@@ -3403,10 +3475,12 @@ window.shareSpirit=async function(name){
       });
       y+=2;
     }
-    const drawRow=(label,val)=>{ y+=RH; x.textAlign="left"; x.fillStyle="#D8CDB2"; x.font="16px Spectral, Georgia, serif"; let lab=label; while(x.measureText(lab).width>W-M*2-86 && lab.length>4){ lab=lab.slice(0,-2); } x.fillText(lab + (lab!==label?'…':''), M, y); x.textAlign="right"; x.fillStyle=(val<0)?"#E8A88F":(val>0?"#F2C45A":"#9DB0A4"); x.font="700 16px Silkscreen, monospace"; x.fillText((val>0?'+':'')+val, W-M, y); x.textAlign="center"; };
-    const section=(title,items)=>{ if(!items.length) return; y+=30; x.fillStyle="#9DB0A4"; x.font="11px Silkscreen, monospace"; x.textAlign="left"; x.fillText(title, M, y); x.textAlign="center"; x.strokeStyle="rgba(38,53,44,.9)"; x.lineWidth=1; x.beginPath(); x.moveTo(M,y+8); x.lineTo(W-M,y+8); x.stroke(); y+=10; items.forEach(it=>drawRow(it.label,it.val)); };
-    section("LEDGER OF DEEDS", deedItems);
-    section("CHALLENGES & WAGERS", cwItems);
+    const drawRow=(label,val)=>{ y+=RH; x.textAlign="left";
+      if(val===null){ x.fillStyle="#7E8C82"; x.font="italic 14px Spectral, Georgia, serif"; x.fillText(label, M, y); x.textAlign="center"; return; }
+      x.fillStyle="#D8CDB2"; x.font="16px Spectral, Georgia, serif"; let lab=label; while(x.measureText(lab).width>W-M*2-86 && lab.length>4){ lab=lab.slice(0,-2); } x.fillText(lab + (lab!==label?'…':''), M, y); x.textAlign="right"; x.fillStyle=(val<0)?"#E8A88F":(val>0?"#F2C45A":"#9DB0A4"); x.font="700 16px Silkscreen, monospace"; x.fillText((val>0?'+':'')+val, W-M, y); x.textAlign="center"; };
+    const section=(title,items)=>{ if(!items.length) return; y+=34; x.fillStyle="#9DB0A4"; x.font="11px Silkscreen, monospace"; x.textAlign="left"; x.fillText(title, M, y); x.textAlign="center"; x.strokeStyle="rgba(38,53,44,.9)"; x.lineWidth=1; x.beginPath(); x.moveTo(M,y+8); x.lineTo(W-M,y+8); x.stroke(); y+=10; items.forEach(it=>drawRow(it.label,it.val)); };
+    section("LEDGER OF DEEDS", deedShown);
+    section("CHALLENGES & WAGERS", cwShown);
     x.fillStyle="#5E6F6B"; x.font="10px Silkscreen, monospace"; x.textAlign="center"; x.fillText("the Eye remembers · "+new Date().toLocaleDateString(), gx, H-18);
     const blob=await new Promise(res=>cv.toBlob(res,"image/png"));
     const file=new File([blob],("grove-"+m.name+".png").replace(/\s+/g,"-"),{type:"image/png"});
@@ -3928,7 +4002,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ae · Stoking the fire now writes to your ledger of deeds, thoughts show a fade-countdown in the soul card, and the totem's empty spin no longer pretends to cost you 50.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30af · Ledgers now sort by greatest Devotion (and scroll when long), share cards are roomier with a top-5/top-3 summary, the Keeper's panel is grouped, the soul-card ring is gone, and the Keeper can tune each rank's aura intensity.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

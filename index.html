@@ -618,7 +618,7 @@ async function sbRead(){
 }
 async function sbRpc(fn,args){
   const r=await fetch(`${SUPABASE.url}/rest/v1/rpc/${fn}`,{method:"POST",headers:sbHeaders(),body:JSON.stringify(args)});
-  if(!r.ok) throw new Error(await r.text());
+  if(!r.ok){ const e=new Error(await r.text()); e.status=r.status; throw e; }
   const t=await r.text(); return t?JSON.parse(t):null;
 }
 
@@ -630,11 +630,16 @@ const OQKEY='grove-queue';
 function oqLoad(){ try{ return JSON.parse(localStorage.getItem(OQKEY)||'[]'); }catch(e){ return []; } }
 function oqSave(q){ try{ localStorage.setItem(OQKEY, JSON.stringify(q)); }catch(e){} }
 function oqCount(){ return oqLoad().length; }
-function enqueueOp(fn,args){ const q=oqLoad(); q.push({id:Date.now()+'-'+Math.random().toString(36).slice(2,7), fn:fn, args:args, t:Date.now()}); oqSave(q); syncBadge(); }
+const OQ_MAX=200, OQ_TTL_MS=24*3600*1000, OQ_MAX_TRIES=8;
+function enqueueOp(fn,args){ const q=oqLoad(); q.push({id:Date.now()+'-'+Math.random().toString(36).slice(2,7), fn:fn, args:args, t:Date.now(), tries:0}); while(q.length>OQ_MAX) q.shift(); oqSave(q); syncBadge(); }
+// transient = worth retrying later (offline / timeout / rate-limit / 5xx). A 4xx is a real rejection → drop it.
+function oqTransient(e){ const s=e&&e.status; return isNetErr(e) || s===408 || s===429 || (s>=500&&s<=599); }
 let _flushing=false;
 async function flushQueue(){
   if(_flushing) return; if(typeof MODE==='undefined'||MODE!=='remote') return;
   try{ if(typeof navigator!=='undefined' && !navigator.onLine) return; }catch(_){}
+  // prune stale ops so we never replay an action into a world that has long moved on
+  { const q=oqLoad(); const cut=Date.now()-OQ_TTL_MS; const fresh=q.filter(it=>!(it&&it.t&&it.t<cut)); if(fresh.length!==q.length){ oqSave(fresh); syncBadge(); } }
   if(!oqCount()) return; _flushing=true;
   try{
     while(true){
@@ -642,9 +647,16 @@ async function flushQueue(){
       const q=oqLoad(); if(!q.length) break; const item=q[0];
       let drop=true;
       try{ await sbRpc(item.fn, item.args); }
-      catch(e){ if(isNetErr(e)){ drop=false; } /* else: server rejected the replay -> drop it */ }
+      catch(e){
+        if(oqTransient(e)){
+          drop=false;
+          // count the attempt; a permanently-stuck op must not block the whole queue forever
+          const q3=oqLoad();
+          if(q3[0]&&q3[0].id===item.id){ q3[0].tries=(q3[0].tries||0)+1; if(q3[0].tries>=OQ_MAX_TRIES){ q3.shift(); oqSave(q3); syncBadge(); continue; } oqSave(q3); }
+        } /* else 4xx: the server rejected the replay (stale/invalid) — drop it; refreshRemote below reconciles local state */
+      }
       if(!drop) break;
-      const q2=oqLoad(); q2.shift(); oqSave(q2); syncBadge();
+      const q2=oqLoad(); if(q2[0]&&q2[0].id===item.id){ q2.shift(); oqSave(q2); syncBadge(); } else { oqSave(q2); }
     }
   } finally { _flushing=false; }
   try{ await refreshRemote(); if(typeof trialsRefresh==='function') trialsRefresh(); if(typeof renderRites==='function') renderRites(); if(typeof layoutGrove==='function') layoutGrove(); }catch(e){}
@@ -857,7 +869,7 @@ window.rollback=async function(mins){
   ensureDefaults(); await saveData(); layoutGrove(); renderLedger(); renderRites(); closeSheet(); toast(`Rolled back ~${age} min.`);
 };
 let REACT_SUPPRESS=false;
-function rebaselineSnaps(){ try{ MOOD_SNAP=moodSnapshot(); }catch(e){} try{ LOG_SNAP=logSnapshot(); }catch(e){} try{ OFFER_SNAP=offerIds(); APPLIED_OFFER_SNAP=appliedOfferIds(); }catch(e){} try{ const snap={}; (MEM.members||[]).forEach(m=>{ snap[m.name]=tierIndex(m.points||0); }); saveRankSnap(snap); }catch(e){} }
+function rebaselineSnaps(){ try{ MOOD_SNAP=moodSnapshot(); }catch(e){} try{ LOG_SNAP=logSnapshot(); }catch(e){} try{ OFFER_SNAP=offerIds(); APPLIED_OFFER_SNAP=appliedOfferIds(); }catch(e){} try{ BET_SNAP=betSnapshot(); }catch(e){} try{ const snap={}; (MEM.members||[]).forEach(m=>{ snap[m.name]=tierIndex(m.points||0); }); saveRankSnap(snap); }catch(e){} }
 async function pollRemote(){
   if(MODE!=="remote") return;
   if(scrim.classList.contains("show")) return;   // don't yank the UI mid-edit
@@ -865,7 +877,7 @@ async function pollRemote(){
     MEM=d; ensureDefaults(); cacheRemote();
     const quiet = document.hidden || REACT_SUPPRESS; REACT_SUPPRESS=false;
     if(quiet){ rebaselineSnaps(); }
-    else { try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} }
+    else { try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectBetEndings(); }catch(e){} }
     takeSnap(); layoutGrove(); renderLedger(); renderRites(); const tr=document.getElementById('trials'); if(tr && tr.style.display!=='none') renderTrials();
     if(!quiet) checkRankUps();
   } }catch(e){}
@@ -3366,7 +3378,7 @@ window.approveRite=function(id){
   Snd.sfx('approve');
   voteRite(id, VOTER);
 };
-async function refreshRemote(){ try{ const d=await sbRead(); if(d){ MEM=d; ensureDefaults(); cacheRemote(); try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectOfferPassed(); }catch(e){} } }catch(e){} }
+async function refreshRemote(){ try{ const d=await sbRead(); if(d){ MEM=d; ensureDefaults(); cacheRemote(); try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectOfferPassed(); }catch(e){} try{ detectBetEndings(); }catch(e){} } }catch(e){} }
 
 window.proposeRite=async function(item){
   let off=false;
@@ -3782,6 +3794,30 @@ function detectLogGains(){
   if(ev.length>8) return;   /* bulk grant (Keeper "log to all") — no flood */
   ev.slice(0,6).forEach(e=>{ const lbl='\ud83e\udeb5 '+(e.d>1?('+'+e.d+' logs'):'A log for the fire'); try{ setMood(e.name,'joyful',lbl); }catch(_){} queueReact(e.name,'joyful',lbl); });
 }
+/* ---- stake-bet janitor: surface silent sweep endings so refunds never feel like they vanished ---- */
+let BET_SNAP=null;
+function betSnapshot(){ const s={w:{},g:{}}; (MEM.wagers||[]).forEach(w=>{ if(w&&w.id) s.w[w.id]=w.status; }); (MEM.groups||[]).forEach(g=>{ if(g&&g.id) s.g[g.id]=g.status; }); return s; }
+function initBetSnap(){ BET_SNAP=betSnapshot(); }
+function detectBetEndings(){
+  if(!BET_SNAP){ BET_SNAP=betSnapshot(); return; }
+  const me=(typeof VOTER!=='undefined')?VOTER:'';
+  const ev=[];
+  if(me){
+    (MEM.wagers||[]).forEach(w=>{ if(!w||!w.id) return; const was=BET_SNAP.w[w.id]; if(was===undefined||was===w.status) return;
+      if(w.proposer!==me && w.taker!==me) return;
+      if(w.status==='expired' && w.proposer===me) ev.push('⌛ Your wager'+(w.title?(' “'+w.title+'”'):'')+' expired unmatched — '+(w.amount||0)+'✦ returned.');
+      else if(w.status==='forfeit') ev.push('⚖ Your wager'+(w.title?(' “'+w.title+'”'):'')+' went unresolved — both forfeited '+(w.amount||0)+'✦.');
+    });
+    (MEM.groups||[]).forEach(g=>{ if(!g||!g.id) return; const was=BET_SNAP.g[g.id]; if(was===undefined||was===g.status) return;
+      if(!groupParts(g).includes(me)) return;
+      if(g.status==='expired') ev.push('⌛ “'+(g.title||'Group wager')+'” never locked — your '+(g.stake||0)+'✦ stake returned.');
+      else if(g.status==='void') ev.push('⚖ “'+(g.title||'Group wager')+'” went unsettled — your '+(g.stake||0)+'✦ stake refunded.');
+    });
+  }
+  BET_SNAP=betSnapshot();
+  if(ev.length>3){ try{ toast(ev.length+' of your stakes were settled — the points are back in your pouch.'); }catch(_){} }
+  else ev.forEach(m=>{ try{ toast(m); }catch(_){} });
+}
 let _reactStyled=false;
 function ensureReactStyle(){ if(_reactStyled)return; _reactStyled=true; const st=document.createElement('style'); st.id='spreactStyle'; st.textContent=`
 .spreact{position:fixed;left:50%;bottom:84px;transform:translateX(-50%) translateY(20px);z-index:99990;display:flex;align-items:center;gap:11px;padding:10px 16px 10px 10px;border-radius:15px;background:rgba(18,13,8,.93);border:1px solid rgba(242,196,90,.35);box-shadow:0 12px 34px rgba(0,0,0,.55);opacity:0;animation:srIn .32s cubic-bezier(.2,.8,.2,1) forwards;max-width:84vw;backdrop-filter:blur(3px)}
@@ -3926,7 +3962,7 @@ async function communityAction(a){
   try{ Snd.action(a.t); }catch(e){}
   return okR;
 }
-function trialsRefresh(){ renderTrials(); layoutGrove(); renderLedger(); try{ syncOffering(); }catch(e){} try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} }
+function trialsRefresh(){ renderTrials(); layoutGrove(); renderLedger(); try{ syncOffering(); }catch(e){} try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectBetEndings(); }catch(e){} }
 function thoughtLive(t){ return !!(t && t.text && (Date.now()/1000 - (t.at||0)) < 12*3600); }
 async function setThought(text){
   const me=(typeof VOTER!=='undefined')?VOTER:''; if(!me) return;
@@ -4921,7 +4957,7 @@ function offeringCeremony(name){
   await loadData();
   ensureDefaults();
   try{ if(sweepRites(Date.now()/1000) && MODE!=="remote") await saveData(); }catch(e){}
-  try{ initMoodSnap(); }catch(e){} try{ initLogSnap(); }catch(e){} try{ initOfferSnap(); }catch(e){}
+  try{ initMoodSnap(); }catch(e){} try{ initLogSnap(); }catch(e){} try{ initOfferSnap(); }catch(e){} try{ initBetSnap(); }catch(e){}
   if(SB_ON && MODE!=="remote"){ showDbBanner("Not connected to the shared grove — running LOCAL-ONLY on this device. The keeper password set in Supabase and other people's wagers/points will NOT work here. On the hosted site this usually means your Supabase project is PAUSED — open the Supabase dashboard, resume the project, then reload."); }
   document.getElementById("offNote").textContent =
     MODE==="remote" ? "◦ live ledger · synced through the Eye ◦"

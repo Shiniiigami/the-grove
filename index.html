@@ -212,9 +212,9 @@
     font-family:'Spectral',Georgia,serif;word-break:break-word;text-shadow:0 1px 2px rgba(0,0,0,.55);backdrop-filter:blur(4px) saturate(1.1);-webkit-backdrop-filter:blur(4px) saturate(1.1);}
   .spirit .think .tht{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
   .spirit .think:after{content:'';position:absolute;left:50%;bottom:-7px;width:7px;height:7px;border-radius:50%;
-    background:rgba(16,13,24,.5);transform:translateX(-8px)}
+    background:rgba(16,13,24,.5);transform:translateX(calc(-8px + var(--tailshift,0px)))}
   .spirit .think:before{content:'';position:absolute;left:50%;bottom:-13px;width:4px;height:4px;border-radius:50%;
-    background:rgba(16,13,24,.5);transform:translateX(-3px)}
+    background:rgba(16,13,24,.5);transform:translateX(calc(-3px + var(--tailshift,0px)))}
   .spirit .think .thinkx{position:absolute;top:-7px;right:-7px;width:16px;height:16px;border-radius:50%;
     border:1px solid rgba(0,0,0,.18);background:#fff;color:#7a3d44;font-size:11px;line-height:1;cursor:pointer;
     display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.35);padding:0;font-family:system-ui}
@@ -1504,6 +1504,7 @@ function layoutGrove(){
   const cols = w<360?3:(w<520?4:5);
   const cellW = w/cols;
   const rowH = 162;
+  const bubbles=[];
   members.forEach((m,i)=>{
     const soul=buildSoul(m.name,m.points,m.sprite);
     const wrap=document.createElement("div");
@@ -1525,6 +1526,7 @@ function layoutGrove(){
       tb.style.maxWidth=Math.min(132, Math.round(cellW-16))+"px";
       tb.innerHTML = '<span class="tht">'+esc(m.thought.text)+'</span>' + ((typeof VOTER!=='undefined'&&VOTER===m.name)? '<button class="thinkx" title="Remove now" onclick="event.stopPropagation();removeThought(\''+m.name.replace(/'/g,"\\'")+'\')">\u00d7</button>' : '');
       wrap.appendChild(tb);
+      bubbles.push({tb:tb, cx: col*cellW + cellW/2 + jx});
     }
     wrap.onclick=()=>openSoul(m.name);
     groveEl.appendChild(wrap);
@@ -1533,6 +1535,10 @@ function layoutGrove(){
   });
   const rows=Math.ceil(members.length/cols);
   groveEl.style.height=(rows*rowH+70)+"px";
+  // keep every bubble inside the grove — edge columns shift inward instead of clipping off-screen
+  bubbles.forEach(o=>{ const bw=o.tb.offsetWidth; let le=o.cx-bw/2, sh=0;
+    if(le<5){ sh=5-le; } else { const re=o.cx+bw/2; if(re>w-5){ sh=(w-5)-re; } }
+    if(sh){ o.tb.style.transform='translate(calc(-50% + '+Math.round(sh)+'px), -100%)'; o.tb.style.setProperty('--tailshift', (-Math.round(sh))+'px'); } });
   renderChronicle();
 }
 let _glResizeT;
@@ -3695,7 +3701,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27cy · thought bubbles: capped to column width + less jitter (no mobile overlap) · dark glass</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-27cz · thought bubbles: edge-clamped on-screen (tail follows) + column-capped · dark glass</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

@@ -592,7 +592,7 @@ const KEEPER_DEED_KEYS = ['pilgrimage','first fire','rite of passage'];
 function isKeeperDeed(label){ const b=deedBase(String(label||'')).trim().toLowerCase(); return KEEPER_DEED_KEYS.some(k=>b.indexOf(k)>=0); }
 function ensureDefaults(){ if(!MEM)return; if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); if(MEM._tierMig!==1){ if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); MEM._tierMig=1; } if(MEM._tierColorMig!==3){ (MEM.tiers||[]).forEach(t=>{ if(!t.hex && TIER_COLORS_V2[t.name]) t.hex=TIER_COLORS_V2[t.name]; }); MEM._tierColorMig=3; } if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); if(MEM._deedMig!==3){ if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); MEM._deedMig=3; } if(!MEM.rites)MEM.rites=[]; if(!MEM.challenges)MEM.challenges=[]; if(!MEM.seasonHistory)MEM.seasonHistory=[]; if(!MEM.wagers)MEM.wagers=[]; if(!MEM.itemLocks)MEM.itemLocks={}; normAura(); if(!MEM.badgeColors)MEM.badgeColors={}; if(!MEM.badgeColors["Of the Eye"])MEM.badgeColors["Of the Eye"]="#E0B466"; if(!MEM.badgeColors["Drained the Chalice"])MEM.badgeColors["Drained the Chalice"]="#E0743A"; if(MEM.seasonStart===undefined)MEM.seasonStart=0;
   if(MEM._hatMig!==3){ const _hm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && ['crown','laurel','halo'].includes(c.hat)){ c.hat='none'; _hm.push(m); } }); MEM._hatMig=3; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _hm.length && !localStorage.getItem('grove-crownpurge3')){ _hm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-crownpurge3','1'); } }catch(e){} }
-  if(MEM._fadeMig!==1){ const _fm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && c.hair_style==='fade'){ c.hair_style='short'; _fm.push(m); } }); MEM._fadeMig=1; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _fm.length && !localStorage.getItem('grove-fademig1')){ _fm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-fademig1','1'); } }catch(e){} } if(!MEM.fire)MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[]}; if(!MEM.fire.stokers)MEM.fire.stokers=[]; if(MEM.fire.lastDecay===undefined)MEM.fire.lastDecay=Date.now()/1000; if(MEM.fire.streak===undefined)MEM.fire.streak=0; if(MEM._fireTune!==2){ MEM.fire.goal=6; MEM._fireTune=2; } (MEM.members||[]).forEach(m=>{ if(m.season===undefined) m.season=0; if(m.chalBudget===undefined) m.chalBudget=150; else { const cb=m.chalBudget|0; m.chalBudget = cb>150?150 : (cb<0?0:cb); } if(m.oath===undefined) m.oath=true; if(m.lastStoke===undefined) m.lastStoke=0; if(m.logs===undefined) m.logs=0; if(m.fireLogs===undefined) m.fireLogs=0; if(!(m.points>0)) m.points=Math.max(0,m.points||0); if(!(m.season>0)) m.season=Math.max(0,m.season||0); if(m._preTop!==undefined && !(m.offered&&m.offered>Date.now()/1000)){ const c=m.sprite&&m.sprite.chibi; if(c&&c.top_style==='robes'){ const cc=structuredClone(c); cc.top_style=m._preTop||(cc.sleeves===false?'tank':'tee'); m.sprite={chibi:cc}; } delete m._preTop; } }); }
+  if(MEM._fadeMig!==1){ const _fm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && c.hair_style==='fade'){ c.hair_style='short'; _fm.push(m); } }); MEM._fadeMig=1; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _fm.length && !localStorage.getItem('grove-fademig1')){ _fm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-fademig1','1'); } }catch(e){} } if(!MEM.fire)MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[]}; if(!MEM.fire.stokers)MEM.fire.stokers=[]; if(MEM.fire.lastDecay===undefined)MEM.fire.lastDecay=Date.now()/1000; if(MEM.fire.streak===undefined)MEM.fire.streak=0; if(MEM._fireTune!==2){ MEM.fire.goal=6; MEM._fireTune=2; } (MEM.members||[]).forEach(m=>{ if(m.season===undefined) m.season=0; if(m.chalBudget===undefined) m.chalBudget=150; else { const cb=m.chalBudget|0; m.chalBudget = cb>150?150 : (cb<0?0:cb); } if(m.oath===undefined) m.oath=true; if(m.lastStoke===undefined) m.lastStoke=0; if(m.logs===undefined) m.logs=0; if(m.fireLogs===undefined) m.fireLogs=0; if(!(m.points>0)) m.points=Math.max(0,m.points||0); if(!(m.season>0)) m.season=Math.max(0,m.season||0); if(m._preTop!==undefined && !(m.offered&&m.offered>Date.now()/1000)){ const c=m.sprite&&m.sprite.chibi; if(c&&c.top_style==='robes'){ const cc=structuredClone(c); cc.top_style=m._preTop||(cc.sleeves===false?'tank':'tee'); m.sprite={chibi:cc}; } delete m._preTop; if(Array.isArray(m.unlocks)) m.unlocks=m.unlocks.filter(u=>u!=='robes'); } }); }
 function tierOf(p){const T=tiers();let t=T[0];for(const x of T)if(p>=x.min)t=x;return t;}
 function tierIndex(p){const T=tiers();let i=0;T.forEach((x,k)=>{if(p>=x.min)i=k;});return i;}
 function rankProgress(p){
@@ -679,8 +679,12 @@ async function flushQueue(){
       try{ if(typeof navigator!=='undefined' && !navigator.onLine) break; }catch(_){}
       const q=oqLoad(); if(!q.length) break; const item=q[0];
       let drop=true;
-      // re-inject the Keeper passphrase from memory at replay time — it is never persisted to the queue
-      const _args=(item.fn==='grove_remove_rite'||item.fn==='grove_save')?Object.assign({},item.args,{p_pass:SESSION_PASS||""}):item.args;
+      // re-inject the Keeper passphrase from memory at replay time — it is never persisted to the queue.
+      // If the passphrase is gone (e.g. the page reloaded since), HOLD the op rather than firing an
+      // empty pass that the server 4xx-rejects and we then drop — that would silently lose the action.
+      const _passOp=(item.fn==='grove_remove_rite'||item.fn==='grove_save');
+      if(_passOp && !SESSION_PASS){ break; }
+      const _args=_passOp?Object.assign({},item.args,{p_pass:SESSION_PASS}):item.args;
       try{ await sbRpc(item.fn, _args); }
       catch(e){
         if(oqTransient(e)){
@@ -1778,7 +1782,7 @@ function keeperManageHTML(){
 window.keeperRenameSpirit=async function(oldName){
   if(!keeperUnlocked){ toast('Only the Keeper may rename spirits.'); return; }
   if(!memByName(oldName)){ toast('No such spirit.'); return; }
-  let v=prompt('Rename \u201c'+oldName+'\u201d to:', oldName); if(v==null) return; v=v.trim();
+  let v=prompt('Rename \u201c'+oldName+'\u201d to:', oldName); if(v==null) return; v=clampName(v);
   if(!v){ toast('A name cannot be empty.'); return; }
   if(v.length>16){ toast('Keep names to 16 characters or fewer.'); return; }
   if(v===oldName) return;
@@ -1906,7 +1910,7 @@ function openSoul(name){
   (MEM.challenges||[]).filter(c=>c.accepter===name && c.status!=='expired').forEach(c=>{
     const self=VOTER&&VOTER===name; const who=self?'you':name;
     const role = (c.status==='done') ? 'completed' : `${who} committed`;
-    cwItems.push({val:+(c.reward||0), html:`<div class="h"><em>${c.title} <span style="opacity:.55;font-size:11px">(${role})</span></em><b>+${c.reward}</b></div>`});
+    cwItems.push({val:+(c.reward||0), html:`<div class="h"><em>${esc(c.title)} <span style="opacity:.55;font-size:11px">(${role})</span></em><b>+${c.reward}</b></div>`});
   });
   (MEM.wagers||[]).filter(w=>(w.proposer===name||w.taker===name)&&(w.status==='settled'||w.status==='forfeit')).forEach(w=>{
     let res,col,val;
@@ -1914,7 +1918,7 @@ function openSoul(name){
     else if(w.winner==='tie'){ res=`tie · returned`; col=`<b style="opacity:.6">±0</b>`; val=0; }
     else if(w.winner===name){ res=`won the wager`; col=`<b>+${w.amount}</b>`; val=(w.amount||0); }
     else { res=`lost the wager`; col=`<b style="color:#E8A88F">−${w.amount}</b>`; val=-(w.amount||0); }
-    cwItems.push({val, html:`<div class="h"><em>${w.title} <span style="opacity:.55;font-size:11px">(${res})</span></em>${col}</div>`});
+    cwItems.push({val, html:`<div class="h"><em>${esc(w.title)} <span style="opacity:.55;font-size:11px">(${res})</span></em>${col}</div>`});
   });
   cwItems.sort((a,b)=>b.val-a.val);   // greatest first
   let myCh;
@@ -1934,7 +1938,7 @@ function openSoul(name){
     <div class="soul">
       <canvas id="soulCv"></canvas>
       <div class="who">
-        <div class="nm">${m.name}</div>
+        <div class="nm">${esc(m.name)}</div>
         ${epiLine}${offMark}${cdMark}
         <span class="tier-tag" style="background:${hexA(tier.hex,.14)};border:1px solid ${hexA(tier.hex,.5)};color:${tier.hex}">${tier.name}</span>
         <div class="badgewrap">${badges}</div>
@@ -2018,7 +2022,7 @@ function keeperPanel(){
     <div class="kpanel">
       <h3>Keeper's Ledger</h3>
       <p class="sub">Award deeds at the closing ceremony. All spirits update at once.</p>
-      <div class="field"><label>Member</label><select id="kmem" onchange="kBuffRefresh()">${opts}</select></div>
+      <div class="field"><label>Member</label><select id="kmem" onchange="KBUFF=true;kBuffRefresh()">${opts}</select></div>
       <div id="kbuffNote"></div>
       <div class="field"><label>Reason</label><input id="kreason" placeholder="e.g. Completed the portage"></div>
       <div class="field"><label>Gain or lose?</label><div class="seg" id="ksignseg">
@@ -2065,7 +2069,7 @@ function keeperPanel(){
   try{ kBuffRefresh(); }catch(e){}
 }
 function roman(n){ return ['','I','II','III','IV','V','VI','VII','VIII','IX','X'][n]||String(n); }
-function garmentForPoints(p){ if(p>=2500)return'ascend'; if(p>=2000)return'luminary'; if(p>=1500)return'robes'; if(p>=1000)return'sage'; if(p>=600)return'mantle'; if(p>=300)return'tunic'; if(p>=100)return'sash'; return null; }
+function garmentForPoints(p){ return garmentForTier(tierIndex(p)); }   // delegate — never drift from the tier scheme
 // The robe of a spirit's actual RANK (tier index), not raw points — so each order wears its
 // own garment: Acolyte sash · Disciple tunic · Warden mantle · Sage robe · Luminary starlit
 // robe · Ascended radiant cloak. Initiates keep their own top; the Offering robe is never a
@@ -2103,7 +2107,7 @@ window.keeperSetOffer=async function(on){
     m.badges=m.badges||[]; if(!m.badges.includes("Of the Eye")) m.badges.push("Of the Eye");
     if(!wasOffered){ m.points=(m.points||0)+150; m.season=(m.season||0)+150; m.history=m.history||[]; m.history.push({l:"Offered to the Eye",d:150,t:Date.now()/1000}); }
     try{ robeGroveByRank(); }catch(e){}   // the grove dons rank robes; the offered (and any already offered) keep theirs
-  } else { m.offered=0; if(m.sprite&&m.sprite.chibi&&m.sprite.chibi.top_style==='robes'){ const c=cloneChibi(m); c.top_style=(m._preTop||(c.sleeves===false?'tank':'tee')); delete m._preTop; m.sprite={chibi:c}; } }
+  } else { m.offered=0; m.unlocks=(m.unlocks||[]).filter(u=>u!=='robes'); if(m.sprite&&m.sprite.chibi&&m.sprite.chibi.top_style==='robes'){ const c=cloneChibi(m); c.top_style=(m._preTop||(c.sleeves===false?'tank':'tee')); delete m._preTop; m.sprite={chibi:c}; } }
   await saveData(); layoutGrove(); renderLedger(); keeperOfferForm();
   toast(on?`${name} is offered to the Eye.`:`${name} is released.`);
 };
@@ -2218,11 +2222,17 @@ window.bulkAll=function(on){ bulkSyncInputs(); const q=(BULK_Q||'').toLowerCase(
 window.bulkApply=async function(){ bulkSyncInputs(); const names=Object.keys(BULK_SEL).filter(n=>BULK_SEL[n]); const err=document.getElementById('kerr');
   if(!names.length){ if(err)err.textContent='Pick at least one spirit.'; return; }
   let mag=parseInt(BULK_PTS,10); if(isNaN(mag)||mag===0){ if(err)err.textContent='Enter a Devotion Points value.'; return; }
-  mag=Math.min(100000,Math.abs(mag)); const net=mag*(BULK_SIGN<0?-1:1); const reason=(BULK_REASON||'Deed recorded').trim().slice(0,80); const tnow=Date.now()/1000;
-  const undo=[];
+  mag=Math.min(100000,Math.abs(mag)); const net=mag*(BULK_SIGN<0?-1:1); const reason=clampText(BULK_REASON,80)||'Deed recorded'; const tnow=Date.now()/1000;
+  const undo=[]; const roseUp=[];
   names.forEach(n=>{ const m=memByName(n); if(!m)return; undo.push({name:n,pts:m.points,season:(m.season||0),histLen:(m.history||[]).length,logs:m.logs});
-    m.points=Math.max(0,m.points+net); m.season=Math.max(0,(m.season||0)+net); m.history=m.history||[]; m.history.push({l:reason,d:net,n:1,t:tnow}); if(net>0 && BULK_LOG) maybeEarnLog(m,net); });
+    const _b=tierIndex(m.points);
+    m.points=Math.max(0,m.points+net); m.season=Math.max(0,(m.season||0)+net); m.history=m.history||[]; m.history.push({l:reason,d:net,n:1,t:tnow}); if(net>0 && BULK_LOG) maybeEarnLog(m,net);
+    const _a=tierIndex(m.points); if(_a>_b) roseUp.push({name:m.name,rank:tiers()[_a].name,idx:_a}); });
+  // advance rank snapshots so a later poll doesn't re-celebrate, and announce any rank-ups
+  try{ if(roseUp.length){ const s=loadRankSnap(); roseUp.forEach(r=>{ s[r.name]=r.idx; }); saveRankSnap(s); } }catch(e){}
   await saveData(); layoutGrove(); renderLedger(); closeSheet();
+  if(roseUp.length===1) celebrateRankUp(roseUp[0].name, roseUp[0].rank);
+  else if(roseUp.length>1){ try{ toast(roseUp.length+' spirits ascended — '+roseUp.map(r=>r.name).join(', ')); }catch(e){} }
   actionToast(`${names.length} spirit${names.length===1?'':'s'} ${net>0?'gain':'lose'} ${Math.abs(net)} — ${reason}`, '↩ Undo', async ()=>{
     undo.forEach(u=>{ const m=memByName(u.name); if(!m)return; m.points=u.pts; m.season=u.season; if(m.history&&m.history.length>u.histLen)m.history.length=u.histLen; m.logs=u.logs; });
     await saveData(); layoutGrove(); renderLedger(); toast('Bulk award undone.'); });
@@ -2278,7 +2288,7 @@ window.confirmFreshSlate=async function(){
   await saveData(); layoutGrove(); renderLedger(); closeSheet(); toast("A fresh slate. The cult begins anew.");
 };
 window.saveSeasonLabel=async function(){
-  const v=document.getElementById("seasLabel").value.trim();
+  const v=clampText(document.getElementById("seasLabel").value,60);
   if(!v){document.getElementById("kerr").textContent="Give the season a name.";return;}
   MEM.season=v; await saveData(); renderLedger(); closeSheet(); toast("Season named.");
 };
@@ -2498,11 +2508,11 @@ window.setQuick=function(reason,pts){
 };
 window.awardPoints=async function(){
   const name=document.getElementById("kmem").value;
-  let reason=document.getElementById("kreason").value.trim()||"Deed recorded";
+  let reason=clampText(document.getElementById("kreason").value,80)||"Deed recorded";
   let mag=parseInt(document.getElementById("kpts").value,10);
   if(isNaN(mag)||mag===0){document.getElementById("kerr").textContent="Enter a Devotion Points value.";return;}
-  mag=Math.abs(mag);
-  const mult=Math.max(1,parseInt(document.getElementById("kmult").value,10)||1);
+  mag=Math.min(100000,Math.abs(mag));
+  const mult=Math.max(1,Math.min(1000,parseInt(document.getElementById("kmult").value,10)||1));
   const pts=mag*mult*KSIGN;
   const m=MEM.members.find(x=>x.name===name);
   const before=tierIndex(m.points);
@@ -2523,7 +2533,7 @@ window.awardPoints=async function(){
   closeSheet();
   if(after>before){ celebrateRankUp(m.name, tiers()[after].name); }
   else { Snd.sfx('chime'); }
-  actionToast(`${m.name} ${pts>0?'gains':'loses'} ${Math.abs(pts)} — ${reason}`, '↩ Undo', async ()=>{
+  actionToast(`${m.name} ${netPts>=0?'gains':'loses'} ${Math.abs(netPts)} — ${reason}`, '↩ Undo', async ()=>{
     const mm=memByName(_undo.name); if(!mm)return;
     mm.points=_undo.pts; mm.season=_undo.season;
     if(mm.history && mm.history.length>_undo.histLen) mm.history.length=_undo.histLen;
@@ -2540,7 +2550,9 @@ window.removeDeed=async function(name,i){
   const h=m.history[i];
   if(!confirm(`Strike this deed from ${name}'s ledger?\n\n"${h.l}" (${h.d>0?'+':''}${h.d})\n\nTheir Devotion will be adjusted by ${-h.d}.`)) return;
   m.points=Math.max(0,(m.points||0)-(h.d||0));
-  m.season=Math.max(0,(m.season||0)-(h.d||0));
+  // only unwind the SEASON score if this deed was earned in the current season — a deed from a
+  // past season no longer contributes to m.season (newSeason reset it), so don't subtract it twice.
+  if((h.t||0) >= (MEM.seasonStart||0)) m.season=Math.max(0,(m.season||0)-(h.d||0));
   m.history.splice(i,1);
   await saveData(); layoutGrove(); renderLedger(); openSoul(name); toast(`Struck "${h.l}" from ${name}'s ledger.`);
 };
@@ -2558,7 +2570,7 @@ window.addMemberForm=function(){
     </div>`;
 };
 window.commitMember=async function(){
-  const name=document.getElementById("nmName").value.trim();
+  const name=clampName(document.getElementById("nmName").value);
   if(!name){document.getElementById("kerr").textContent="A spirit needs a name.";return;}
   if(MEM.members.some(x=>x.name.toLowerCase()===name.toLowerCase())){document.getElementById("kerr").textContent="That spirit already walks the grove.";return;}
   const pts=parseInt(document.getElementById("nmPts").value,10)||0;
@@ -2660,8 +2672,8 @@ function isUnlocked(name,val){
 const GATED_ITEMS={
   top_style:[['Tank','tank',0],['Tee','tee',0],['Shirt','shirt',0],['Hoodie','hoodie',0],['Long-sleeve','longsleeve',0],['Flannel','flannel',0],['Puffer vest','puffer',0],['Dress','dress',0],['Acolyte sash','sash',100],['Disciple tunic','tunic',350],['Disciple · Eye','discipleeye',350],['Warden mantle','mantle',750],['Sage robe','sage',1400],['Offering robe','robes',1400],['Starlit robe','luminary',2800],['Radiant cloak','ascend',5000]],
   hat:[['None','none',0],['Beanie','beanie',0],['Cap','cap',0],['Bandana','bandana',0],['Headband','headband',0],['Antlers','antlers',100],['Ram horns','horns',350],['Witch hat','witch',350],['Animal skull','skull',750],['Laurel','laurel',1400],['Crown','crown',2800],['Halo','halo',5000],['Third eye','thirdeye',5000]],
-  held:[['None','none',0],['Beer','beer',0],['Coffee','mug',0],['Bottle','bottle',0],['Frisbee','frisbee',0],['Joint','joint',0],['Kebab','kebab',0],['Flashlight','flashlight',0],['Binoculars','binoculars',100],['Boombox','boombox',300],['Guitar','guitar',300],['Marshmallow','marsh',100],['Fishing rod','rod',300],['Axe','axe',300],['Cult tome','book',600],['Paddle','paddle',600],['Staff','staff',1000],['Lantern','lantern',1000]],
-  accent:[['None','none',0],['Necklace','necklace',0],['Tie','tie',0],['Scarf','scarf',0],['Bolo tie','bolo',100],['Cult badge · bronze','cultbronze',300],['Cult badge · silver','cultsilver',600],['Cult badge · gold','cultgold',1000],['Ankh','ankh',600],['Bone charm','bonecharm',1000]]
+  held:[['None','none',0],['Beer','beer',0],['Coffee','mug',0],['Bottle','bottle',0],['Frisbee','frisbee',0],['Joint','joint',0],['Kebab','kebab',0],['Flashlight','flashlight',0],['Binoculars','binoculars',100],['Boombox','boombox',350],['Guitar','guitar',350],['Marshmallow','marsh',100],['Fishing rod','rod',350],['Axe','axe',350],['Cult tome','book',750],['Paddle','paddle',750],['Staff','staff',1400],['Lantern','lantern',1400]],
+  accent:[['None','none',0],['Necklace','necklace',0],['Tie','tie',0],['Scarf','scarf',0],['Bolo tie','bolo',100],['Cult badge · bronze','cultbronze',350],['Cult badge · silver','cultsilver',750],['Cult badge · gold','cultgold',1400],['Ankh','ankh',750],['Bone charm','bonecharm',1400]]
 };
 const GATED_CATS=[['top_style','Top / robe'],['hat','Headwear'],['held','Held item'],['accent','Accent']];
 function itemMin(cat,key,defMin){ const k=cat+':'+key; return (MEM.itemLocks && MEM.itemLocks[k]!=null) ? MEM.itemLocks[k] : defMin; }
@@ -3428,20 +3440,20 @@ function chronicleEvents(limit){
   (MEM.wagers||[]).forEach(w=>{
     const t=w.matchedAt||w.created||0;
     if(w.status==='settled'){
-      if(w.winner==='tie') ev.push({t,ic:"🤝",tx:`<b>${w.proposer}</b> and <b>${w.taker}</b> called it a draw — <i>${w.title}</i>`});
-      else if(w.winner) ev.push({t,ic:"🎲",tx:`<b>${w.winner}</b> won a wager of ${2*(w.amount||0)} ✦ — <i>${w.title}</i>`});
-    } else if(w.status==='forfeit'){ ev.push({t:w.disputeAt||t,ic:"⚖",tx:`A wager between <b>${w.proposer}</b> and <b>${w.taker}</b> ended in forfeit`}); }
+      if(w.winner==='tie') ev.push({t,ic:"🤝",tx:`<b>${esc(w.proposer)}</b> and <b>${esc(w.taker)}</b> called it a draw — <i>${esc(w.title)}</i>`});
+      else if(w.winner) ev.push({t,ic:"🎲",tx:`<b>${esc(w.winner)}</b> won a wager of ${2*(w.amount||0)} ✦ — <i>${esc(w.title)}</i>`});
+    } else if(w.status==='forfeit'){ ev.push({t:w.disputeAt||t,ic:"⚖",tx:`A wager between <b>${esc(w.proposer)}</b> and <b>${esc(w.taker)}</b> ended in forfeit`}); }
   });
-  (MEM.groups||[]).forEach(g=>{ if(g.status==='settled'){ const pot=(g.stake||0)*(((g.sideA||[]).length)+((g.sideB||[]).length)); const win=(g.winner==='A'?g.sideA:g.sideB)||[]; ev.push({t:g.lockedAt||g.created||0,ic:"⚔",tx:`Side ${g.winner} (<b>${win.join(', ')||'—'}</b>) split a pot of ${pot} ✦ — <i>${g.title}</i>`}); } });
-  (MEM.challenges||[]).forEach(c=>{ if(c.status==='done'){ ev.push({t:c.created||0,ic:"✅",tx:`<b>${c.accepter||'someone'}</b> completed a challenge for ${c.reward} ✦ — <i>${c.title}</i>`}); } });
+  (MEM.groups||[]).forEach(g=>{ if(g.status==='settled'){ const pot=(g.stake||0)*(((g.sideA||[]).length)+((g.sideB||[]).length)); const win=(g.winner==='A'?g.sideA:g.sideB)||[]; ev.push({t:g.lockedAt||g.created||0,ic:"⚔",tx:`Side ${esc(g.winner)} (<b>${win.map(esc).join(', ')||'—'}</b>) split a pot of ${pot} ✦ — <i>${esc(g.title)}</i>`}); } });
+  (MEM.challenges||[]).forEach(c=>{ if(c.status==='done'){ ev.push({t:c.created||0,ic:"✅",tx:`<b>${esc(c.accepter||'someone')}</b> completed a challenge for ${c.reward} ✦ — <i>${esc(c.title)}</i>`}); } });
   const f=MEM.fire||{};
-  if(f.lastBlessed){ ev.push({t:f.lastBlessed,ic:"🔥",tx:`The fire reached its peak${f.lastSpark?` — <b>${f.lastSpark}</b> struck the final spark`:""}, blessing the faithful with +${f.lastBless||0} ✦`}); }
-  (MEM.seasonHistory||[]).forEach(s=>{ if(s.ended){ const top=(s.standings||[])[0]; ev.push({t:s.ended,ic:"◈",tx:`The season <b>${s.label||'past'}</b> was sealed${top?` — <b>${top.name}</b> crowned its champion`:""}`}); } });
-  loadLocalRankups().forEach(r=>{ ev.push({t:r.t,ic:"✦",tx:`<b>${r.name}</b> rose to <b>${r.rank}</b>`}); });
+  if(f.lastBlessed){ ev.push({t:f.lastBlessed,ic:"🔥",tx:`The fire reached its peak${f.lastSpark?` — <b>${esc(f.lastSpark)}</b> struck the final spark`:""}, blessing the faithful with +${f.lastBless||0} ✦`}); }
+  (MEM.seasonHistory||[]).forEach(s=>{ if(s.ended){ const top=(s.standings||[])[0]; ev.push({t:s.ended,ic:"◈",tx:`The season <b>${esc(s.label||'past')}</b> was sealed${top?` — <b>${esc(top.name)}</b> crowned its champion`:""}`}); } });
+  loadLocalRankups().forEach(r=>{ ev.push({t:r.t,ic:"✦",tx:`<b>${esc(r.name)}</b> rose to <b>${esc(r.rank)}</b>`}); });
   // The fire's blessing has its own single Chronicle line above — skip the per-stoker deed
   // rows here so the feed isn't flooded, but they still appear in each spirit's ledger of deeds.
   const FIRE_DEEDS={'Tended the Sacred Fire':1,'Struck the Final Spark':1};
-  (MEM.members||[]).forEach(m=>{ (m.history||[]).forEach(h=>{ if(h&&h.t&&!FIRE_DEEDS[deedBase(h.l)]){ const up=(h.d||0)>=0; ev.push({t:h.t,ic:up?"✶":"☄",tx:`<b>${m.name}</b> ${up?'earned':'lost'} ${up?'+':''}${h.d} ✦ — <i>${deedBase(h.l)||h.l}</i>`}); } }); });
+  (MEM.members||[]).forEach(m=>{ (m.history||[]).forEach(h=>{ if(h&&h.t&&!FIRE_DEEDS[deedBase(h.l)]){ const up=(h.d||0)>=0; ev.push({t:h.t,ic:up?"✶":"☄",tx:`<b>${esc(m.name)}</b> ${up?'earned':'lost'} ${up?'+':''}${h.d} ✦ — <i>${esc(deedBase(h.l)||h.l)}</i>`}); } }); });
   const since=MEM.seasonStart||0;
   ev.sort((a,b)=>(b.t||0)-(a.t||0));
   return ev.filter(e=>(e.t||0)>=since).slice(0, limit||30);
@@ -4151,7 +4163,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30aq · Share cards gain a backdrop theme — Night, Ember, Dawn or Dusk — chosen from the soul card.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ar · Second hardening pass — names &amp; free text are sanitised at input (closing the remaining XSS gaps), manual awards are capped, striking an old-season deed no longer dents this season, the Offering robe is re-locked on release, cosmetic unlock labels are exact, and a dozen smaller fixes.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4821,7 +4833,7 @@ window.newWagerForm=function(){
   scrim.classList.add("show");
 };
 window.commitWager=async function(){
-  const title=(document.getElementById("wgTitle").value||"").trim();
+  const title=clampText(document.getElementById("wgTitle").value,60);
   const amt=parseInt(document.getElementById("wgAmt").value,10)||0;
   const me=memByName(VOTER); const have=me?(me.points||0):0;
   const err=document.getElementById("kerr");
@@ -4841,6 +4853,10 @@ window.voteWager=async function(id,side){ if(!VOTER){ toast("Choose your spirit 
 window.disputeWager=async function(id){ if(!VOTER)return; if(!confirm("Raise a dispute? The grove will vote (5 settles it). If no verdict in 1 hour, BOTH of you forfeit the pot."))return; const ok=await communityAction({t:'wager_dispute',id,by:VOTER}); if(!ok)return; trialsRefresh(); toast("Dispute raised — the grove decides."); };
 /* ---------- GROUP WAGER UI ---------- */
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+// Input sanitisers — names flow into dozens of innerHTML/attr/onclick sites, so strip anything
+// that could break out of a tag/attribute/string at the source (belt-and-suspenders with esc()).
+function clampName(s){ return String(s==null?'':s).replace(/[<>"'`&]/g,'').replace(/\s+/g,' ').trim().slice(0,40); }
+function clampText(s,max){ return String(s==null?'':s).replace(/[<>]/g,'').trim().slice(0,max||80); }
 const GROUP_STATUS={pending:'forming',active:'live',disputed:'disputed',settled:'settled',expired:'expired',void:'void'};
 function gNames(arr,starter){ return (arr&&arr.length)? arr.map(n=>n===starter?`${esc(n)}★`:esc(n)).join(', ') : '—'; }
 function groupCard(g){
@@ -5107,7 +5123,7 @@ window.newChallengeForm=function(){
   scrim.classList.add("show");
 };
 window.submitChallenge=async function(){
-  const title=document.getElementById("chTitle").value.trim();
+  const title=clampText(document.getElementById("chTitle").value,60);
   const rew=parseInt(document.getElementById("chRew").value,10);
   const me=memByName(VOTER); const bud=me?Math.max(0,Math.min(150, me.chalBudget!==undefined?me.chalBudget:150)):0;
   if(!title){ document.getElementById("kerr").textContent="Name the challenge."; return; }
@@ -5234,7 +5250,7 @@ function initEmbers(){
 /* ====================== DAY / NIGHT ATMOSPHERE ====================== */
 const GEO_DEFAULT={lat:43.6532,lng:-79.3832}; /* Toronto */
 function geo(){ const g=(MEM&&MEM.geo)||{}; const lat=(typeof g.lat==='number')?g.lat:GEO_DEFAULT.lat; const lng=(typeof g.lng==='number')?g.lng:GEO_DEFAULT.lng; return {lat,lng}; }
-function tzOffsetHours(tz){ try{ const d=new Date(); const u=new Date(d.toLocaleString('en-US',{timeZone:'UTC'})); const l=new Date(d.toLocaleString('en-US',{timeZone:tz})); return Math.round((l-u)/3600000); }catch(e){ return -5; } }
+function tzOffsetHours(tz){ try{ const d=new Date(); const u=new Date(d.toLocaleString('en-US',{timeZone:'UTC'})); const l=new Date(d.toLocaleString('en-US',{timeZone:tz})); return (l-u)/3600000; }catch(e){ return -5; } }
 // current wall-clock hour (with DST) in any IANA timezone; the grove's sky follows the
 // configured location's own timezone, defaulting to Toronto.
 function localHours(tz){ try{ const f=new Intl.DateTimeFormat('en-US',{timeZone:tz||'America/Toronto',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}); const p={}; f.formatToParts(new Date()).forEach(x=>p[x.type]=x.value); let hh=+p.hour; if(hh===24)hh=0; return hh+(+p.minute)/60+(+p.second)/3600; }catch(e){ const d=new Date(); return d.getHours()+d.getMinutes()/60; } }
@@ -5383,7 +5399,7 @@ window.geoForm=function(){ const g=geo(); const st=sunTimes(); sheet.innerHTML=`
     <div class="err" id="kerr"></div>
   </div>`; scrim.classList.add("show"); };
 window.geoSave=async function(){ const lat=parseFloat(document.getElementById('geoLat').value), lng=parseFloat(document.getElementById('geoLng').value); const tzEl=document.getElementById('geoTzSel'); const tz=(tzEl&&tzEl.value)||'America/Toronto'; if(isNaN(lat)||isNaN(lng)||lat<-90||lat>90||lng<-180||lng>180){ document.getElementById('kerr').textContent='Enter a valid latitude (−90…90) and longitude (−180…180).'; return; } MEM.geo={lat,lng,tz}; await saveData(); try{ atmoUpdate(); }catch(e){} const st=sunTimes(); toast(`Sky set — sunrise ${fmtH(st.sunrise)}, sunset ${fmtH(st.sunset)}.`); deedsForm(); };
-window.geoReset=async function(){ MEM.geo={lat:43.6532,lng:-79.3832,tz:'America/Toronto'}; await saveData(); try{ atmoUpdate(); }catch(e){} const la=document.getElementById('geoLat'),lo=document.getElementById('geoLng'); if(la)la.value=43.6532; if(lo)lo.value=-79.3832; const st=sunTimes(); toast(`Sky reset to Toronto — sunrise ${fmtH(st.sunrise)}, sunset ${fmtH(st.sunset)}.`); };
+window.geoReset=async function(){ MEM.geo={lat:43.6532,lng:-79.3832,tz:'America/Toronto'}; await saveData(); try{ atmoUpdate(); }catch(e){} const la=document.getElementById('geoLat'),lo=document.getElementById('geoLng'); if(la)la.value=43.6532; if(lo)lo.value=-79.3832; const tz=document.getElementById('geoTzSel'); if(tz)tz.value='America/Toronto'; const st=sunTimes(); toast(`Sky reset to Toronto — sunrise ${fmtH(st.sunrise)}, sunset ${fmtH(st.sunset)}.`); };
 
 
 /* ====================== THE OFFERING — ceremony overlay ====================== */

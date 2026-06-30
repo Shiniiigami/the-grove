@@ -4,7 +4,7 @@
    - push + notificationclick handlers (used once push is wired on the backend)
    Bump VERSION every build so old caches are cleared and the new worker takes over.
 */
-const VERSION = 'grove-2026-06-27ba';
+const VERSION = 'grove-2026-06-27de';
 const SHELL = ['./', './index.html', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
@@ -67,7 +67,12 @@ self.addEventListener('push', (e) => {
   let data = {};
   try { data = e.data ? e.data.json() : {}; }
   catch (_) { try { data = { title: 'The Grove', body: e.data && e.data.text() }; } catch (__) {} }
-  const title = data.title || 'The Grove';
+  // The backend brands every push by tacking " from The Grove" onto the title,
+  // which is redundant with the app icon and wraps awkwardly on the lock screen.
+  // Strip that suffix so the title stays one clean category line ("\ud83d\udcdc A new deed").
+  let title = (data.title || 'The Grove')
+    .replace(/\s*(?:[\u2014\u2013-]\s*)?from the grove\b[.!]?\s*$/i, '')
+    .trim() || 'The Grove';
   const opts = {
     body: data.body || '',
     icon: data.icon || './icon-192.png',

@@ -189,11 +189,11 @@
   #app{position:relative;z-index:5;max-width:720px;margin:0 auto;padding:18px 16px 120px;}
   header{text-align:center;padding:14px 0 6px;}
   .eyebrow{font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.32em;color:var(--sage);
-    text-transform:uppercase;}
+    text-transform:uppercase;text-shadow:0 1px 2px rgba(0,0,0,.55);}
   h1{font-family:'Cinzel',serif;font-weight:700;font-size:clamp(26px,7vw,40px);margin:.18em 0 .1em;
     letter-spacing:.06em;color:var(--candle);position:relative;z-index:6;
     text-shadow:0 2px 10px rgba(0,0,0,.65), 0 0 22px rgba(242,196,90,.25);}
-  .creed{font-style:italic;color:var(--sage);font-size:14px;max-width:30ch;margin:.2em auto 0;line-height:1.5;position:relative;z-index:6;}
+  .creed{font-style:italic;color:var(--sage);font-size:14px;max-width:30ch;margin:.2em auto 0;line-height:1.5;position:relative;z-index:6;text-shadow:0 1px 3px rgba(0,0,0,.6);}
   /* ---------- tabs ---------- */
   nav{display:flex;gap:5px;justify-content:center;margin:20px auto 8px;max-width:380px;}
   .tab{flex:1;font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.06em;
@@ -210,7 +210,11 @@
   .spirit canvas{image-rendering:pixelated;display:block;}
   .spirit .nm{font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.04em;margin-top:2px;
     color:var(--parch);opacity:.86;white-space:nowrap;text-shadow:0 1px 3px #000;}
-  .spirit .pts{font-family:'Silkscreen',monospace;font-size:8px;color:var(--candle);opacity:.75;}
+  .spirit .ti{font-family:'Spectral',Georgia,serif;font-style:italic;font-size:10px;line-height:1.12;margin-top:1px;
+    color:var(--sage);opacity:.92;max-width:96px;text-align:center;text-shadow:0 1px 2px #000;}
+  .spirit .rk{font-family:'Silkscreen',monospace;font-size:8px;letter-spacing:.05em;margin-top:2px;
+    text-transform:uppercase;text-shadow:0 1px 2px #000;}
+  .spirit .pts{font-family:'Silkscreen',monospace;font-size:8px;color:var(--candle);opacity:.75;margin-top:1px;}
   .spirit .think{position:absolute;left:50%;top:14px;transform:translate(-50%,-100%);
     background:rgba(16,13,24,.42);color:#ECE3CF;border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:4px 8px;font-size:10px;line-height:1.22;
     width:max-content;max-width:130px;text-align:center;box-shadow:0 2px 7px rgba(0,0,0,.28);z-index:4;
@@ -407,11 +411,12 @@
   .eyebrow,h1,.creed,.hint{transition:color 1.1s ease, text-shadow 1.1s ease, opacity 1.1s ease;}
   #chronicle,#chronfull{transition:background-color 1.1s ease, box-shadow 1.1s ease;border-radius:14px;}
   header{position:relative;z-index:6;}
-  header::before{content:"";position:absolute;inset:-16px -12px -2px;z-index:-1;pointer-events:none;border-radius:26px;
-    background:radial-gradient(72% 84% at 50% 44%, rgba(6,10,8,.66) 0%, rgba(6,10,8,.36) 52%, rgba(6,10,8,0) 80%);
-    opacity:0;transition:opacity 1.2s ease;}
-  body.sky-day header::before{opacity:1;}
-  body.sky-day h1{text-shadow:0 1px 3px rgba(0,0,0,.7), 0 0 22px rgba(0,0,0,.42);}
+  /* No backing box behind the title. Legibility comes from a tight dark halo on the
+     header text itself, so it reads cleanly over any sky — day, night, or eclipse —
+     without bleeding into the background. */
+  body.sky-day h1{text-shadow:0 0 3px rgba(6,12,9,.96),0 1px 2px rgba(6,12,9,.95),0 0 16px rgba(6,12,9,.72);}
+  body.sky-day .eyebrow{color:#EAF1EC;text-shadow:0 1px 2px rgba(6,12,9,.95),0 0 8px rgba(6,12,9,.6);}
+  body.sky-day .creed{color:#EFF4EC;text-shadow:0 1px 2px rgba(6,12,9,.92),0 0 8px rgba(6,12,9,.55);}
   body.sky-day .hint{color:#1b2a22;opacity:.92;}
   body.sky-day #chronicle,body.sky-day #chronfull{
     background:rgba(7,11,9,.5);box-shadow:0 1px 0 rgba(255,255,255,.04) inset;
@@ -1531,7 +1536,9 @@ function layoutGrove(){
   const w = (groveEl.clientWidth>40 ? groveEl.clientWidth : 0) || Math.min(688,(window.innerWidth||360)-34) || 340;
   const cols = w<360?3:(w<520?4:5);
   const cellW = w/cols;
-  const rowH = 162;
+  // taller cells now that each spirit can carry a title + rank line under the name —
+  // keeps the row below clear of these labels and of the next row's thought bubbles.
+  const rowH = 200;
   const bubbles=[];
   members.forEach((m,i)=>{
     const soul=buildSoul(m.name,m.points,m.sprite);
@@ -1548,7 +1555,10 @@ function layoutGrove(){
     cv.style.setProperty('--dl',(-(rng(soul.seed^13)()*3)).toFixed(2)+'s');
     const nm=document.createElement("div");nm.className="nm";nm.textContent=m.name;
     const pts=document.createElement("div");pts.className="pts";pts.textContent=m.points+" ✦";
-    wrap.append(cv,nm,pts);
+    wrap.append(cv,nm);
+    if(m.epithet){ const ti=document.createElement("div"); ti.className="ti"; ti.textContent='“'+m.epithet+'”'; wrap.appendChild(ti); }
+    const _tr=tierOf(m.points); const rk=document.createElement("div"); rk.className="rk"; rk.style.color=_tr.hex; rk.textContent=_tr.name; wrap.appendChild(rk);
+    wrap.appendChild(pts);
     if(thoughtLive(m.thought)){
       const tb=document.createElement("div"); tb.className="think";
       tb.style.maxWidth=Math.min(132, Math.round(cellW-16))+"px";
@@ -3780,7 +3790,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30r · Chalice gains nudged up (Cascade +10, the Eye +15, Shared Burden +15) for a richer trial · no duplicate title/badge nominations and none re-awarded · wager dispute countdown shows the true 1-hour limit · refuse/give-up messages corrected to −40 · Chalice: draining the cup +40, each early King +5, refusing the rite −40 · Keeper-only milestone deeds now match any wording (e.g. “Made the Pilgrimage”) · you can report any spirit, including your own (single-phone games) · new builds auto-refresh on web & PWA (no stale version) · rules updated for recent changes · the Eye opens when the fourth King fills the Chalice · ranks shown in the Chalice circle · tap-to-report & tap-to-cast-out · the accused may vote on their own report/cast-out · no duplicate laws · Keeper-only milestone deeds · notifications open the right page · emoji thoughts fixed · challenge budget capped at 150</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30s · the grove now shows each spirit’s title & rank under their name (roomier rows so thought bubbles don’t overlap) · removed the dark header box; the title now reads cleanly on day/night/eclipse via a text halo · Chalice gains nudged up (Cascade +10, the Eye +15, Shared Burden +15) for a richer trial · no duplicate title/badge nominations and none re-awarded · wager dispute countdown shows the true 1-hour limit · refuse/give-up messages corrected to −40 · Chalice: draining the cup +40, each early King +5, refusing the rite −40 · Keeper-only milestone deeds now match any wording (e.g. “Made the Pilgrimage”) · you can report any spirit, including your own (single-phone games) · new builds auto-refresh on web & PWA (no stale version) · rules updated for recent changes · the Eye opens when the fourth King fills the Chalice · ranks shown in the Chalice circle · tap-to-report & tap-to-cast-out · the accused may vote on their own report/cast-out · no duplicate laws · Keeper-only milestone deeds · notifications open the right page · emoji thoughts fixed · challenge budget capped at 150</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

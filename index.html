@@ -135,7 +135,8 @@
   .chal-mini{font-family:'Silkscreen',monospace;font-size:10px;color:var(--sage,#9FB3A3);background:rgba(255,255,255,.03);border:1px solid rgba(242,196,90,.3);border-radius:8px;padding:7px 10px;cursor:pointer}
   .chal-mini.ghost{border-color:rgba(159,179,163,.25)}
   .chal-pills{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
-  .chal-pill{font-size:12px;color:#E8DCC2;background:rgba(255,255,255,.04);border:1px solid rgba(242,196,90,.25);border-radius:999px;padding:5px 11px}
+  .chal-pill{display:inline-flex;flex-direction:column;align-items:center;line-height:1.15;font-size:12px;color:#E8DCC2;background:rgba(255,255,255,.04);border:1px solid rgba(242,196,90,.25);border-radius:14px;padding:4px 11px}
+  .chal-pill .chal-prk{font-size:9px;letter-spacing:.05em;opacity:.85;margin-top:1px;font-family:'Silkscreen',monospace;text-transform:uppercase}
   .chal-pill.mine{border-color:#F2C45A;color:#FFE9A3}
   .chal-pill a{color:#cf4a3f;cursor:pointer;margin-left:4px}
   .chal-meter{display:flex;gap:8px;align-items:center;justify-content:center;margin-bottom:2px}
@@ -562,6 +563,10 @@ const DEFAULT_DEEDS = [
 ];
 function tiers(){ return (MEM && MEM.tiers && MEM.tiers.length)?MEM.tiers:DEFAULT_TIERS; }
 function deeds(){ return (MEM && MEM.deeds && MEM.deeds.length)?MEM.deeds:DEFAULT_DEEDS; }
+// The great milestone deeds belong to the Keeper alone — they sit in the Keeper's Ledger
+// presets and only the Keeper may award them. Spirits can't nominate them from the Rites tab.
+const KEEPER_DEEDS = ['the pilgrimage','of the first fire','rite of passage'];
+function isKeeperDeed(label){ return KEEPER_DEEDS.indexOf(deedBase(String(label||'')).trim().toLowerCase())>=0; }
 function ensureDefaults(){ if(!MEM)return; if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); if(MEM._tierMig!==1){ MEM.tiers=structuredClone(DEFAULT_TIERS); MEM._tierMig=1; } if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); if(MEM._deedMig!==3){ MEM.deeds=structuredClone(DEFAULT_DEEDS); MEM._deedMig=3; } if(!MEM.rites)MEM.rites=[]; if(!MEM.challenges)MEM.challenges=[]; if(!MEM.seasonHistory)MEM.seasonHistory=[]; if(!MEM.wagers)MEM.wagers=[]; if(!MEM.itemLocks)MEM.itemLocks={}; if(!MEM.badgeColors)MEM.badgeColors={}; if(!MEM.badgeColors["Of the Eye"])MEM.badgeColors["Of the Eye"]="#E0B466"; if(!MEM.badgeColors["Drained the Chalice"])MEM.badgeColors["Drained the Chalice"]="#E0743A"; if(MEM.seasonStart===undefined)MEM.seasonStart=0;
   if(MEM._hatMig!==3){ const _hm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && ['crown','laurel','halo'].includes(c.hat)){ c.hat='none'; _hm.push(m); } }); MEM._hatMig=3; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _hm.length && !localStorage.getItem('grove-crownpurge3')){ _hm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-crownpurge3','1'); } }catch(e){} }
   if(MEM._fadeMig!==1){ const _fm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && c.hair_style==='fade'){ c.hair_style='short'; _fm.push(m); } }); MEM._fadeMig=1; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _fm.length && !localStorage.getItem('grove-fademig1')){ _fm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-fademig1','1'); } }catch(e){} } if(!MEM.fire)MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[]}; if(!MEM.fire.stokers)MEM.fire.stokers=[]; if(MEM.fire.lastDecay===undefined)MEM.fire.lastDecay=Date.now()/1000; if(MEM.fire.streak===undefined)MEM.fire.streak=0; if(MEM._fireTune!==2){ MEM.fire.goal=6; MEM._fireTune=2; } (MEM.members||[]).forEach(m=>{ if(m.season===undefined) m.season=0; if(m.chalBudget===undefined) m.chalBudget=150; else { const cb=m.chalBudget|0; m.chalBudget = cb>150?150 : (cb<0?0:cb); } if(m.oath===undefined) m.oath=true; if(m.lastStoke===undefined) m.lastStoke=0; if(m.logs===undefined) m.logs=0; if(m.fireLogs===undefined) m.fireLogs=0; if(!(m.points>0)) m.points=Math.max(0,m.points||0); if(!(m.season>0)) m.season=Math.max(0,m.season||0); if(m._preTop!==undefined && !(m.offered&&m.offered>Date.now()/1000)){ const c=m.sprite&&m.sprite.chibi; if(c&&c.top_style==='robes'){ const cc=structuredClone(c); cc.top_style=m._preTop||(cc.sleeves===false?'tank':'tee'); m.sprite={chibi:cc}; } delete m._preTop; } }); }
@@ -3512,13 +3517,12 @@ window.nominateDeedForm=function(){
   if(!VOTER){ toast("Pick your name first."); return; }
   NOSIGN=1; NOM_TARGETS=new Set();
   const memBtns=sortedMembers().map(m=>`<button onclick="toggleNomTarget('${m.name}',this)">${m.name}</button>`).join("");
-  const deedChips=(MEM.deeds||[]).map((d,i)=>`<button id="pdeed${i}" onclick="setNomDeed(${i})">${d[0]} ${d[1]>=0?'+':''}${d[1]}</button>`).join("");
+  const deedChips=(MEM.deeds||[]).map((d,i)=>({d,i})).filter(({d})=>keeperUnlocked||!isKeeperDeed(d[0])).map(({d,i})=>`<button id="pdeed${i}" onclick="setNomDeed(${i})">${d[0]} ${d[1]>=0?'+':''}${d[1]}</button>`).join("");
   sheet.innerHTML=`
     <div class="grip"></div>
     <div class="kpanel">
       <h3>Nominate a Deed</h3>
-      <p class="sub">Name the deed, pick one or more members, and set the Devotion Points. A reason is required. Bigger awards need more approvals — max ±200.</p>
-      <p class="sub" style="font-style:italic;color:var(--candle)">The Eye rewards the worthy and remembers the rest — name the deed plainly, for embellishment offends it.</p>
+      <p class="sub">Name the deed, pick one or more members, and set the Devotion Points. A reason is required. Bigger awards need more approvals — max ±200. Keep it witty and the Eye is pleased.</p>
       <div class="crlabel">Members · tap to include</div>
       <div class="seg" style="flex-wrap:wrap">${memBtns}</div>
       <div class="field" style="margin-top:10px"><label>Reason · required</label><input id="noReason" oninput="clearPresetHL()" placeholder="e.g. Saved the campfire"></div>
@@ -3550,6 +3554,7 @@ window.submitNomDeed=function(){
   if(!targets.length){ document.getElementById("kerr").textContent="Pick at least one member."; return; }
   const label=document.getElementById("noReason").value.trim();
   if(!label){ document.getElementById("kerr").textContent="A deed needs a reason."; return; }
+  if(!keeperUnlocked && isKeeperDeed(label)){ document.getElementById("kerr").textContent="“"+deedBase(label)+"” is the Keeper’s to bestow — it cannot be nominated."; return; }
   { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
   let mag=parseInt(document.getElementById("noPts").value,10);
   if(isNaN(mag)||mag===0){ document.getElementById("kerr").textContent="Enter a Devotion Points value."; return; }
@@ -3599,8 +3604,7 @@ window.nominateTitleForm=function(){
     <div class="grip"></div>
     <div class="kpanel">
       <h3>Nominate a Title</h3>
-      <p class="sub">Bestow an epithet — ✦ Returned, The Pathfinder, Keeper of the Flame. Needs 10 approvals.</p>
-      <p class="sub" style="font-style:italic;color:var(--candle)">An epithet outlives the night it was earned. Make it sing, not sting — the Eye favours wit over venom.</p>
+      <p class="sub">Bestow an epithet — ✦ Returned, The Pathfinder, Keeper of the Flame. Needs 10 approvals. Keep it witty and the Eye is pleased.</p>
       <div class="field"><label>Member</label><select id="ntTarget">${opts}</select></div>
       <div class="field"><label>Title</label><input id="ntTitle" placeholder="e.g. The Pathfinder"></div>
       <button class="gold" onclick="submitNomTitle()">Raise nomination</button>
@@ -3649,8 +3653,7 @@ window.nominateBadgeForm=function(){
     <div class="grip"></div>
     <div class="kpanel">
       <h3>Nominate a Badge</h3>
-      <p class="sub">A collectible mark of honour — members can hold many. Needs 7 approvals.</p>
-      <p class="sub" style="font-style:italic;color:var(--candle)">A badge is a small legend pinned to a soul. Earn the Eye's nod — clever travels further than cruel.</p>
+      <p class="sub">A collectible mark of honour — members can hold many. Needs 7 approvals. Keep it witty and the Eye is pleased.</p>
       <div class="field"><label>Member</label><select id="nbTarget">${opts}</select></div>
       <div class="field"><label>Badge</label><input id="nbBadge" oninput="clearChipsHL('nbChips')" placeholder="e.g. Polar Bear"></div>
       <div class="quick" id="nbChips">${chips}</div>
@@ -3767,7 +3770,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30j · removed the “fade” hairstyle (existing ones become “short”) · notifications now open the right page (deed → Rites, wager/challenge → Trials) · fixed “bad passphrase” when the Keeper removes a rite (server pass-check now bcrypt-aware) · thoughts no longer error on emoji (Unicode-safe trim) · challenge budget can’t exceed 150 (capped + healed) · Chalice: host begins, then the right passes down the join order if they don’t · lobby dissolves after 3 min · cast out by tapping a name · must join before adding others · lock/exit chime fixed · law-break reports lapse after 30s · keeper passphrase hashed (bcrypt) · (prev: Chalice anti-stall + cron · 60s nomination undo · profanity filter · stake-bet janitor · server-authoritative wheel + rite/chalice hardening)</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30k · ranks shown in the Chalice circle · tap-to-report & tap-to-cast-out · the accused may vote on their own report/cast-out · no duplicate laws · Keeper-only milestone deeds · no “fade” hair · notifications open the right page · emoji thoughts fixed · challenge budget capped at 150</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -5136,6 +5139,10 @@ function clone(o){ try{ return JSON.parse(JSON.stringify(o)); }catch(e){ return 
 function nowS(){ return Math.floor(Date.now()/1000); }
 function tierOf(name){ const m=(typeof memByName==='function')?memByName(name):members().find(x=>x.name===name); return (typeof tierIndex==='function')?tierIndex((m&&m.points)||0):0; }
 function tierName(ti){ try{ return tiers()[ti].name; }catch(e){ return 'rank '+ti; } }
+function spiritRankName(s){ try{ return tierName(tierOf(s)); }catch(e){ return ''; } }
+function spiritRankCol(s){ try{ return (tiers()[tierOf(s)]||{}).hex||'#9FB3A3'; }catch(e){ return '#9FB3A3'; } }
+// the rank line that sits under a spirit's name in the circle (small but legible)
+function rankSub(s){ const r=spiritRankName(s); return r?('<span class="chal-prk" style="color:'+spiritRankCol(s)+'">'+chEsc(r)+'</span>'):''; }
 function shuffleDeck(){ const d=[]; for(let ri=0;ri<13;ri++)for(let si=0;si<4;si++)d.push([ri,si]); for(let i=d.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=d[i]; d[i]=d[j]; d[j]=t; } return d; }
 function thr(n){ return Math.max(1, Math.ceil(n/3)); }
 const TURN_SECS=120;
@@ -5284,7 +5291,9 @@ function submitLaw(){
   if(!controls(g.current.drawer)){ toast('Only '+g.current.drawer+' may decree.'); return; }
   const txt=prompt('Decree a law that holds until the trial ends:');
   if(!txt||!txt.trim()) return;
-  const n=clone(g); n.current.law=txt.trim(); n.phase='confirm'; send(n);
+  const t=txt.trim();
+  if((g.laws||[]).some(l=>String(l.text||'').trim().toLowerCase()===t.toLowerCase())){ toast('That law already holds — decree a different one.'); return; }
+  const n=clone(g); n.current.law=t; n.phase='confirm'; send(n);
 }
 function pickLoser(nm){
   const g=GC(); if(!g||g.phase!=='confirm'||!g.current) return;
@@ -5301,7 +5310,7 @@ function confirmCard(){
   if(R.kind==='all'){ liveSpirits(n).forEach(s=>tallyAdd(n,s,5)); feedPush(n,'The Cascade — all drink (+5).'); }
   else if(R.kind==='self'){ tallyAdd(n,c.drawer,R.self); feedPush(n,c.drawer+' drinks (+'+R.self+').'); if(n.bind&&n.bind.owner===c.drawer){ tallyAdd(n,n.bind.mate,5); feedPush(n,n.bind.mate+' is bound — also drinks (+5).'); } }
   else if(R.kind==='pick2self'){ tallyAdd(n,c.drawer,R.self); (c.picks||[]).forEach(p=>tallyAdd(n,p,R.each)); feedPush(n,c.drawer+' drinks twice; '+(c.picks||[]).join(' & ')+' drink.'); }
-  else if(R.kind==='law'){ n.laws.push({id:'L'+nowS()+Math.floor(Math.random()*999), text:c.law, by:c.drawer, t:nowS()}); feedPush(n,c.drawer+' decrees: \u201c'+c.law+'\u201d'); }
+  else if(R.kind==='law'){ const lt=String(c.law||'').trim(); if(lt && !(n.laws||[]).some(l=>String(l.text||'').trim().toLowerCase()===lt.toLowerCase())){ n.laws.push({id:'L'+nowS()+Math.floor(Math.random()*999), text:lt, by:c.drawer, t:nowS()}); feedPush(n,c.drawer+' decrees: \u201c'+lt+'\u201d'); } else { feedPush(n,c.drawer+'\u2019s decree echoes a law already in force.'); } }
   else if(R.kind==='loser'){ if(!c.loser){ toast('Name the loser first.'); return; } tallyAdd(n,c.loser,-R.pen); feedPush(n,c.loser+' lost '+R.name+' (\u2212'+R.pen+').'); }
   else if(R.kind==='summon'){ const tg=liveSpirits(n).filter(s=>tierOf(s)===c.tier); tg.forEach(s=>tallyAdd(n,s,R.each)); feedPush(n,'The Summons calls '+tierName(c.tier)+' \u2014 '+(tg.join(', ')||'none')+' drink.'); }
   else if(R.kind==='anoint'){ const tg=liveSpirits(n).filter(s=>tierOf(s)===c.tier); tg.forEach(s=>tallyAdd(n,s,R.each)); feedPush(n,c.drawer+' anoints '+tierName(c.tier)+' \u2014 '+(tg.join(', ')||'none')+' drink.'); }
@@ -5317,19 +5326,27 @@ function resolveDone(n){
 }
 
 /* ---------- Decree reports ---------- */
+let REPORT_PICK=false;
 function report(){
   const g=GC(); if(!g||g.status!=='playing'||!(g.laws||[]).length) return; const who=me();
   if(!who){ toast('Pick your spirit first.'); return; }
-  const acc=prompt('Report who broke a law? (name)\nPlaying: '+g.spirits.join(', '));
-  if(!acc) return; const accused=g.spirits.find(s=>s.toLowerCase()===acc.trim().toLowerCase());
-  if(!accused){ toast('No such spirit in the trial.'); return; }
+  REPORT_PICK=!REPORT_PICK; render();
+}
+function reportPick(name){
+  const g=GC(); if(!g||g.status!=='playing'){ REPORT_PICK=false; return; } const who=me();
+  if(!who){ toast('Pick your spirit first.'); REPORT_PICK=false; return; }
+  const accused=(g.spirits||[]).find(s=>s===name);
+  if(!accused || isAway(g,accused)){ toast('No such spirit in the trial.'); REPORT_PICK=false; render(); return; }
+  if(controls(accused)){ toast('You cannot report your own spirit.'); return; }
   const cd=(g.reportCd||{})[accused]||0; if(nowS()-cd<60){ toast('That spirit was just judged — let it rest a moment.'); return; }
-  const n=clone(g); n.reports=n.reports||[]; n.reports.push({id:'R'+nowS()+Math.floor(Math.random()*999), accused:accused, by:who, agrees:[who], t:nowS(), status:'open'}); feedPush(n, who+' reports '+accused+' for breaking a law.'); send(n);
+  if((g.reports||[]).find(r=>r.accused===accused && reportLive(r))){ toast('A report already stands against '+accused+'.'); REPORT_PICK=false; render(); return; }
+  const n=clone(g); n.reports=n.reports||[]; n.reports.push({id:'R'+nowS()+Math.floor(Math.random()*999), accused:accused, by:who, agrees:[who], t:nowS(), status:'open'});
+  REPORT_PICK=false;
+  feedPush(n, who+' reports '+accused+' for breaking a law.'); send(n);
 }
 function agreeReport(id){
   const g=GC(); if(!g) return; const who=me(); if(!who) return;
   const r=(g.reports||[]).find(x=>x.id===id); if(!r||!reportLive(r)){ toast('That report has lapsed.'); return; }
-  if(r.accused===who){ toast('You cannot judge your own report.'); return; }
   if(r.agrees.indexOf(who)>=0){ toast('You already agreed.'); return; }
   const n=clone(g); const nr=n.reports.find(x=>x.id===id); nr.agrees.push(who);
   if(nr.agrees.length>=thr(n.spirits.length)){ nr.status='passed'; tallyAdd(n,nr.accused,-5); n.reportCd=n.reportCd||{}; n.reportCd[nr.accused]=nowS(); feedPush(n,nr.accused+' is judged \u2014 the law was broken (\u22125, and a drink).'); }
@@ -5383,7 +5400,6 @@ function kickPick(name){
 function agreeKick(id){
   const g=GC(); if(!g) return; const who=me(); if(!who) return;
   const k=(g.kicks||[]).find(x=>x.id===id); if(!k||k.status!=='open') return;
-  if(k.target===who||controls(k.target)){ toast('You cannot vote on your own removal.'); return; }
   if(k.agrees.indexOf(who)>=0){ toast('You already agreed.'); return; }
   const n=clone(g); const nk=n.kicks.find(x=>x.id===id); nk.agrees.push(who);
   const need=Math.max(2, Math.ceil(liveSpirits(n).length/2));
@@ -5561,7 +5577,7 @@ function renderIntro(){
 }
 function renderLobby(g){
   const isNom = g.nominee===me()||controls(g.nominee);
-  let list=g.spirits.map(s=>'<span class="chal-pill'+(controls(s)?' mine':'')+'">'+s+(s===g.nominee?' \u2726':'')+(controls(s)&&s!==g.nominee?' <a onclick="chalAPI.leave(\''+s+'\')">\u2715</a>':'')+'</span>').join('');
+  let list=g.spirits.map(s=>'<span class="chal-pill'+(controls(s)?' mine':'')+'"><span class="chal-pnm">'+s+(s===g.nominee?' \u2726':'')+(controls(s)&&s!==g.nominee?' <a onclick="chalAPI.leave(\''+s+'\')">\u2715</a>':'')+'</span>'+rankSub(s)+'</span>').join('');
   const joined=g.spirits.indexOf(me())>=0;
   let h='<div class="chal-body"><div class="chal-sub">The circle is forming \u00b7 '+g.spirits.length+'/20</div>';
   h+='<div class="chal-pills">'+list+'</div>';
@@ -5589,8 +5605,14 @@ function lawsStrip(g){
   let h='<div class="chal-laws"><div class="chal-lawhdr">Active Laws</div>';
   h+=g.laws.map(l=>'<div class="chal-law">\u00a7 \u201c'+l.text+'\u201d <span>\u2014 '+l.by+'</span></div>').join('');
   const openR=(g.reports||[]).filter(reportLive);
-  if(openR.length){ h+=openR.map(r=>{ const can=me()&&r.accused!==me()&&r.agrees.indexOf(me())<0; const left=Math.max(0,REPORT_SECS-(nowS()-(r.t||0))); return '<div class="chal-report">\u2696 '+r.by+' reports <b>'+r.accused+'</b> ('+r.agrees.length+'/'+thr(g.spirits.length)+' \u00b7 '+left+'s) '+(can?'<button onclick="chalAPI.agree(\''+r.id+'\')">Agree</button>':'')+'</div>'; }).join(''); }
-  h+='<button class="chal-mini" onclick="chalAPI.report()">Report a law-breaker</button>';
+  if(openR.length){ h+=openR.map(r=>{ const can=me()&&r.agrees.indexOf(me())<0; const left=Math.max(0,REPORT_SECS-(nowS()-(r.t||0))); return '<div class="chal-report">\u2696 '+r.by+' reports <b>'+r.accused+'</b> ('+r.agrees.length+'/'+thr(g.spirits.length)+' \u00b7 '+left+'s) '+(can?'<button onclick="chalAPI.agree(\''+r.id+'\')">Agree</button>':'')+'</div>'; }).join(''); }
+  if(REPORT_PICK){
+    const targets=liveSpirits(g).filter(s=>!controls(s)&&!(g.reports||[]).find(r=>r.accused===s&&reportLive(r)));
+    h+='<div class="chal-kickpick"><div class="chal-lawhdr">Report whom? (half the circle must agree)</div><div class="chal-pills">';
+    h+=targets.length?targets.map(s=>'<button class="chal-pill pick" onclick="chalAPI.reportPick(\''+chEsc(s).replace(/'/g,"\\'")+'\')">'+chEsc(s)+'</button>').join(''):'<span class="chal-pill away">no one to report</span>';
+    h+='</div><button class="chal-mini ghost" onclick="chalAPI.report()">Cancel</button></div>';
+  }
+  h+='<button class="chal-mini" onclick="chalAPI.report()">'+(REPORT_PICK?'\u2715 Close':'Report a law-breaker')+'</button>';
   h+='</div>'; return h;
 }
 function feedStrip(g){ const f=(g.feed||[]).slice(0,6); if(!f.length) return ''; return '<div class="chal-feed">'+f.map(e=>'<div>'+e.x+'</div>').join('')+'</div>'; }
@@ -5598,12 +5620,12 @@ function feedStrip(g){ const f=(g.feed||[]).slice(0,6); if(!f.length) return '';
 function rosterStrip(g){
   const live=liveSpirits(g); const away=(g.spirits||[]).filter(s=>isAway(g,s));
   let h='<div class="chal-roster"><div class="chal-lawhdr">The Circle ('+live.length+')</div><div class="chal-pills">';
-  h+=g.spirits.map(s=>{ const aw=isAway(g,s), kk=g.kicked&&g.kicked[s]; return '<span class="chal-pill'+(controls(s)?' mine':'')+(aw?' away':'')+'">'+s+(s===g.nominee?' \u2726':'')+(aw?(kk?' \u2715':' \u2193'):'')+'</span>'; }).join('');
+  h+=g.spirits.map(s=>{ const aw=isAway(g,s), kk=g.kicked&&g.kicked[s]; return '<span class="chal-pill'+(controls(s)?' mine':'')+(aw?' away':'')+'"><span class="chal-pnm">'+s+(s===g.nominee?' \u2726':'')+(aw?(kk?' \u2715':' \u2193'):'')+'</span>'+rankSub(s)+'</span>'; }).join('');
   h+='</div>';
   const rj=away.filter(s=>!(g.kicked&&g.kicked[s]));
   if(rj.length){ h+='<div class="chal-rejoin">'+rj.map(s=>'<button class="chal-mini" onclick="chalAPI.rejoin(\''+s+'\')">Rejoin as '+s+'</button>').join('')+'</div>'; }
   const ok=(g.kicks||[]).filter(k=>k.status==='open');
-  if(ok.length){ h+=ok.map(k=>{ const can=me()&&k.target!==me()&&!controls(k.target)&&k.agrees.indexOf(me())<0; return '<div class="chal-report">\u2715 cast out <b>'+k.target+'</b> ('+k.agrees.length+'/'+Math.max(2,Math.ceil(live.length/2))+') '+(can?'<button onclick="chalAPI.agreeKick(\''+k.id+'\')">Agree</button>':'')+'</div>'; }).join(''); }
+  if(ok.length){ h+=ok.map(k=>{ const can=me()&&k.agrees.indexOf(me())<0; return '<div class="chal-report">\u2715 cast out <b>'+k.target+'</b> ('+k.agrees.length+'/'+Math.max(2,Math.ceil(live.length/2))+') '+(can?'<button onclick="chalAPI.agreeKick(\''+k.id+'\')">Agree</button>':'')+'</div>'; }).join(''); }
   if(KICK_PICK){
     const targets=live.filter(s=>!controls(s)&&!(g.kicks||[]).find(k=>k.target===s&&k.status==='open'));
     h+='<div class="chal-kickpick"><div class="chal-lawhdr">Cast out whom? (half the circle must agree)</div><div class="chal-pills">';
@@ -5781,7 +5803,7 @@ const _origRT = window.renderTrials;
 if(typeof _origRT==='function'){ window.renderTrials=function(){ const r=_origRT.apply(this,arguments); try{ injectLauncher(); }catch(e){} return r; }; }
 
 /* expose handlers */
-window.chalAPI={ show:openUI, open:openLobby, join:joinGame, addSpirit:addSpirit, addSel:addSel, leave:leaveLobby, leaveAll:leaveGame, rejoin:rejoin, kick:proposeKick, kickPick:kickPick, agreeKick:agreeKick, start:startGame, draw:draw, tap:tap, picksDone:picksDone, tier:submitTier, law:submitLaw, loser:pickLoser, confirm:confirmCard, drink:drinkChalice, dare:takeDare, vdare:voteDare, giveup:dareGiveUp, sip:sipChalice, seal:sealRite, report:report, agree:agreeReport, end:endGame, dismiss:dismiss, kForce:kForce, kReset:kReset, kHost:kHost };
+window.chalAPI={ show:openUI, open:openLobby, join:joinGame, addSpirit:addSpirit, addSel:addSel, leave:leaveLobby, leaveAll:leaveGame, rejoin:rejoin, kick:proposeKick, kickPick:kickPick, agreeKick:agreeKick, start:startGame, draw:draw, tap:tap, picksDone:picksDone, tier:submitTier, law:submitLaw, loser:pickLoser, confirm:confirmCard, drink:drinkChalice, dare:takeDare, vdare:voteDare, giveup:dareGiveUp, sip:sipChalice, seal:sealRite, report:report, reportPick:reportPick, agree:agreeReport, end:endGame, dismiss:dismiss, kForce:kForce, kReset:kReset, kHost:kHost };
 window.closeUI=closeUI;
 })();
 </script>

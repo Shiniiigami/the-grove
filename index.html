@@ -767,7 +767,7 @@ function robeGroveByRank(){
   const now=Date.now()/1000; const changed=[];
   (MEM.members||[]).forEach(m=>{
     if(m.offered && m.offered>now) return;             // the offered keep the Offering Robe + timer
-    const g=garmentForPoints(m.points||0); if(!g) return;   // Initiates keep their current top
+    const g=garmentForTier(tierIndex(m.points||0)); if(!g) return;   // by RANK, not raw points; Initiates keep their top
     const c=m.sprite&&m.sprite.chibi; if(!c) return;
     if(c.top_style===g) return;                         // already in their rank robe
     const cc=cloneChibi(m); cc.top_style=g; m.sprite={chibi:cc}; changed.push(m);
@@ -2057,6 +2057,11 @@ function keeperPanel(){
 }
 function roman(n){ return ['','I','II','III','IV','V','VI','VII','VIII','IX','X'][n]||String(n); }
 function garmentForPoints(p){ if(p>=2500)return'ascend'; if(p>=2000)return'luminary'; if(p>=1500)return'robes'; if(p>=1000)return'sage'; if(p>=600)return'mantle'; if(p>=300)return'tunic'; if(p>=100)return'sash'; return null; }
+// The robe of a spirit's actual RANK (tier index), not raw points — so each order wears its
+// own garment: Acolyte sash · Disciple tunic · Warden mantle · Sage robe · Luminary starlit
+// robe · Ascended radiant cloak. Initiates keep their own top; the Offering robe is never a
+// rank garment. Clamps any custom ranks above the seventh to the Ascended cloak.
+function garmentForTier(ti){ ti=ti|0; if(ti<=0) return null; const g=[null,'sash','tunic','mantle','sage','luminary','ascend']; return g[Math.min(ti,6)]; }
 window.keeperOfferForm=function(){
   const now=Date.now()/1000;
   const opts=sortedMembers().map(m=>{ const on=m.offered&&m.offered>now; return `<option value="${m.name}">${m.name}${on?' · offered':''}</option>`; }).join("");
@@ -2154,7 +2159,7 @@ window.summonsRobes=async function(){
   if(!confirm("Summons: clothe every spirit in the garment of their rank? This changes each member's top (other features are kept). Initiates keep their current top.")) return;
   let n=0;
   MEM.members.forEach(m=>{
-    const g=garmentForPoints(m.points||0); if(!g) return;
+    const g=garmentForTier(tierIndex(m.points||0)); if(!g) return;
     const c=cloneChibi(m); c.top_style=g; m.sprite={chibi:c}; n++;
   });
   await saveData(); layoutGrove(); renderLedger(); if(typeof renderRules==='function')renderRules(); closeSheet();
@@ -4045,7 +4050,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30aj · A successful offering now robes the whole grove in the garb of their rank — save the offered, who keep the Offering Robe and their timer — and the sky toggle is Keeper-only, beside the day's sunrise and sunset.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ak · Rank robes now follow a spirit's actual order, not raw points — so a Sage wears the Sage robe and a Luminary the starlit robe, never the Offering robe or a higher order's garb.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

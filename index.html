@@ -590,7 +590,7 @@ function deeds(){ return (MEM && MEM.deeds && MEM.deeds.length)?MEM.deeds:DEFAUL
 // Pilgrimage", "Pilgrimage", etc.) — exact-match missed the variants people actually type.
 const KEEPER_DEED_KEYS = ['pilgrimage','first fire','rite of passage'];
 function isKeeperDeed(label){ const b=deedBase(String(label||'')).trim().toLowerCase(); return KEEPER_DEED_KEYS.some(k=>b.indexOf(k)>=0); }
-function ensureDefaults(){ if(!MEM)return; if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); if(MEM._tierMig!==1){ MEM.tiers=structuredClone(DEFAULT_TIERS); MEM._tierMig=1; } if(MEM._tierColorMig!==3){ (MEM.tiers||[]).forEach(t=>{ if(TIER_COLORS_V2[t.name]) t.hex=TIER_COLORS_V2[t.name]; }); MEM._tierColorMig=3; } if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); if(MEM._deedMig!==3){ MEM.deeds=structuredClone(DEFAULT_DEEDS); MEM._deedMig=3; } if(!MEM.rites)MEM.rites=[]; if(!MEM.challenges)MEM.challenges=[]; if(!MEM.seasonHistory)MEM.seasonHistory=[]; if(!MEM.wagers)MEM.wagers=[]; if(!MEM.itemLocks)MEM.itemLocks={}; if(!Array.isArray(MEM.auraScale)||MEM.auraScale.length!==7)MEM.auraScale=[1,1,1,1,1,1,1]; if(!MEM.badgeColors)MEM.badgeColors={}; if(!MEM.badgeColors["Of the Eye"])MEM.badgeColors["Of the Eye"]="#E0B466"; if(!MEM.badgeColors["Drained the Chalice"])MEM.badgeColors["Drained the Chalice"]="#E0743A"; if(MEM.seasonStart===undefined)MEM.seasonStart=0;
+function ensureDefaults(){ if(!MEM)return; if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); if(MEM._tierMig!==1){ if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); MEM._tierMig=1; } if(MEM._tierColorMig!==3){ (MEM.tiers||[]).forEach(t=>{ if(!t.hex && TIER_COLORS_V2[t.name]) t.hex=TIER_COLORS_V2[t.name]; }); MEM._tierColorMig=3; } if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); if(MEM._deedMig!==3){ if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); MEM._deedMig=3; } if(!MEM.rites)MEM.rites=[]; if(!MEM.challenges)MEM.challenges=[]; if(!MEM.seasonHistory)MEM.seasonHistory=[]; if(!MEM.wagers)MEM.wagers=[]; if(!MEM.itemLocks)MEM.itemLocks={}; normAura(); if(!MEM.badgeColors)MEM.badgeColors={}; if(!MEM.badgeColors["Of the Eye"])MEM.badgeColors["Of the Eye"]="#E0B466"; if(!MEM.badgeColors["Drained the Chalice"])MEM.badgeColors["Drained the Chalice"]="#E0743A"; if(MEM.seasonStart===undefined)MEM.seasonStart=0;
   if(MEM._hatMig!==3){ const _hm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && ['crown','laurel','halo'].includes(c.hat)){ c.hat='none'; _hm.push(m); } }); MEM._hatMig=3; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _hm.length && !localStorage.getItem('grove-crownpurge3')){ _hm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-crownpurge3','1'); } }catch(e){} }
   if(MEM._fadeMig!==1){ const _fm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && c.hair_style==='fade'){ c.hair_style='short'; _fm.push(m); } }); MEM._fadeMig=1; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _fm.length && !localStorage.getItem('grove-fademig1')){ _fm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-fademig1','1'); } }catch(e){} } if(!MEM.fire)MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[]}; if(!MEM.fire.stokers)MEM.fire.stokers=[]; if(MEM.fire.lastDecay===undefined)MEM.fire.lastDecay=Date.now()/1000; if(MEM.fire.streak===undefined)MEM.fire.streak=0; if(MEM._fireTune!==2){ MEM.fire.goal=6; MEM._fireTune=2; } (MEM.members||[]).forEach(m=>{ if(m.season===undefined) m.season=0; if(m.chalBudget===undefined) m.chalBudget=150; else { const cb=m.chalBudget|0; m.chalBudget = cb>150?150 : (cb<0?0:cb); } if(m.oath===undefined) m.oath=true; if(m.lastStoke===undefined) m.lastStoke=0; if(m.logs===undefined) m.logs=0; if(m.fireLogs===undefined) m.fireLogs=0; if(!(m.points>0)) m.points=Math.max(0,m.points||0); if(!(m.season>0)) m.season=Math.max(0,m.season||0); if(m._preTop!==undefined && !(m.offered&&m.offered>Date.now()/1000)){ const c=m.sprite&&m.sprite.chibi; if(c&&c.top_style==='robes'){ const cc=structuredClone(c); cc.top_style=m._preTop||(cc.sleeves===false?'tank':'tee'); m.sprite={chibi:cc}; } delete m._preTop; } }); }
 function tierOf(p){const T=tiers();let t=T[0];for(const x of T)if(p>=x.min)t=x;return t;}
@@ -626,7 +626,7 @@ const SEED = {
     {name:"Aby",     epithet:"The Wandering",         sprite:{chibi:{skin:"#D9A06A",hair:"#33251C",hair_style:"long",beard:null,glasses:false,ears:"none",top:"#7A3B5A",sleeves:true,jacket:null,pants:"#3A3A44",boots:"#5A3A2A",accent:"none"}}, points:280,  since:2026, badges:[], history:[{l:"Attendance",d:100}]},
     {name:"Don",     epithet:"The Cold-Swimmer",      sprite:{chibi:{skin:"#C98A5A",hair:"#1A1612",hair_style:"fade",beard:"#1A1612",glasses:false,ears:"none",top:"#3A5A6B",sleeves:true,jacket:null,pants:"#23364A",boots:"#1C1C1E",accent:"none"}}, points:240,  since:2026, badges:["Polar Bear"], history:[{l:"Attendance",d:100},{l:"Night swim",d:30}]},
     {name:"Nicole",  epithet:"The New Flame",         sprite:{chibi:{skin:"#E6B088",hair:"#33251C",hair_style:"curly",beard:null,glasses:true,glassCol:"#C9A24B",ears:"dangle",earCol:"#E8C45A",top:"#5C6646",sleeves:false,jacket:null,pants:"#4A3B2A",boots:"#1C1C1E",accent:"necklace",accentCol:"#E8C45A"}}, points:190,  since:2026, badges:[], history:[{l:"Attendance",d:100}]},
-    {name:"Galen",   epithet:"The Quiet Pine",        sprite:{chibi:{skin:"#E2AC80",hair:"#5A4030",hair_style:"fade",beard:"#6E4426",glasses:false,ears:"stud",top:"#1C1C20",sleeves:true,jacket:"#6B4A2E",pants:"#2A2620",boots:"#7B4A2A",accent:"choker",accentCol:"#C9CDD2"}}, points:150,  since:2026, badges:[], history:[{l:"Attendance",d:100}]},
+    {name:"Galen",   epithet:"The Quiet Pine",        sprite:{chibi:{skin:"#E2AC80",hair:"#5A4030",hair_style:"fade",beard:"#6E4426",glasses:false,ears:"stud",top:"#1C1C20",sleeves:true,jacket:"#6B4A2E",pants:"#2A2620",boots:"#7B4A2A",accent:"necklace",accentCol:"#C9CDD2"}}, points:150,  since:2026, badges:[], history:[{l:"Attendance",d:100}]},
     {name:"Aria",    epithet:"The Spark",             sprite:{chibi:{skin:"#F0C9A0",hair:"#B5651D",hair_style:"bun",beard:null,glasses:false,ears:"stud",top:"#8A5A6A",sleeves:false,jacket:null,pants:"#33384A",boots:"#3A2A22",accent:"none"}}, points:90,   since:2026, badges:[], history:[{l:"Brought the sacrifice",d:20}]},
     {name:"Gety",    epithet:"The Offering",          sprite:{chibi:{skin:"#E2AC80",hair:"#2A1E16",hair_style:"curly",beard:null,glasses:false,ears:"none",top:"#46707A",sleeves:true,jacket:null,pants:"#2A2620",boots:"#3A2A22",accent:"none"}}, points:80,   since:2026, badges:[], history:[{l:"Brought the sacrifice",d:20}]},
   ]
@@ -679,7 +679,9 @@ async function flushQueue(){
       try{ if(typeof navigator!=='undefined' && !navigator.onLine) break; }catch(_){}
       const q=oqLoad(); if(!q.length) break; const item=q[0];
       let drop=true;
-      try{ await sbRpc(item.fn, item.args); }
+      // re-inject the Keeper passphrase from memory at replay time — it is never persisted to the queue
+      const _args=(item.fn==='grove_remove_rite'||item.fn==='grove_save')?Object.assign({},item.args,{p_pass:SESSION_PASS||""}):item.args;
+      try{ await sbRpc(item.fn, _args); }
       catch(e){
         if(oqTransient(e)){
           drop=false;
@@ -1580,6 +1582,9 @@ function drawChibiSprite(canvas,soul,scale,t,base,dpr){
 function hexA(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${n>>16},${(n>>8)&255},${n&255},${a})`;}
 // Keeper-tunable aura intensity per rank (tier index → multiplier, 0..3, default 1).
 function auraScaleFor(ti){ try{ const a=MEM&&MEM.auraScale; if(a&&a[ti]!=null){ const v=+a[ti]; if(v>=0) return Math.min(3,v); } }catch(e){} return 1; }
+// Keep MEM.auraScale exactly as long as the (possibly customised) tier ladder — never hard-locked
+// to 7, so adding/removing a rank no longer wipes the auras. Preserves existing values.
+function normAura(){ const n=(MEM&&MEM.tiers&&MEM.tiers.length)||7; if(!Array.isArray(MEM.auraScale))MEM.auraScale=[]; while(MEM.auraScale.length<n)MEM.auraScale.push(1); if(MEM.auraScale.length>n)MEM.auraScale.length=n; return MEM.auraScale; }
 
 /* ====================== RENDER ====================== */
 const groveEl=document.getElementById("grove");
@@ -1707,7 +1712,7 @@ function renderLedger(){
     const no=document.createElement("div");no.className="rank-no";no.textContent=i+1;
     const cv=document.createElement("canvas");
     const info=document.createElement("div");info.className="info";
-    const epi = m.epithet ? `<span style="color:var(--sage);font-style:italic;font-size:11px"> · ${m.epithet}</span>` : "";
+    const epi = m.epithet ? `<span style="color:var(--sage);font-style:italic;font-size:11px"> · ${esc(m.epithet)}</span>` : "";
     const rp=rankProgress(m.points);
     const prog = rp.atMax ? `<div class="nrp-lbl" style="color:var(--candle)">✦ highest order reached</div>`
       : `<div class="nrp"><i style="width:${rp.pct}%"></i></div><div class="nrp-lbl">${rp.toNext} ✦ Devotion Points to ${rp.nextName}</div>`;
@@ -1890,9 +1895,9 @@ function openSoul(name){
   const i=tierIndex(m.points);
   let pctW=100, lo=tier.min, txt="Highest order attained";
   if(nt){const span=nt.min-tier.min;pctW=Math.round((m.points-tier.min)/span*100);txt=`${nt.min-m.points} Devotion Points to ${nt.name}`;}
-  const badges=(m.badges||[]).map(b=>`<span class="badge" style="${badgeStyle(b)}">✦ ${b}</span>`).join("");
+  const badges=(m.badges||[]).map(b=>`<span class="badge" style="${badgeStyle(b)}">✦ ${esc(b)}</span>`).join("");
   const hist=deedLedgerHTML(m,keeperUnlocked);
-  const epiLine = m.epithet ? `<div style="font-style:italic;color:var(--sage);font-size:14px;margin:1px 0 4px">"${m.epithet}"</div>` : "";
+  const epiLine = m.epithet ? `<div style="font-style:italic;color:var(--sage);font-size:14px;margin:1px 0 4px">"${esc(m.epithet)}"</div>` : "";
   const _now=Date.now()/1000; const _off=(m.offered&&m.offered>_now)?(m.offered-_now):0;
   const offMark = _off>0 ? `<div style="display:inline-block;margin:4px 0 2px;padding:3px 9px;border-radius:8px;background:rgba(232,168,143,.14);border:1px solid rgba(232,168,143,.55);color:#E8A88F;font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.06em">▲ THE OFFERED · ${Math.floor(_off/3600)}h ${Math.floor((_off%3600)/60)}m left</div>` : "";
   const _OFCOOL=12*3600; const _ocd=(m.lastOffer && (m.lastOffer+_OFCOOL)>_now)?(m.lastOffer+_OFCOOL-_now):0;
@@ -2281,7 +2286,7 @@ function renderBadgeForm(){
   const m=MEM.members.find(x=>x.name===BADGE_MEMBER)||{badges:[]};
   const have=(m.badges||[]).length
     ? (m.badges||[]).map((b,i)=>`<div style="margin-bottom:9px">
-        <span class="badge" style="${badgeStyle(b)};display:inline-flex;align-items:center;gap:7px"><span>✦ ${b}</span><span onclick="editBadge(${i})" title="Rename" style="cursor:pointer;opacity:.85">✎</span><span onclick="removeBadge(${i})" title="Remove" style="cursor:pointer;color:var(--ember)">✕</span></span>
+        <span class="badge" style="${badgeStyle(b)};display:inline-flex;align-items:center;gap:7px"><span>✦ ${esc(b)}</span><span onclick="editBadge(${i})" title="Rename" style="cursor:pointer;opacity:.85">✎</span><span onclick="removeBadge(${i})" title="Remove" style="cursor:pointer;color:var(--ember)">✕</span></span>
         ${swatchBtns(badgeColor(b), c=>`setBadgeColor(${i},'${c}')`, '')}
       </div>`).join("")
     : `<span class="sub">No badges yet.</span>`;
@@ -2453,8 +2458,11 @@ window.awardPoints=async function(){
   else if(netPts<0 && m.lossMult>1){ const lm=m.lossMult; delete m.lossMult; netPts=netPts*lm; reason+=` (×${lm} curse)`; }
   m.points=Math.max(0,m.points+netPts);
   m.season=Math.max(0,(m.season||0)+netPts);
-  m.history=m.history||[];m.history.push({l:reason,d:netPts,n:mult,t:Date.now()/1000});
+  // a single award is ONE deed — store the wheel multiplier separately, never as the stack-count `n`
+  m.history=m.history||[];m.history.push({l:reason,d:netPts,n:1,t:Date.now()/1000});
   const after=tierIndex(m.points);
+  // advance this member's rank snapshot now, so a later poll doesn't re-celebrate the same rank-up
+  try{ if(after!==before){ const s=loadRankSnap(); s[m.name]=after; saveRankSnap(s); } }catch(e){}
   await saveData();
   layoutGrove(); renderLedger();
   closeSheet();
@@ -2771,7 +2779,7 @@ window.logsZero=async function(){ if(!confirm("Clear everyone's logs back to 0?"
 
 /* --- edit a member's awarded deeds (their ledger) --- */
 let LEDGER_EDIT=null, LEDGER_MEM=null, LEDGER_OLDSUM=0;
-function loadLedgerEdit(){ const m=MEM.members.find(x=>x.name===LEDGER_MEM)||{history:[]}; LEDGER_EDIT=histGroups(m).map(g=>({l:g.base, d:g.sum, n:g.count})); LEDGER_OLDSUM=(m.history||[]).reduce((s,h)=>s+(h.d||0),0); }
+function loadLedgerEdit(){ const m=MEM.members.find(x=>x.name===LEDGER_MEM)||{history:[]}; LEDGER_EDIT=histGroups(m).map(g=>({l:g.base, d:g.sum, n:g.count, t:((m.history||[])[g.maxi]||{}).t})); LEDGER_OLDSUM=(m.history||[]).reduce((s,h)=>s+(h.d||0),0); }
 function syncLedger(){ if(!LEDGER_EDIT)return; LEDGER_EDIT.forEach((h,i)=>{ const l=document.getElementById('le_l'+i),d=document.getElementById('le_d'+i); if(l)h.l=l.value; if(d)h.d=parseInt(d.value,10)||0; }); }
 window.ledgerEditForm=function(){ LEDGER_MEM=sortedMembers()[0].name; loadLedgerEdit(); renderLedgerEdit(); };
 window.ledgerPick=function(n){ LEDGER_MEM=n; loadLedgerEdit(); renderLedgerEdit(); };
@@ -2782,7 +2790,7 @@ window.ledgerSave=async function(){ syncLedger(); const m=MEM.members.find(x=>x.
   const delta=newSum-LEDGER_OLDSUM;
   m.points=Math.max(0,(m.points||0)+delta); m.season=Math.max(0,(m.season||0)+delta);
   const tnow=Date.now()/1000;
-  m.history=clean.map(h=>({l:String(h.l).trim(), d:h.d||0, n:Math.max(1,h.n||1), t:tnow}));
+  m.history=clean.map(h=>({l:String(h.l).trim(), d:h.d||0, n:Math.max(1,h.n||1), t:(h.t||tnow)}));
   await saveData(); layoutGrove(); renderLedger(); toast(`${m.name}'s ledger updated.`); deedsForm();
 };
 function renderLedgerEdit(){
@@ -2815,7 +2823,7 @@ window.ranksForm=function(){ RANKS_EDIT=structuredClone(tiers()); renderRanks();
 const AURA_SAMPLE_CHIBI={skin:"#D9A06A",hair:"#1A1612",hair_style:"short",beard:null,glasses:false,ears:"none",top:"#5C6646",sleeves:true,jacket:null,pants:"#2A2620",boots:"#3A2A22",accent:"none"};
 function auraSampleSoul(i){ const T=tiers(); const hex=(T[i]||T[T.length-1]).hex; return {chibi:AURA_SAMPLE_CHIBI, grid:null, W:30, H:46, tier:{hex}, ti:i, seed:i*5+3, base:hex, imgUrl:null, name:'_aura'+i}; }
 function auraDrawPv(i){ try{ const T=tiers(); drawChibiSprite(document.getElementById('auraPv'+i), auraSampleSoul(i), 5, 0, (T[i]||{}).hex, Math.min(2,window.devicePixelRatio||1)); }catch(e){} }
-window.auraForm=function(){ if(!Array.isArray(MEM.auraScale)||MEM.auraScale.length!==7) MEM.auraScale=[1,1,1,1,1,1,1]; renderAura(); };
+window.auraForm=function(){ normAura(); renderAura(); };
 function renderAura(){
   const T=tiers();
   const rows=T.map((t,i)=>{ const v=Math.round(auraScaleFor(i)*100);
@@ -2841,7 +2849,7 @@ function renderAura(){
 }
 window.auraSet=function(i,v){ if(!Array.isArray(MEM.auraScale))MEM.auraScale=[1,1,1,1,1,1,1]; MEM.auraScale[i]=Math.max(0,Math.min(3,(+v)/100)); const el=document.getElementById('auraVal'+i); if(el)el.textContent=Math.round(+v)+'%'; auraDrawPv(i); };
 window.auraSave=async function(){ try{ await saveData(); }catch(e){} try{ layoutGrove(); }catch(e){} try{ renderLedger(); }catch(e){} toast('The auras are set.'); keeperPanel(); };
-window.auraReset=function(){ MEM.auraScale=[1,1,1,1,1,1,1]; renderAura(); };
+window.auraReset=function(){ MEM.auraScale=(MEM.tiers||[]).map(()=>1); if(!MEM.auraScale.length)MEM.auraScale=[1,1,1,1,1,1,1]; renderAura(); };
 let ITEMLOCKS_EDIT=null;
 window.itemLocksForm=function(){ ITEMLOCKS_EDIT=Object.assign({}, MEM.itemLocks||{}); renderItemLocks(); };
 function renderItemLocks(){
@@ -2876,12 +2884,16 @@ window.rankColor=function(i,c){ syncRanks(); RANKS_EDIT[i].hex=c; renderRanks();
 window.rankAdd=function(){ syncRanks(); const mx=RANKS_EDIT.length?Math.max(...RANKS_EDIT.map(t=>t.min)):0; RANKS_EDIT.push({name:"New Order",min:mx+200,hex:"#6FB39A"}); renderRanks(); };
 window.rankDel=function(i){ syncRanks(); if(RANKS_EDIT.length<=1)return; RANKS_EDIT.splice(i,1); renderRanks(); };
 window.ranksDefault=function(){ if(!confirm('Reset all orders to the seven default ranks — their names, thresholds and muted colours?\n\n(Nothing is saved until you press “Redraw the orders”.)')) return; RANKS_EDIT=structuredClone(DEFAULT_TIERS); renderRanks(); toast('Default orders restored — redraw to keep them.'); };
-window.ranksSave=async function(){ syncRanks(); RANKS_EDIT.sort((a,b)=>a.min-b.min); RANKS_EDIT[0].min=0; MEM.tiers=RANKS_EDIT; await saveData(); layoutGrove(); renderLedger(); closeSheet(); toast("The orders are redrawn."); };
+window.ranksSave=async function(){ syncRanks(); RANKS_EDIT.sort((a,b)=>a.min-b.min); RANKS_EDIT[0].min=0;
+  // thresholds must strictly increase, else a tier is unreachable and aura/garment indexing skips it
+  for(let i=1;i<RANKS_EDIT.length;i++){ if(!(RANKS_EDIT[i].min>RANKS_EDIT[i-1].min)) RANKS_EDIT[i].min=RANKS_EDIT[i-1].min+1; }
+  RANKS_EDIT.forEach(t=>{ t.name=String(t.name||'').slice(0,22); });
+  MEM.tiers=RANKS_EDIT; normAura(); await saveData(); layoutGrove(); renderLedger(); closeSheet(); toast("The orders are redrawn."); };
 function renderRanks(){
   const rows=RANKS_EDIT.map((t,i)=>`
     <div style="border:1px solid var(--moss);border-radius:10px;padding:9px;margin-bottom:8px;background:rgba(20,32,25,.5)">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-        <input id="rn${i}" value="${String(t.name||'').replace(/"/g,'&quot;')}" placeholder="Rank name" style="flex:1;${inp}font-family:'Cinzel',serif">
+        <input id="rn${i}" maxlength="22" value="${String(t.name||'').replace(/"/g,'&quot;')}" placeholder="Rank name" style="flex:1;${inp}font-family:'Cinzel',serif">
         <input id="rm${i}" type="number" value="${t.min}" ${i===0?'disabled title="starts at 0"':''} style="width:80px;${inp}font-family:'Silkscreen',monospace;font-size:12px;${i===0?'opacity:.5':''}">
         <button onclick="rankDel(${i})" style="background:none;border:none;color:var(--ember);font-size:18px;cursor:pointer">✕</button>
       </div>
@@ -3498,7 +3510,7 @@ window.shareSpirit=async function(name){
     x.fillStyle="#EFE7D6"; x.font="700 36px Cinzel, serif"; x.fillText(m.name, gx, y); y+=8;
     if(m.epithet){ y+=20; x.fillStyle="#9DB0A4"; x.font="italic 17px Spectral, Georgia, serif"; x.fillText('"'+m.epithet+'"', gx, y); }
     // rank pill
-    y+=34; x.font="13px Silkscreen, monospace"; const rkt=tier.name.toUpperCase(); const rkw=x.measureText(rkt).width+30;
+    y+=34; x.font="13px Silkscreen, monospace"; let rkt=tier.name.toUpperCase(); while(rkt.length>4 && x.measureText(rkt).width+30>W-M*2){ rkt=rkt.slice(0,-1); } const rkw=x.measureText(rkt).width+30;
     x.fillStyle=hexA(tier.hex,.14); rr(x,gx-rkw/2,y-19,rkw,26,8); x.fill(); x.strokeStyle=hexA(tier.hex,.55); x.lineWidth=1.4; rr(x,gx-rkw/2,y-19,rkw,26,8); x.stroke();
     x.fillStyle=tier.hex||"#E8C45A"; x.fillText(rkt, gx, y-1);
     // two point boxes, like the card
@@ -3646,12 +3658,13 @@ function riteCard(r){
   const h=Math.floor(leftS/3600), mn=Math.floor((leftS%3600)/60);
   const left = leftS>0 ? `${h}h ${mn}m left` : "expiring";
   let desc="";
-  if(r.kind==="deed") desc=`<b>${r.target}</b> &nbsp;<span style="color:${r.points<0?'#E8A88F':'var(--candle)'}">${r.points>=0?'+':''}${r.points}</span> — ${r.label}`;
-  else if(r.kind==="newdeed") desc=`New deed · <b>${r.label}</b> <span style="color:${r.points<0?'#E8A88F':'var(--candle)'}">${r.points>=0?'+':''}${r.points}</span>`;
-  else if(r.kind==="title") desc=`<b>${r.target}</b> → <span style="font-style:italic;color:var(--sage)">"${r.label}"</span>`;
-  else if(r.kind==="badge") desc=`<b>${r.target}</b> earns badge &nbsp;<span style="color:${r.color||badgeColor(r.label)}">✦ ${r.label}</span>`;
-  else if(r.kind==="offer") desc=`<b>${r.target}</b> is offered to the Eye &nbsp;<span style="color:#E8A88F">▲ Offering Robe</span>`;
-  else if(r.kind==="oath") desc=`<b>${r.target}</b> seeks to be sworn &nbsp;<span style="color:var(--sage)">— Rite of Passage</span>`;
+  const _t=esc(r.target), _l=esc(r.label);
+  if(r.kind==="deed") desc=`<b>${_t}</b> &nbsp;<span style="color:${r.points<0?'#E8A88F':'var(--candle)'}">${r.points>=0?'+':''}${r.points}</span> — ${_l}`;
+  else if(r.kind==="newdeed") desc=`New deed · <b>${_l}</b> <span style="color:${r.points<0?'#E8A88F':'var(--candle)'}">${r.points>=0?'+':''}${r.points}</span>`;
+  else if(r.kind==="title") desc=`<b>${_t}</b> → <span style="font-style:italic;color:var(--sage)">"${_l}"</span>`;
+  else if(r.kind==="badge") desc=`<b>${_t}</b> earns badge &nbsp;<span style="color:${r.color||badgeColor(r.label)}">✦ ${_l}</span>`;
+  else if(r.kind==="offer") desc=`<b>${_t}</b> is offered to the Eye &nbsp;<span style="color:#E8A88F">▲ Offering Robe</span>`;
+  else if(r.kind==="oath") desc=`<b>${_t}</b> seeks to be sworn &nbsp;<span style="color:var(--sage)">— Rite of Passage</span>`;
   const isOath=r.kind==="oath";
   const countLbl = isOath ? `${Math.max(0,n-1)} / 3 witnesses` : `${n} / ${thr} ✦`;
   const voted = hasVotedHere(r.id) || (VOTER && (r.approvers||[]).includes(VOTER));
@@ -3662,7 +3675,7 @@ function riteCard(r){
   const keeperRmBtn = keeperUnlocked ? `<button class="rwithdraw" style="background:rgba(150,40,40,.18);border-color:rgba(210,80,70,.6);color:#F0A090" onclick="keeperRemoveRite('${r.id}')">✕ Remove</button>` : "";
   return `<div class="ritecard">
     <div class="rbody"><div class="rdesc">${desc}</div>
-      <div class="rmeta">${countLbl} &nbsp; <span class="rby">by ${r.nominator} · ${left}</span></div></div>
+      <div class="rmeta">${countLbl} &nbsp; <span class="rby">by ${esc(r.nominator)} · ${left}</span></div></div>
     <div class="rbtns">${approveBtn}${withdrawBtn}${keeperRmBtn}</div>
   </div>`;
 }
@@ -3725,7 +3738,7 @@ window.keeperRemoveRite=async function(id){
   if(!confirm("Remove this rite entirely? This cannot be undone.")) return;
   if(MODE==="remote"){
     try{ await sbRpc("grove_remove_rite",{p_id:id,p_pass:SESSION_PASS||""}); await refreshRemote(); }
-    catch(e){ if(isNetErr(e)){ withdrawLocal(id); cacheRemote(); enqueueOp("grove_remove_rite",{p_id:id,p_pass:SESSION_PASS||""}); toast("No signal — removal saved."); } else { let msg="Could not remove the rite."; try{ const j=JSON.parse(e.message); if(j&&j.message) msg=j.message; }catch(_){ if(e&&e.message) msg=e.message; } toast(msg); return; } }
+    catch(e){ if(isNetErr(e)){ withdrawLocal(id); cacheRemote(); enqueueOp("grove_remove_rite",{p_id:id}); toast("No signal — removal saved."); } else { let msg="Could not remove the rite."; try{ const j=JSON.parse(e.message); if(j&&j.message) msg=j.message; }catch(_){ if(e&&e.message) msg=e.message; } toast(msg); return; } }
   } else { withdrawLocal(id); await saveData(); }
   renderRites(); layoutGrove(); renderLedger(); try{ syncOffering(); }catch(e){}
   toast("The rite is struck from the grove.");
@@ -3774,7 +3787,7 @@ function oathGateHTML(name){
   const wit = pend? Math.max(0,(pend.approvers||[]).length-1) : 0;
   const tenets=TENETS.map(t=>`<div class="rulerow"><span>${t}</span></div>`).join("");
   return `<div class="ritehdr">Rite of Passage</div>
-    <p class="rtext" style="text-align:center;max-width:38ch;margin:0 auto 4px">You are not yet sworn, <b>${name}</b>. The Rites and Trials open only to the initiated. Agree to the tenets and gather <b>three witnesses</b> to attest your oath.</p>
+    <p class="rtext" style="text-align:center;max-width:38ch;margin:0 auto 4px">You are not yet sworn, <b>${esc(name)}</b>. The Rites and Trials open only to the initiated. Agree to the tenets and gather <b>three witnesses</b> to attest your oath.</p>
     <div class="ritehdr" style="margin-top:14px">The Tenets of the Order</div>${tenets}
     ${ pend
       ? `<p class="rtext" style="text-align:center;color:var(--candle);margin-top:14px">Your oath stands before the grove — <b>${wit}/3</b> witnesses have attested. Ask three sworn spirits to witness you from their Rites.</p>`
@@ -4050,7 +4063,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ak · Rank robes now follow a spirit's actual order, not raw points — so a Sage wears the Sage robe and a Luminary the starlit robe, never the Offering robe or a higher order's garb.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30al · Hardening pass — user text is HTML-escaped everywhere, rank auras survive custom rank counts, rank thresholds must strictly rise, migrations no longer clobber restored backups, and a clutch of small fixes (rank-up double-fire, ledger timestamps, polar skies, rank-name caps).</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4632,7 +4645,7 @@ window.spinTheWheel=async function(){
     if(typeof MODE!=='undefined' && MODE==='remote'){
       o=await sbRpc('grove_wheel',{p_name:VOTER});               // authoritative spin + apply
       if(o && o.denied){
-        if(o.reason==='cooldown'){} else if(o.reason==='funds'){ toast('You need 50 ✦ to be tested.'); }
+        if(o.reason==='cooldown'){} else if(o.reason==='funds'){ toast('You need 15 ✦ to be tested.'); }
         o=null;
       } else { try{ await refreshRemote(); }catch(e){} }
     } else {
@@ -5147,7 +5160,8 @@ let SKY_OVR=(function(){ try{ const v=localStorage.getItem('grove-sky'); return 
 function setSky(mode){ SKY_OVR=(mode==='day'||mode==='night')?mode:null; try{ if(SKY_OVR) localStorage.setItem('grove-sky',SKY_OVR); else localStorage.removeItem('grove-sky'); }catch(e){} try{ atmoUpdate(); }catch(e){} try{ renderLedger(); }catch(e){} }
 window.setSky=setSky;
 function skyPhase(){
-  const {sunrise,sunset}=sunTimes();
+  let {sunrise,sunset}=sunTimes();
+  if(!(sunset>sunrise)) sunset=sunrise+0.1;   // guard polar/degenerate days so isDay/frac never lock to night
   let h;
   if(SKY_OVR==='day'){ h=(sunrise+sunset)/2; }                                  // high noon
   else if(SKY_OVR==='night'){ const len=(24-sunset)+sunrise; h=(((sunset+len/2)%24)+24)%24; }  // dead of night

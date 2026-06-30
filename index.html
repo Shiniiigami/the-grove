@@ -1580,11 +1580,18 @@ function drawChibiSprite(canvas,soul,scale,t,base,dpr){
   const cw=GW*px+padX*2, ch=GH*px+padTop+padBot;
   canvas.width=cw*dpr;canvas.height=ch*dpr;canvas.style.width=cw+"px";canvas.style.height=ch+"px";
   const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,cw,ch);
-  // Rank radiance: NO backdrop disc — the rank glow rides directly on the sprite via shadowBlur
-  // (below), so the figure itself blazes brighter with rank but there's no amber/dark disk behind
-  // it. per-rank intensity multiplier the Keeper can tune (1 = default).
+  // Rank bloom: a soft CIRCULAR tier-coloured glow that fades fully within the sprite bounds
+  // — filled as a disc, not the whole canvas rect, so there's no boxy edge. Both the radius
+  // and the opacity grow with rank, so the higher ranks read as genuinely more radiant.
+  // per-rank intensity multiplier the Keeper can tune (1 = default). Soft bloom only — no ring.
   const aI=auraScaleFor(soul.ti);
-  ctx.save();ctx.shadowColor=base;ctx.shadowBlur=glowR*flick*0.95*aI;
+  const _cx=cw/2,_cy=ch*0.46, _R=Math.min(cw,ch)*(0.30+tn*0.22)*(0.62+0.38*aI);
+  const g=ctx.createRadialGradient(_cx,_cy,2,_cx,_cy,_R);
+  g.addColorStop(0,hexA(base,(0.06+tnE*0.52)*aI));
+  g.addColorStop(0.5,hexA(base,(0.02+tnE*0.20)*aI));
+  g.addColorStop(1,"transparent");
+  ctx.save(); ctx.beginPath(); ctx.arc(_cx,_cy,_R,0,6.28); ctx.fillStyle=g; ctx.fill(); ctx.restore();
+  ctx.save();ctx.shadowColor=base;ctx.shadowBlur=glowR*flick*0.75*aI;
   drawChibi(ctx,f,px,padX,padTop,soul.ti,tiers().length,(typeof moodExpr==='function'?moodExpr(soul.name):'neutral'));
   ctx.restore();
 }
@@ -1967,7 +1974,6 @@ function openSoul(name){
     ${thoughtSection}
     ${chSection}
     ${editBtn}
-    <div id="cardThemeRow" style="display:flex;gap:6px;justify-content:center;align-items:center;margin-top:10px;flex-wrap:wrap"><span style="font-family:'Silkscreen',monospace;font-size:8px;letter-spacing:.1em;color:var(--sage);opacity:.7;margin-right:2px">CARD</span>${Object.keys(CARD_THEMES).map(t=>`<button class="lsort ${cardTheme()===t?'on':''}" data-t="${t}" onclick="setCardTheme('${t}')">${CARD_THEMES[t].label}</button>`).join('')}</div>
     <button class="ghostbtn" style="margin-top:8px" onclick="shareSpirit('${m.name.replace(/'/g,"\\'")}')">⤓ Share this spirit</button>
     <button class="closebtn" onclick="closeSheet()">Return to the grove</button>`;
   scrim.classList.add("show");
@@ -3582,70 +3588,70 @@ window.shareSpirit=async function(name){
     const rr=(c,X,Y,w,h,r)=>{ r=Math.min(r,h/2,w/2); c.beginPath(); c.moveTo(X+r,Y); c.arcTo(X+w,Y,X+w,Y+h,r); c.arcTo(X+w,Y+h,X,Y+h,r); c.arcTo(X,Y+h,X,Y,r); c.arcTo(X,Y,X+w,Y,r); c.closePath(); };
     // ---- measure pass: wrap badges into pill rows ----
     const meas=document.createElement("canvas").getContext("2d");
-    meas.font="600 12px Silkscreen, monospace";
-    const PAD=11, GAP=7, PILLH=26, maxRow=W-M*2;
+    meas.font="600 11px Silkscreen, monospace";
+    const PAD=10, GAP=6, PILLH=24, maxRow=W-M*2;
     const pills=badges.map(b=>({b, w:meas.measureText('✦ '+b).width+PAD*2}));
     const rows=[]; let cur=[], cw=0;
     pills.forEach(p=>{ const add=(cur.length?GAP:0)+p.w; if(cw+add>maxRow && cur.length){ rows.push(cur); cur=[]; cw=0; } cur.push(p); cw+=(cur.length>1?GAP:0)+p.w; });
     if(cur.length) rows.push(cur);
-    const badgeBlockH = badges.length ? (28 + rows.length*(PILLH+GAP)) : 0;
-    const RH=36, SECHEAD=46;                    // row height, section-heading block (roomier)
+    const badgeBlockH = badges.length ? (24 + rows.length*(PILLH+GAP)) : 0;
+    const RH=32, SECHEAD=40;                    // row height, section-heading block
     const deedBlockH = deedShown.length ? (SECHEAD + deedShown.length*RH) : 0;
     const cwBlockH   = cwShown.length   ? (SECHEAD + cwShown.length*RH)   : 0;
     // ---- total height: header/identity block runs to the bottom of the point boxes,
     // then each section adds exactly its own height, so the footer always sits just below
     // the final row — never overlapping it. ----
-    const topH = m.epithet?492:472;
+    const topH = m.epithet?384:368;
     const H = topH + badgeBlockH + deedBlockH + cwBlockH + 44;
     const cv=document.createElement("canvas"); const DPR=2; cv.width=W*DPR; cv.height=H*DPR;
     const x=cv.getContext("2d"); x.scale(DPR,DPR);
     const _th=CARD_THEMES[cardTheme()]||CARD_THEMES.night; const g=x.createLinearGradient(0,0,0,H); g.addColorStop(0,_th.bg0); g.addColorStop(1,_th.bg1);
     x.fillStyle=g; x.fillRect(0,0,W,H);
     const gx=W/2;
-    // tier-tinted glow halo behind the chibi
-    const rg=x.createRadialGradient(gx,168,8,gx,168,190);
+    // tier-tinted glow halo behind the chibi (recentred for the smaller, true-size chibi)
+    const rg=x.createRadialGradient(gx,128,8,gx,128,150);
     rg.addColorStop(0, hexA(tier.hex,.30)); rg.addColorStop(1, hexA(tier.hex,0));
-    x.fillStyle=rg; x.fillRect(0,40,W,300);
+    x.fillStyle=rg; x.fillRect(0,24,W,220);
     x.textAlign="center";
-    x.fillStyle="#7E8C82"; x.font="11px Silkscreen, monospace"; x.fillText("ORDER OF THE EYE", gx, 38);
-    // chibi — drawSoul sizes its own canvas; draw it into a fixed square box, the hero of the card
-    try{ const soul=buildSoul(m.name,m.points,m.sprite); const sc=document.createElement("canvas"); drawSoul(sc,soul,8,0); const box=210; x.drawImage(sc, gx-box/2, 56, box, box); }catch(e){}
-    let y=322;
-    x.fillStyle="#EFE7D6"; x.font="700 36px Cinzel, serif"; x.fillText(m.name, gx, y); y+=8;
-    if(m.epithet){ y+=20; x.fillStyle="#9DB0A4"; x.font="italic 17px Spectral, Georgia, serif"; x.fillText('"'+m.epithet+'"', gx, y); }
+    x.fillStyle="#7E8C82"; x.font="10px Silkscreen, monospace"; x.fillText("ORDER OF THE EYE", gx, 32);
+    // chibi at its true soul-card size (168px tall, natural aspect — never stretched), the hero of the card
+    try{ const soul=buildSoul(m.name,m.points,m.sprite); const sc=document.createElement("canvas"); drawSoul(sc,soul,8,0); const dh=168, dw=Math.round(dh*(sc.width/sc.height)); x.drawImage(sc, gx-dw/2, 44, dw, dh); }catch(e){}
+    let y=258;
+    x.fillStyle="#EFE7D6"; x.font="700 30px Cinzel, serif"; x.fillText(m.name, gx, y); y+=6;
+    if(m.epithet){ y+=16; x.fillStyle="#9DB0A4"; x.font="italic 15px Spectral, Georgia, serif"; x.fillText('"'+m.epithet+'"', gx, y); }
     // rank pill
-    y+=34; x.font="13px Silkscreen, monospace"; let rkt=tier.name.toUpperCase(); while(rkt.length>4 && x.measureText(rkt).width+30>W-M*2){ rkt=rkt.slice(0,-1); } const rkw=x.measureText(rkt).width+30;
-    x.fillStyle=hexA(tier.hex,.14); rr(x,gx-rkw/2,y-19,rkw,26,8); x.fill(); x.strokeStyle=hexA(tier.hex,.55); x.lineWidth=1.4; rr(x,gx-rkw/2,y-19,rkw,26,8); x.stroke();
+    y+=28; x.font="12px Silkscreen, monospace"; let rkt=tier.name.toUpperCase(); while(rkt.length>4 && x.measureText(rkt).width+28>W-M*2){ rkt=rkt.slice(0,-1); } const rkw=x.measureText(rkt).width+28;
+    x.fillStyle=hexA(tier.hex,.14); rr(x,gx-rkw/2,y-17,rkw,23,7); x.fill(); x.strokeStyle=hexA(tier.hex,.55); x.lineWidth=1.3; rr(x,gx-rkw/2,y-17,rkw,23,7); x.stroke();
     x.fillStyle=tier.hex||"#E8C45A"; x.fillText(rkt, gx, y-1);
     // two point boxes, like the card
-    y+=22; const bw=(W-M*2-14)/2, bh=66;
-    x.fillStyle="rgba(242,196,90,.08)"; rr(x,M,y,bw,bh,9); x.fill(); x.strokeStyle="rgba(242,196,90,.25)"; x.lineWidth=1; rr(x,M,y,bw,bh,9); x.stroke();
-    x.fillStyle="rgba(143,168,155,.08)"; rr(x,M+bw+14,y,bw,bh,9); x.fill(); x.strokeStyle="rgba(143,168,155,.25)"; rr(x,M+bw+14,y,bw,bh,9); x.stroke();
-    x.font="700 13px Silkscreen, monospace"; x.fillStyle="#F2C45A"; x.fillText(String(m.season||0), M+bw/2, y+26);
-    x.fillStyle="#ECE3CC"; x.fillText(String(m.points), M+bw+14+bw/2, y+26);
-    x.font="9px Silkscreen, monospace"; x.fillStyle="#8FA89B"; x.fillText("✦ THIS SEASON", M+bw/2, y+50); x.fillText("✦ LIFETIME", M+bw+14+bw/2, y+50);
+    y+=20; const bw=(W-M*2-14)/2, bh=56;
+    x.fillStyle="rgba(242,196,90,.08)"; rr(x,M,y,bw,bh,8); x.fill(); x.strokeStyle="rgba(242,196,90,.25)"; x.lineWidth=1; rr(x,M,y,bw,bh,8); x.stroke();
+    x.fillStyle="rgba(143,168,155,.08)"; rr(x,M+bw+14,y,bw,bh,8); x.fill(); x.strokeStyle="rgba(143,168,155,.25)"; rr(x,M+bw+14,y,bw,bh,8); x.stroke();
+    x.font="700 12px Silkscreen, monospace"; x.fillStyle="#F2C45A"; x.fillText(String(m.season||0), M+bw/2, y+23);
+    x.fillStyle="#ECE3CC"; x.fillText(String(m.points), M+bw+14+bw/2, y+23);
+    x.font="8px Silkscreen, monospace"; x.fillStyle="#8FA89B"; x.fillText("✦ THIS SEASON", M+bw/2, y+43); x.fillText("✦ LIFETIME", M+bw+14+bw/2, y+43);
     y+=bh;
     // badges as colored pills
     if(badges.length){
-      y+=26;
+      y+=22;
       rows.forEach(rowPills=>{
         const rowW=rowPills.reduce((s,p)=>s+p.w,0)+GAP*(rowPills.length-1);
         let px=gx-rowW/2;
         rowPills.forEach(p=>{ const c=(typeof badgeColor==='function')?badgeColor(p.b):"#CBB89A";
-          x.fillStyle=hexA(c,.13); rr(x,px,y-19,p.w,PILLH,8); x.fill(); x.strokeStyle=hexA(c,.55); x.lineWidth=1; rr(x,px,y-19,p.w,PILLH,8); x.stroke();
-          x.fillStyle=c; x.font="600 12px Silkscreen, monospace"; x.textAlign="left"; x.fillText('✦ '+p.b, px+PAD, y-1); x.textAlign="center";
+          x.fillStyle=hexA(c,.13); rr(x,px,y-17,p.w,PILLH,7); x.fill(); x.strokeStyle=hexA(c,.55); x.lineWidth=1; rr(x,px,y-17,p.w,PILLH,7); x.stroke();
+          x.fillStyle=c; x.font="600 11px Silkscreen, monospace"; x.textAlign="left"; x.fillText('✦ '+p.b, px+PAD, y-1); x.textAlign="center";
           px+=p.w+GAP; });
         y+=PILLH+GAP;
       });
       y+=2;
     }
     const drawRow=(label,val)=>{ y+=RH; x.textAlign="left";
-      if(val===null){ x.fillStyle="#7E8C82"; x.font="italic 14px Spectral, Georgia, serif"; x.fillText(label, M, y); x.textAlign="center"; return; }
-      x.fillStyle="#D8CDB2"; x.font="16px Spectral, Georgia, serif"; let lab=label; while(x.measureText(lab).width>W-M*2-86 && lab.length>4){ lab=lab.slice(0,-2); } x.fillText(lab + (lab!==label?'…':''), M, y); x.textAlign="right"; x.fillStyle=(val<0)?"#E8A88F":(val>0?"#F2C45A":"#9DB0A4"); x.font="700 16px Silkscreen, monospace"; x.fillText((val>0?'+':'')+val, W-M, y); x.textAlign="center"; };
-    const section=(title,items)=>{ if(!items.length) return; y+=34; x.fillStyle="#9DB0A4"; x.font="11px Silkscreen, monospace"; x.textAlign="left"; x.fillText(title, M, y); x.textAlign="center"; x.strokeStyle="rgba(38,53,44,.9)"; x.lineWidth=1; x.beginPath(); x.moveTo(M,y+8); x.lineTo(W-M,y+8); x.stroke(); y+=10; items.forEach(it=>drawRow(it.label,it.val)); };
+      if(val===null){ x.fillStyle="#7E8C82"; x.font="italic 13px Spectral, Georgia, serif"; x.fillText(label, M, y); x.textAlign="center"; return; }
+      x.fillStyle="#D8CDB2"; x.font="14px Spectral, Georgia, serif"; let lab=label; while(x.measureText(lab).width>W-M*2-86 && lab.length>4){ lab=lab.slice(0,-2); } x.fillText(lab + (lab!==label?'…':''), M, y); x.textAlign="right"; x.fillStyle=(val<0)?"#E8A88F":(val>0?"#F2C45A":"#9DB0A4"); x.font="700 14px Silkscreen, monospace"; x.fillText((val>0?'+':'')+val, W-M, y); x.textAlign="center"; };
+    const section=(title,items)=>{ if(!items.length) return; y+=30; x.fillStyle="#9DB0A4"; x.font="10px Silkscreen, monospace"; x.textAlign="left"; x.fillText(title, M, y); x.textAlign="center"; x.strokeStyle="rgba(38,53,44,.9)"; x.lineWidth=1; x.beginPath(); x.moveTo(M,y+8); x.lineTo(W-M,y+8); x.stroke(); y+=10; items.forEach(it=>drawRow(it.label,it.val)); };
     section("LEDGER OF DEEDS", deedShown);
     section("CHALLENGES & WAGERS", cwShown);
-    x.fillStyle="#5E6F6B"; x.font="10px Silkscreen, monospace"; x.textAlign="center"; x.fillText("the Eye remembers · "+new Date().toLocaleDateString(), gx, H-18);
+    x.fillStyle="#5E6F6B"; x.font="9px Silkscreen, monospace"; x.textAlign="center"; x.fillText("the Eye remembers · "+new Date().toLocaleDateString(), gx, H-16);
     const blob=await new Promise(res=>cv.toBlob(res,"image/png"));
     const file=new File([blob],("grove-"+m.name+".png").replace(/\s+/g,"-"),{type:"image/png"});
     if(navigator.canShare && navigator.canShare({files:[file]})){
@@ -4171,7 +4177,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30as · Boundary-test pass — malformed saved data can no longer brick the boot (every field is sanitised on load), the last free-text fields are clamped against injection, the Trial of the Chalice now seats at most 3 spirits per phone, and the amber disk behind the soul portrait is gone (the rank glow now rides the figure itself).</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30at · Shareable spirit image reworked — the chibi now matches its true soul-card size and proportions (no more stretched square) and everything around it is scaled down to suit. The card-theme picker was removed from the soul card.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

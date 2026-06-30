@@ -3268,6 +3268,28 @@ function renderIdentityBar(){
 let NOSIGN = 1, PDSIGN = 1;
 let NOM_TARGETS = new Set();
 function votesForPoints(p){ p=Math.abs(p); if(p<=20)return 3; if(p<=49)return 4; if(p<=69)return 5; if(p<=100)return 6; if(p<=150)return 7; return 8; }
+/* ---- the Eye keeps a clean tongue: reject profanity / slurs in anything the grove inscribes ---- */
+// Whole-word list (matched as standalone tokens, with common suffixes). Word-boundary matching keeps
+// "class", "bass", "cockpit", "specific" etc. safe (the "Scunthorpe problem").
+const PROFANITY=['fuck','shit','bitch','cunt','dick','cock','pussy','asshole','ass','arse','bastard','slut','whore','fag','faggot','nigger','nigga','retard','retarded','rape','rapist','spic','chink','kike','wetback','tranny','jizz','wank','wanker','twat','prick','bollocks','douche','dildo','gook','paki','beaner'];
+// Anchored spaced-evasion list — catches "f u c k", "f.u.c.k" without matching inside real words.
+const PROFANITY_SPACED=['fuck','shit','cunt','bitch','faggot','nigger','nigga','rapist','kike','tranny','whore','asshole'];
+// Substring list — roots that never occur inside ordinary English, so safe to catch when glued
+// ("fuckface", "motherfucker"). Deliberately excludes shit/cunt/rapist/etc. (therapist, Scunthorpe…).
+const PROFANITY_SUBSTR=['fuck','faggot','nigger','nigga','kike','wetback','tranny','beaner'];
+function deLeet(s){ return String(s==null?'':s).toLowerCase().replace(/[@4]/g,'a').replace(/0/g,'o').replace(/[1!|]/g,'i').replace(/3/g,'e').replace(/[5$]/g,'s').replace(/7/g,'t').replace(/8/g,'b'); }
+function profanityHit(text){
+  const t=deLeet(text);
+  const tokens=t.split(/[^a-z]+/).filter(Boolean);
+  for(const w of PROFANITY){ const re=new RegExp('^'+w+'(s|es|ed|er|ers|ing|in|y|z|a|hole|head|wad|ish)?$'); if(tokens.some(tok=>re.test(tok))) return w; }
+  const spacey=t.replace(/[^a-z]+/g,' ').trim();
+  for(const w of PROFANITY_SPACED){ const sep=w.split('').join('[ ]?'); if(new RegExp('(^| )'+sep+'( |$)').test(spacey)) return w; }
+  const glued=t.replace(/[^a-z]/g,'');
+  for(const w of PROFANITY_SUBSTR){ if(glued.includes(w)) return w; }
+  return null;
+}
+// returns "" if clean, else an error message naming the offence
+function profanityError(text){ const hit=profanityHit(text); return hit ? 'The Eye keeps a civil tongue — drop the language and try again.' : ''; }
 window.toggleNomTarget=function(name,btn){ if(NOM_TARGETS.has(name)){NOM_TARGETS.delete(name);btn.classList.remove('on');} else {NOM_TARGETS.add(name);btn.classList.add('on');} };
 function proposeLocal(it){ MEM.rites=MEM.rites||[]; it.id=it.id||("r"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36)); it.approvers=[it.nominator]; it.applied=false; it.created=Date.now()/1000; MEM.rites.push(it); if(it.approvers.length>=it.threshold){ applyRiteEffect(it); it.applied=true; } }
 function withdrawLocal(id){ MEM.rites=(MEM.rites||[]).filter(x=>x.id!==id); }
@@ -3328,7 +3350,8 @@ function riteCard(r){
   const isOath=r.kind==="oath";
   const countLbl = isOath ? `${Math.max(0,n-1)} / 3 witnesses` : `${n} / ${thr} ✦`;
   const voted = hasVotedHere(r.id) || (VOTER && (r.approvers||[]).includes(VOTER));
-  const canWithdraw = VOTER && r.nominator===VOTER && !r.applied && (n*2 < thr) && ['deed','title','badge','offer'].includes(r.kind);
+  const fresh = (Date.now()/1000 - (r.created||0)) < 60;   // 60s grace: the nominator can always pull a misfire
+  const canWithdraw = VOTER && r.nominator===VOTER && !r.applied && (fresh || (n*2 < thr)) && ['deed','title','badge','offer'].includes(r.kind);
   const approveBtn = `<button class="rapprove ${voted?"voted":""}" ${voted?"disabled":""} onclick="approveRite('${r.id}')">${voted?(isOath?"✓ Witnessed":"✓ Approved"):(isOath?"Witness":"Approve")}</button>`;
   const withdrawBtn = canWithdraw ? `<button class="rwithdraw" onclick="withdrawRite('${r.id}')">Withdraw</button>` : "";
   const keeperRmBtn = keeperUnlocked ? `<button class="rwithdraw" style="background:rgba(150,40,40,.18);border-color:rgba(210,80,70,.6);color:#F0A090" onclick="keeperRemoveRite('${r.id}')">✕ Remove</button>` : "";
@@ -3380,9 +3403,10 @@ window.withdrawRite=async function(id){
   const r=(MEM.rites||[]).find(x=>x.id===id); if(!r) return;
   if(r.nominator!==VOTER){ toast("Only the one who raised it can withdraw it."); return; }
   const n=(r.approvers||[]).length, thr=r.threshold||5;
+  const fresh = (Date.now()/1000 - (r.created||0)) < 60;   // 60s grace window for misfires
   if(r.applied){ toast("It has already passed."); return; }
-  if(n*2>=thr){ toast("Too many have approved — it can no longer be withdrawn."); return; }
-  if(!confirm("Withdraw this rite? It will be taken back before the Eye.")) return;
+  if(!fresh && n*2>=thr){ toast("Too many have approved — it can no longer be withdrawn."); return; }
+  if(!confirm(fresh ? "Pull this nomination back? (within the 60-second grace)" : "Withdraw this rite? It will be taken back before the Eye.")) return;
   if(MODE==="remote"){
     try{ await sbRpc("grove_withdraw",{p_id:id,p_who:VOTER}); await refreshRemote(); }
     catch(e){ if(isNetErr(e)){ withdrawLocal(id); cacheRemote(); enqueueOp("grove_withdraw",{p_id:id,p_who:VOTER}); toast("No signal — withdrawal saved."); } else { let msg="Could not withdraw."; try{ const j=JSON.parse(e.message); if(j&&j.message) msg=j.message; }catch(_){ if(e&&e.message) msg=e.message; } toast(msg); return; } }
@@ -3466,6 +3490,7 @@ window.nominateDeedForm=function(){
     <div class="kpanel">
       <h3>Nominate a Deed</h3>
       <p class="sub">Name the deed, pick one or more members, and set the Devotion Points. A reason is required. Bigger awards need more approvals — max ±200.</p>
+      <p class="sub" style="font-style:italic;color:var(--candle)">The Eye rewards the worthy and remembers the rest — name the deed plainly, for embellishment offends it.</p>
       <div class="crlabel">Members · tap to include</div>
       <div class="seg" style="flex-wrap:wrap">${memBtns}</div>
       <div class="field" style="margin-top:10px"><label>Reason · required</label><input id="noReason" oninput="clearPresetHL()" placeholder="e.g. Saved the campfire"></div>
@@ -3497,6 +3522,7 @@ window.submitNomDeed=function(){
   if(!targets.length){ document.getElementById("kerr").textContent="Pick at least one member."; return; }
   const label=document.getElementById("noReason").value.trim();
   if(!label){ document.getElementById("kerr").textContent="A deed needs a reason."; return; }
+  { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
   let mag=parseInt(document.getElementById("noPts").value,10);
   if(isNaN(mag)||mag===0){ document.getElementById("kerr").textContent="Enter a Devotion Points value."; return; }
   mag=Math.min(200,Math.abs(mag));
@@ -3532,6 +3558,7 @@ window.submitPropDeed=function(){
   const label=document.getElementById("pdName").value.trim();
   let mag=parseInt(document.getElementById("pdPts").value,10);
   if(!label){ document.getElementById("kerr").textContent="Name the deed."; return; }
+  { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
   if(isNaN(mag)||mag===0){ document.getElementById("kerr").textContent="Enter a Devotion Points value."; return; }
   let pts=Math.abs(mag)*PDSIGN;
   pts=Math.max(-50,Math.min(100,pts));
@@ -3545,6 +3572,7 @@ window.nominateTitleForm=function(){
     <div class="kpanel">
       <h3>Nominate a Title</h3>
       <p class="sub">Bestow an epithet — ✦ Returned, The Pathfinder, Keeper of the Flame. Needs 10 approvals.</p>
+      <p class="sub" style="font-style:italic;color:var(--candle)">An epithet outlives the night it was earned. Make it sing, not sting — the Eye favours wit over venom.</p>
       <div class="field"><label>Member</label><select id="ntTarget">${opts}</select></div>
       <div class="field"><label>Title</label><input id="ntTitle" placeholder="e.g. The Pathfinder"></div>
       <button class="gold" onclick="submitNomTitle()">Raise nomination</button>
@@ -3557,6 +3585,7 @@ window.submitNomTitle=function(){
   const target=document.getElementById("ntTarget").value;
   const label=document.getElementById("ntTitle").value.trim();
   if(!label){ document.getElementById("kerr").textContent="Enter a title."; return; }
+  { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
   proposeRite({kind:"title",target,label,threshold:10,nominator:VOTER});
 };
 const DEFAULT_BADGE_IDEAS=["The Unburnt","Pathfinder","Iron Liver","Keeper of the Flame","The Shepherd","The Wraith","The Phoenix","Owl of the Eye","Beast of Burden","Jam Boy","The Anointed","Last of the Faithful"];
@@ -3593,6 +3622,7 @@ window.nominateBadgeForm=function(){
     <div class="kpanel">
       <h3>Nominate a Badge</h3>
       <p class="sub">A collectible mark of honour — members can hold many. Needs 7 approvals.</p>
+      <p class="sub" style="font-style:italic;color:var(--candle)">A badge is a small legend pinned to a soul. Earn the Eye's nod — clever travels further than cruel.</p>
       <div class="field"><label>Member</label><select id="nbTarget">${opts}</select></div>
       <div class="field"><label>Badge</label><input id="nbBadge" oninput="clearChipsHL('nbChips')" placeholder="e.g. Polar Bear"></div>
       <div class="quick" id="nbChips">${chips}</div>
@@ -3607,6 +3637,7 @@ window.submitNomBadge=function(){
   const target=document.getElementById("nbTarget").value;
   const label=document.getElementById("nbBadge").value.trim();
   if(!label){ document.getElementById("kerr").textContent="Name the badge."; return; }
+  { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
   const color=NOM_BADGE_COL;
   if(color){ setLocalBadgeColor(label,color); }
   proposeRite({kind:"badge",target,label,color,threshold:7,nominator:VOTER});
@@ -5365,16 +5396,29 @@ function startPoll(){ if(POLL) return; POLL=setInterval(async()=>{
     try{ toast('The circle dissolved \u2014 no trial began within 15 minutes.'); }catch(e){}
     return;
   }
-  if(g&&g.status==='playing'&&(g.nominee===me()||controls(g.nominee))){
-    if(g.phase==='dare' && g.dare && g.deadline && nowS()>g.deadline){ resolveDareFail(clone(g), g.dare.who+'\u2019s ritual time ran out \u2014 the Chalice curses them (\u221250).'); return; }
-    const drawerAway=(g.phase==='draw') && isAway(g, g.spirits[g.turn]);
-    const cardSlow=!!(g.current && CR[g.current.ri] && CR[g.current.ri].slow);
-    const playPhase=(g.phase==='draw'||g.phase==='resolve'||g.phase==='confirm');
-    const timedOut=playPhase && !!g.deadline && nowS()>g.deadline && !cardSlow;
-    if(drawerAway||timedOut){
-      const n=clone(g); feedPush(n, drawerAway?'An absent spirit\u2019s turn is skipped.':(n.spirits[n.turn]+'\u2019s turn ran out \u2014 skipped.')); n.current=null;
-      if(advanceTurn(n)){ n.phase='draw'; setDeadline(n); send(n); return; }
-      else { endGameState(n,'No spirits remain in the circle.'); return; }
+  // ----- auto-advance / timeout janitor -----
+  // The old code let ONLY the nominee's device advance a timed-out turn, so if the host
+  // wasn't watching the trial stalled for hours. Now any present participant may advance a
+  // commit-free turn skip (concurrent skips are idempotent \u2014 same base state -> same next turn).
+  // Commit-bearing transitions (a failed dare, or ending when nobody is left) stay with a single
+  // deterministic actor \u2014 the device controlling the first present spirit \u2014 so a Devotion commit
+  // can never be applied twice by two devices racing.
+  if(g&&g.status==='playing'){
+    const live0=(g.spirits||[]).find(s=>!isAway(g,s));
+    const iAmJanitor=!!live0 && controls(live0);
+    const iCanAdvance=(g.nominee===me()||controls(g.nominee)) || (g.spirits||[]).some(s=>!isAway(g,s)&&controls(s));
+    if(g.phase==='dare' && g.dare && g.deadline && nowS()>g.deadline){
+      if(iAmJanitor){ resolveDareFail(clone(g), g.dare.who+'\u2019s ritual time ran out \u2014 the Chalice curses them (\u221250).'); return; }
+    } else if(iCanAdvance){
+      const drawerAway=(g.phase==='draw') && isAway(g, g.spirits[g.turn]);
+      const cardSlow=!!(g.current && CR[g.current.ri] && CR[g.current.ri].slow);
+      const playPhase=(g.phase==='draw'||g.phase==='resolve'||g.phase==='confirm');
+      const timedOut=playPhase && !!g.deadline && nowS()>g.deadline && !cardSlow;
+      if(drawerAway||timedOut){
+        const n=clone(g); feedPush(n, drawerAway?'An absent spirit\u2019s turn is skipped.':(n.spirits[n.turn]+'\u2019s turn ran out \u2014 skipped.')); n.current=null;
+        if(advanceTurn(n)){ n.phase='draw'; setDeadline(n); send(n); return; }
+        else if(iAmJanitor){ endGameState(n,'No spirits remain in the circle.'); return; }
+      }
     }
   }
   render();

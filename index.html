@@ -3770,7 +3770,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30m · new builds now auto-refresh on web & PWA (no stale version) · rules updated for recent changes · the Eye opens when the fourth King fills the Chalice · ranks shown in the Chalice circle · tap-to-report & tap-to-cast-out · the accused may vote on their own report/cast-out · no duplicate laws · Keeper-only milestone deeds · notifications open the right page · emoji thoughts fixed · challenge budget capped at 150</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30n · you can report any spirit, including your own (single-phone games) · new builds auto-refresh on web & PWA (no stale version) · rules updated for recent changes · the Eye opens when the fourth King fills the Chalice · ranks shown in the Chalice circle · tap-to-report & tap-to-cast-out · the accused may vote on their own report/cast-out · no duplicate laws · Keeper-only milestone deeds · notifications open the right page · emoji thoughts fixed · challenge budget capped at 150</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -5449,7 +5449,6 @@ function reportPick(name){
   if(!who){ toast('Pick your spirit first.'); REPORT_PICK=false; return; }
   const accused=(g.spirits||[]).find(s=>s===name);
   if(!accused || isAway(g,accused)){ toast('No such spirit in the trial.'); REPORT_PICK=false; render(); return; }
-  if(controls(accused)){ toast('You cannot report your own spirit.'); return; }
   const cd=(g.reportCd||{})[accused]||0; if(nowS()-cd<60){ toast('That spirit was just judged — let it rest a moment.'); return; }
   if((g.reports||[]).find(r=>r.accused===accused && reportLive(r))){ toast('A report already stands against '+accused+'.'); REPORT_PICK=false; render(); return; }
   const n=clone(g); n.reports=n.reports||[]; n.reports.push({id:'R'+nowS()+Math.floor(Math.random()*999), accused:accused, by:who, agrees:[who], t:nowS(), status:'open'});
@@ -5725,7 +5724,7 @@ function lawsStrip(g){
   const openR=(g.reports||[]).filter(reportLive);
   if(openR.length){ h+=openR.map(r=>{ const can=me()&&r.agrees.indexOf(me())<0; const left=Math.max(0,REPORT_SECS-(nowS()-(r.t||0))); return '<div class="chal-report">\u2696 '+r.by+' reports <b>'+r.accused+'</b> ('+r.agrees.length+'/'+thr(g.spirits.length)+' \u00b7 '+left+'s) '+(can?'<button onclick="chalAPI.agree(\''+r.id+'\')">Agree</button>':'')+'</div>'; }).join(''); }
   if(REPORT_PICK){
-    const targets=liveSpirits(g).filter(s=>!controls(s)&&!(g.reports||[]).find(r=>r.accused===s&&reportLive(r)));
+    const targets=liveSpirits(g).filter(s=>!(g.reports||[]).find(r=>r.accused===s&&reportLive(r)));
     h+='<div class="chal-kickpick"><div class="chal-lawhdr">Report whom? (half the circle must agree)</div><div class="chal-pills">';
     h+=targets.length?targets.map(s=>'<button class="chal-pill pick" onclick="chalAPI.reportPick(\''+chEsc(s).replace(/'/g,"\\'")+'\')">'+chEsc(s)+'</button>').join(''):'<span class="chal-pill away">no one to report</span>';
     h+='</div><button class="chal-mini ghost" onclick="chalAPI.report()">Cancel</button></div>';

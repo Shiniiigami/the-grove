@@ -1958,13 +1958,16 @@ function openSoul(name){
   else if(cwItems.length>5) myCh=`<div class="ledscroll cw">${cwItems.map(r=>r.html).join("")}</div><div class="ledhint">↕ scroll · ${cwItems.length} total, greatest first</div>`;
   else myCh=cwItems.map(r=>r.html).join("");
   const chSection = `<div class="hist"><h4>Challenges &amp; Wagers</h4>${myCh}</div>`;
-  const canEdit = (VOTER && VOTER===m.name) || keeperUnlocked;
   const mineSpirit = (typeof VOTER!=='undefined') && VOTER===m.name;
   const thoughtSection = mineSpirit ? thoughtComposerHTML(m)
     : (thoughtLive(m.thought) ? `<div class="hist"><h4>Thought${thoughtFadeLabel(m.thought)}</h4><div class="h"><em>${esc(m.thought.text)}</em></div></div>` : '');
-  const editBtn = canEdit
+  const editBtn = keeperUnlocked
     ? `<button class="ghostbtn" style="margin-top:10px" onclick="editMySpirit('${m.name.replace(/'/g,"\\'")}')">✦ Edit this spirit</button>`
-    : `<p class="hint" style="margin:10px 0 0;font-size:12px">Only ${m.name} may shape this spirit. <button class="idswitch" onclick="switchIdentity()">switch</button></p>`;
+    : mineSpirit
+      ? (isSworn(m.name)
+          ? `<button class="ghostbtn" style="margin-top:10px" onclick="editMySpirit('${m.name.replace(/'/g,"\\'")}')">✦ Edit this spirit</button>`
+          : `<p class="hint" style="margin:10px 0 0;font-size:12px">The unsworn wear the form they were given — take your oath before you may shape your spirit. <button class="idswitch" onclick="goToOath()">take the oath</button></p>`)
+      : `<p class="hint" style="margin:10px 0 0;font-size:12px">Only ${m.name} may shape this spirit. <button class="idswitch" onclick="switchIdentity()">switch</button></p>`;
   sheet.innerHTML=`
     <div class="grip"></div>
     <div class="soul">
@@ -2673,7 +2676,8 @@ function cloneChibi(m){
   return c;
 }
 window.creatorForm=function(){ CHIBI_SELF=false; const first=sortedMembers()[0].name; CHIBI_MEMBER=first; CHIBI_EDIT=cloneChibi(MEM.members.find(m=>m.name===first)); renderCreator(); };
-window.editMySpirit=function(name){ if(!((VOTER&&VOTER===name)||keeperUnlocked)){ toast(`Only ${name} may shape this spirit.`); return; } CHIBI_SELF=true; CHIBI_MEMBER=name; CHIBI_EDIT=cloneChibi(MEM.members.find(m=>m.name===name)); renderCreator(); };
+window.goToOath=function(){ try{ closeSheet(); }catch(e){} try{ const t=document.querySelector('.tab[data-view="rites"]'); if(t) t.click(); }catch(e){} };
+window.editMySpirit=function(name){ if(!((VOTER&&VOTER===name)||keeperUnlocked)){ toast(`Only ${name} may shape this spirit.`); return; } if(!keeperUnlocked && !isSworn(name)){ toast("Take your oath before you can shape your spirit — the unsworn wear the form they were given."); return; } CHIBI_SELF=true; CHIBI_MEMBER=name; CHIBI_EDIT=cloneChibi(MEM.members.find(m=>m.name===name)); renderCreator(); };
 window.chibiPick=function(name){ CHIBI_MEMBER=name; CHIBI_EDIT=cloneChibi(MEM.members.find(m=>m.name===name)); renderCreator(); };
 function crApply(k,v){
   const s=sheet.scrollTop, wasShrunk=s>58;
@@ -4235,7 +4239,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bg · Deeds now stack no matter how they're capitalised — "Kindled the Fire" and "kindled the fire" count as one, shown under the original spelling.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bh · A spirit can't reshape their character until they've taken the oath — the unsworn see a message and a shortcut to swear it. The Keeper can still edit anyone.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

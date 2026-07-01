@@ -772,7 +772,12 @@ function ritePush(item){ try{ if(!item) return; const m=riteMsg(item); grovePush
 /* ===== in-app pop-up when an offering is raised (seen by everyone but the nominator) ===== */
 let OFFER_SNAP=null;
 function offerIds(){ const s={}; (MEM.rites||[]).forEach(r=>{ if(r&&r.kind==='offer'&&!r.applied&&r.id) s[r.id]=1; }); return s; }
-const PUB_OFFER_COOL=3*3600;
+const PUB_OFFER_COOL=6*3600;            // only one offering may be raised every 6 hours
+const OFFER_RITE_TTL=30*60;            // an offering nomination sits before the grove for 30 minutes
+const OFFER_ROBE_SECS=3*3600;          // the offered wear the Offering Robe for 3 hours
+const OFFER_SAME_COOL=24*3600;         // the same spirit can't be offered twice within 24 hours
+// nominations expire after 3h, except the offering, which sits for 30 minutes
+function riteTTL(r){ return (r&&r.kind==='offer')?OFFER_RITE_TTL:3*3600; }
 function lastOfferRaise(){ let t=0; (MEM.rites||[]).forEach(r=>{ if(r&&r.kind==='offer'&&r.created&&r.created>t) t=r.created; }); return t; }
 function publicOfferCool(){ const now=Date.now()/1000; const base=lastOfferRaise(); const cleared=(typeof MEM!=='undefined'&&MEM&&MEM.offerGateClearedAt)||0; if(cleared>=base) return 0; const cd=PUB_OFFER_COOL-(now-base); return cd>0?cd:0; }
 function initOfferSnap(){ OFFER_SNAP=offerIds(); APPLIED_OFFER_SNAP=appliedOfferIds(); }
@@ -2118,7 +2123,7 @@ window.keeperOfferForm=function(){
     <div class="grip"></div>
     <div class="kpanel">
       <h3>The Offering</h3>
-      <p class="sub">Mark a spirit as The Offered — robed in the Offering Robe with a 30-minute mark on their soul card — or release them early. Max 3 at once.</p>
+      <p class="sub">Mark a spirit as The Offered — robed in the Offering Robe for 3 hours — or release them early. Max 3 at once.</p>
       <div class="field"><label>Spirit</label><select id="koTarget">${opts}</select></div>
       <div class="field"><label>Why are they worthy? · a citation the grove will remember</label><input id="koReason" maxlength="60" placeholder="e.g. carried three packs across the portage">${reshapeBtn('koReason','deed')}</div>
       <button class="gold" onclick="keeperSetOffer(true)">▲ Mark as Offered</button>
@@ -2142,7 +2147,7 @@ window.keeperSetOffer=async function(on){
     const wasOffered=m.offered && m.offered>now;
     m.unlocks=m.unlocks||[]; if(!m.unlocks.includes('robes')) m.unlocks.push('robes');
     const c=cloneChibi(m); if(!(m.offered&&m.offered>now)) m._preTop=c.top_style; c.top_style='robes'; m.sprite={chibi:c};
-    m.offered=now+30*60;
+    m.offered=now+OFFER_ROBE_SECS;
     m.badges=m.badges||[]; if(!m.badges.includes("Of the Eye")) m.badges.push("Of the Eye");
     if(!wasOffered){ m.points=(m.points||0)+150; m.season=(m.season||0)+150; m.history=m.history||[]; m.history.push({l:"Offered to the Eye",d:150,t:Date.now()/1000}); }
     // record the citation as an applied offer rite so it lands in the Chronicle, same as a communal offering
@@ -3780,8 +3785,8 @@ function renderRites(){
   const remote = MODE==="remote";
   const voterOpts = `<option value="">— pick your name —</option>`+
     (MEM.members||[]).map(m=>`<option value="${m.name}" ${VOTER===m.name?"selected":""}>${m.name}</option>`).join("");
-  const nowS=Date.now()/1000, TTL=3*3600;
-  const open = (MEM.rites||[]).filter(r=>!r.applied && (nowS-(r.created||nowS) < TTL));
+  const nowS=Date.now()/1000;
+  const open = (MEM.rites||[]).filter(r=>!r.applied && (nowS-(r.created||nowS) < riteTTL(r)));
   const cards = open.length ? open.map(riteCard).join("")
     : `<p class="hint" style="margin:16px 0">No open rites. Raise one below.</p>`;
   el.innerHTML=`
@@ -3800,7 +3805,7 @@ function renderRites(){
 }
 function riteCard(r){
   const n=(r.approvers||[]).length, thr=r.threshold||5;
-  const leftS = 3*3600 - (Date.now()/1000 - (r.created||Date.now()/1000));
+  const leftS = riteTTL(r) - (Date.now()/1000 - (r.created||Date.now()/1000));
   const h=Math.floor(leftS/3600), mn=Math.floor((leftS%3600)/60);
   const left = leftS>0 ? `${h}h ${mn}m left` : "expiring";
   let desc="";
@@ -3917,7 +3922,7 @@ function applyRiteEffect(r){
     const wasOffered=m.offered && m.offered>Date.now()/1000;
     m.unlocks=m.unlocks||[]; if(!m.unlocks.includes('robes')) m.unlocks.push('robes');
     const c=cloneChibi(m); c.top_style='robes'; m.sprite={chibi:c};
-    m.offered=Date.now()/1000 + 30*60;
+    m.offered=Date.now()/1000 + OFFER_ROBE_SECS;
     m.badges=m.badges||[]; if(!m.badges.includes("Of the Eye")) m.badges.push("Of the Eye");
     if(!wasOffered){ m.points=(m.points||0)+150; m.season=(m.season||0)+150; m.history=m.history||[]; m.history.push({l:"Offered to the Eye",d:150,t:Date.now()/1000}); const _nom=(r&&r.nominator&&r.nominator!==m.name)?memByName(r.nominator):null; if(_nom){ _nom.points=(_nom.points||0)+25; _nom.season=(_nom.season||0)+25; _nom.history=_nom.history||[]; _nom.history.push({l:"Named the offering",d:25,t:Date.now()/1000}); } }
   }
@@ -4141,8 +4146,10 @@ window.submitNomBadge=function(){
 window.nominateOfferForm=function(){
   if(!VOTER){ toast("Pick your name first."); return; }
   const _now2=Date.now()/1000;
-  const _pend={}; (MEM.rites||[]).forEach(r=>{ if(r&&r.kind==='offer'&&!r.applied&&(_now2-(r.created||_now2)<3*3600)&&r.target) _pend[r.target]=1; });
-  const opts=sortedMembers().map(m=>{ const _o=m.offered&&m.offered>_now2; const _p=_pend[m.name]; const _d=(_o||_p); return `<option ${_d?'disabled':''}>${m.name}${_o?' \u00b7 offered':(_p?' \u00b7 pending':'')}</option>`; }).join("");
+  const _pend={}; (MEM.rites||[]).forEach(r=>{ if(r&&r.kind==='offer'&&!r.applied&&(_now2-(r.created||_now2)<OFFER_RITE_TTL)&&r.target) _pend[r.target]=1; });
+  // a spirit offered within the last 24h can't be offered again
+  const _recent={}; (MEM.rites||[]).forEach(r=>{ if(r&&r.kind==='offer'&&r.applied&&r.target&&(_now2-(r.created||0)<OFFER_SAME_COOL)) _recent[r.target]=1; });
+  const opts=sortedMembers().map(m=>{ const _o=m.offered&&m.offered>_now2; const _p=_pend[m.name]; const _r=_recent[m.name]; const _d=(_o||_p||_r); return `<option ${_d?'disabled':''}>${m.name}${_o?' \u00b7 offered':(_p?' \u00b7 pending':(_r?' \u00b7 offered today':''))}</option>`; }).join("");
   const _meM=memByName(VOTER), _OC=12*3600, _nw=Date.now()/1000;
   const _cd=(_meM&&_meM.lastOffer&&(_meM.lastOffer+_OC)>_nw)?(_meM.lastOffer+_OC-_nw):0;
   const _hm=(x)=>{x=Math.max(0,x|0);const h=Math.floor(x/3600),m=Math.floor((x%3600)/60);return h?`${h}h ${m}m`:`${m}m`;};
@@ -4177,10 +4184,11 @@ window.submitNomOffer=function(){
   const now=Date.now()/1000;
   const _tm=memByName(target);
   if(_tm && _tm.offered && _tm.offered>now){ document.getElementById("kerr").textContent=`${target} already stands offered to the Eye — none may be offered twice.`; return; }
-  if((MEM.rites||[]).some(r=>r.kind==='offer' && !r.applied && (now-(r.created||now)<3*3600) && r.target===target)){ document.getElementById("kerr").textContent=`${target} is already before the Eye — wait for that offering to be judged.`; return; }
+  if((MEM.rites||[]).some(r=>r.kind==='offer' && r.applied && r.target===target && (now-(r.created||0) < OFFER_SAME_COOL))){ document.getElementById("kerr").textContent=`${target} was offered within the last day — the same offering can't be made twice in 24 hours.`; return; }
+  if((MEM.rites||[]).some(r=>r.kind==='offer' && !r.applied && (now-(r.created||now)<OFFER_RITE_TTL) && r.target===target)){ document.getElementById("kerr").textContent=`${target} is already before the Eye — wait for that offering to be judged.`; return; }
   const active=(MEM.members||[]).filter(x=>x.offered&&x.offered>now&&x.name!==target).length;
   if(active>=3){ document.getElementById("kerr").textContent="Three spirits are already offered — the Eye is full. Wait for one to fade."; return; }
-  const pending=(MEM.rites||[]).filter(r=>r.kind==='offer' && !r.applied && (now-(r.created||now) < 3*3600));
+  const pending=(MEM.rites||[]).filter(r=>r.kind==='offer' && !r.applied && (now-(r.created||now) < OFFER_RITE_TTL));
   if(pending.length>=3){ document.getElementById("kerr").textContent="Three offerings already stand before the Eye. Wait for one to be judged."; return; }
   if(pending.some(r=>r.nominator===VOTER)){ document.getElementById("kerr").textContent="You have already named an offering — one per supplicant. Wait for it to be judged."; return; }
   if(publicOfferCool()>0){ document.getElementById("kerr").textContent=`The grove must wait — the next offering can be chosen in ${Math.ceil(publicOfferCool()/3600)}h.`; return; }
@@ -4228,10 +4236,10 @@ function renderRules(){
     <div class="rulerow"><span>↳ scales by size</span><span class="rmin" style="color:var(--sage)">≤20·3 ≤49·4 ≤69·5<br>≤100·6 ≤150·7 ≤200·8</span></div>
     <div class="rulerow"><span>Nominate a badge</span><span class="rmin">7 ✦</span></div>
     <div class="rulerow"><span>Nominate a title</span><span class="rmin">10 ✦</span></div>
-    <div class="rulerow"><span>The Offering · robe + 30m mark</span><span class="rmin">7 ✦</span></div>
+    <div class="rulerow"><span>The Offering · robe + 3h mark</span><span class="rmin">7 ✦</span></div>
     <p class="rtext" style="margin-top:8px">Points are capped at ±200 per nomination. Open rites expire after 3 hours if they do not pass.</p>
     <div class="ritehdr">The Offering</div>
-    <p class="rtext">The grove’s highest rite (7 ✦ to raise). Nominate a spirit to be offered to the Eye; when it passes they are robed in the <b>Offering Robe</b> with a <b>30-minute</b> mark on their soul card, gain <b>+150</b> Devotion and the <b>Of the Eye</b> badge, while the whole grove’s sky turns — a blood moon and the open Eye — in their honour. The one who raised it earns <b>+25</b>, and only one offering can be made every few hours.</p>
+    <p class="rtext">The grove’s highest rite (7 ✦ to raise). A nomination sits before the grove for <b>30 minutes</b>. When it passes the spirit is robed in the <b>Offering Robe</b> for <b>3 hours</b>, gains <b>+150</b> Devotion and the <b>Of the Eye</b> badge, while the whole grove’s sky turns — a blood moon and the open Eye — in their honour. The one who raised it earns <b>+25</b>. Up to <b>three</b> may stand offered at once; only <b>one</b> offering can be raised every <b>6 hours</b>, and the same spirit can’t be offered twice within <b>24 hours</b>.</p>
     <div class="ritehdr">Titles & Badges</div>
     <p class="rtext">A <b>title</b> is your single epithet beneath your rank — a new one replaces the old. <b>Badges</b> are collectible ✦ marks; hold as many as you earn. A spirit can’t be nominated for a title or badge they already hold, and you can’t raise the same nomination on them twice.</p>
     <div class="ritehdr">Your Spirit</div>
@@ -4239,7 +4247,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bh · A spirit can't reshape their character until they've taken the oath — the unsworn see a message and a shortcut to swear it. The Keeper can still edit anyone.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bi · Offering rules reworked — up to 3 offered at once, the robe worn for 3 hours, a nomination sits 30 minutes, only one offering every 6 hours, and the same spirit can't be offered twice in a day.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4413,7 +4421,7 @@ function sweepGroups(now){ let ch=false; (MEM.groups||[]).forEach(g=>{
   else if(g.status==='active' && now-(g.lockedAt||now)>=GROUP_ACTIVE_SEC){ g.status='disputed'; g.disputeAt=now; ch=true; }
   else if(g.status==='disputed' && now-(g.disputeAt||now)>=GROUP_DISPUTE_SEC){ groupParts(g).forEach(nm=>{const m=memByName(nm); if(m)adjPts(m,g.stake||0);}); g.status='void'; g.winner='void'; ch=true; }
 }); return ch; }
-function sweepRites(now){ const b=(MEM.rites||[]).length; MEM.rites=(MEM.rites||[]).filter(r=> r.applied || (now-(r.created||now) < 3*3600)); return (MEM.rites||[]).length!==b; }
+function sweepRites(now){ const b=(MEM.rites||[]).length; MEM.rites=(MEM.rites||[]).filter(r=> r.applied || (now-(r.created||now) < riteTTL(r))); return (MEM.rites||[]).length!==b; }
 function applyAction(a){
   const now=Date.now()/1000; sweepChallenges(now); sweepWagers(now); sweepFire(now); sweepGroups(now); sweepRites(now);
   if(a.t==='stoke'){ const m=memByName(a.name); if(!m)return; if(now-(m.lastStoke||0)<3*3600)return; if((m.logs||0)<1)return; m.logs=(m.logs||0)-1; m.fireLogs=(m.fireLogs||0)+1; m.lastStoke=now; MEM.fire=MEM.fire||{level:0,goal:6,lastBlessed:0,stokers:[],lastDecay:now,streak:0}; MEM.fire.stokers=MEM.fire.stokers||[]; if(!MEM.fire.stokers.includes(a.name))MEM.fire.stokers.push(a.name); MEM.fire.level=(MEM.fire.level||0)+1; MEM.fire.lastDecay=now; if(MEM.fire.level>=(MEM.fire.goal||6)){ if(MEM.fire.lastBlessed && now-MEM.fire.lastBlessed>=24*3600) MEM.fire.streak=0; const bless=Math.min(200,50+25*(MEM.fire.streak||0)); const _bt=Date.now()/1000; MEM.fire.stokers.forEach(nm=>{const x=memByName(nm); if(x){ adjPts(x,bless); x.history=x.history||[]; x.history.push({l:"Tended the Sacred Fire",d:bless,t:_bt}); }}); adjPts(m,20); m.history=m.history||[]; m.history.push({l:"Struck the Final Spark",d:20,t:_bt}); MEM.fire.lastSpark=a.name; MEM.fire.lastBless=bless; MEM.fire.streak=(MEM.fire.streak||0)+1; MEM.fire.level=0; MEM.fire.stokers=[]; MEM.fire.lastBlessed=now; fireKeeperBadge(); } }

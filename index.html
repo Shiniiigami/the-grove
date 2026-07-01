@@ -4177,7 +4177,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ba · The Eye Totem is now the Devotion Weirwood — a heart-tree whose blood-red canopy grows with the Order's collective devotion this season, its carved Eye open and watching, closing while the offering cooldown runs. The Eye's verdict now blooms or blights the tree (gold blessings, ×3 and a +250 blaze, or a red mark, dimming, or full wrath). The Trial of the Chalice now sits beneath Stoke the Fire, and titles/badges/deed nominations have tighter character caps.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bb · The Eye Totem is now the Devotion Weirwood — a heart-tree whose blood-red canopy grows with the Order's collective devotion this season, its carved Eye open and watching, closing while the offering cooldown runs. The Eye's verdict now blooms or blights the tree (gold blessings, ×3 and a +250 blaze, or a red mark, dimming, or full wrath). The Trial of the Chalice now sits beneath Stoke the Fire, and titles/badges/deed nominations have tighter character caps.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4727,7 +4727,7 @@ function secGlyph(name){
 
 /* ===== The Eye's Tongue — reshape a plain nomination into an on-theme name (fully offline) ===== */
 const EYE_FILL=new Set('the a an of my our master guy gal person king queen lord god best champion pro expert and to at on in is was i who that all too much very really so lot lots totally kinda'.split(' '));
-const EYE_GADJ=['Sacred','Blessed','Unburnt','Devout','Anointed','Wayward','Eternal','Ember-blessed','Eye-marked','Grove-touched','Hollow','Forsaken','Chosen','Radiant','Shrouded','Ordained','Feral','Sanctified','Weathered','Nameless','Twice-Marked'];
+const EYE_GADJ=['Sacred','Blessed','Unburnt','Devout','Anointed','Wayward','Eternal','Ember-blessed','Eye-marked','Grove-touched','Hollow','Forsaken','Chosen','Radiant','Shrouded','Ordained','Feral','Sanctified','Weathered','Nameless','Twice-Marked','Fierce','Gentle','Wise','Bold','Strange','Towering','Grizzled','Stoic','Ravenous','Nimble','Dauntless','Grim','Merry','Ancient','Storied','Restless','Untamed','Unbowed'];
 const EYE_GVERB=['Offered','Kept','Bore','Walked','Answered','Honoured','Endured','Braved','Witnessed','Upheld','Carried','Sought'];
 const EYE_MISHAP=/\b(lost|fell|fall|sick|late|fool|drunk|slow|last)\b|(drank|hammer|snor|trip|burnt|burned|forgot|spill|puke|vomit|barf|nause|cried|hungover|hangover|clumsy|overslept|tardy|stuck|sunburn|fail|drop|fart|burp|mud|muck)/;
 const EYE_HEROIC=/\b(won|led|first|brave|gave|fast)\b|(carri|saved|shared|built|caught|climb|swam|haul|rescu|finish|conquer|strong|portage|fastest|brav|summit|rally|race|sprint)/;
@@ -4802,10 +4802,36 @@ const EYE_MORE={
  swear:{k:'swear curse cuss profan potty-mouth',noun:['Foul Tongue','Blistering Word','Great Oath'],verb:['Swore','Cursed','Bellowed'],adj:['Foul-mouthed','Oath-blessed'],short:['The Foul-Tongued','Bellower of Oaths']},
  quiet:{k:'quiet shy silent reserved introvert',noun:['Long Silence','Still Water','Unspoken Word'],verb:['Watched','Listened','Held'],adj:['Silent','Still-souled'],short:['Keeper of the Long Silence','The Still-Souled']},
 };
-for(const _k in EYE_MORE){ const _e=EYE_MORE[_k];
+// ---- second wave: food, animals, personality descriptions, feats/actions ----
+const EYE_MORE2={
+ food:{k:'food eat glutton hotdog chili pancake egg jerky sandwich pizza taco bean noodle rice',noun:['Great Feast','Sacred Morsel','Bottomless Plate','Communal Bread'],verb:['Devoured','Savoured','Consumed','Feasted'],adj:['Ever-Hungry','Feast-blessed','Ravenous'],short:['The Bottomless','Glutton of the Grove','Keeper of the Feast']},
+ animal:{k:'animal beast critter feral fox hawk',noun:['Wild Beast','Feral Spirit','Untamed Thing'],verb:['Prowled','Stalked','Roamed'],adj:['Feral','Untamed','Wild-eyed'],short:['The Feral','Beast of the Grove','The Untamed']},
+ wolf:{k:'wolf pack howl',noun:['Lone Hunt','The Pack'],verb:['Howled','Hunted','Prowled'],adj:['Lone','Pack-bound'],short:['The Lone Wolf','Howler of the Pack']},
+ squirrel:{k:'squirrel chipmunk acorn nut',noun:['Hidden Hoard','Gathered Nut'],verb:['Hoarded','Stashed','Darted'],adj:['Cheek-stuffed','Ever-Hoarding'],short:['The Hoarder','Chipmunk-Cheeked']},
+ raccoon:{k:'raccoon bandit masked',noun:['Midnight Raid','Masked Face'],verb:['Raided','Pilfered','Rummaged'],adj:['Masked','Bandit-blessed'],short:['The Masked Bandit','Raider of the Bins']},
+ moose:{k:'moose elk antler',noun:['Great Antler','Silent Wood'],verb:['Watched','Wandered','Loomed'],adj:['Antlered','Wood-silent'],short:['The Antlered','Watcher of the Wood']},
+ frog:{k:'frog toad croak',noun:['Marsh Song','The Croak'],verb:['Croaked','Leapt'],adj:['Marsh-blessed','Croaking'],short:['The Croaking','Voice of the Marsh']},
+ snake:{k:'snake serpent slither',noun:['Coiled Path','Hidden Fang'],verb:['Slithered','Coiled','Struck'],adj:['Serpent-touched','Coiled'],short:['The Serpent','Slitherer of the Grass']},
+ goose:{k:'goose duck honk waddle',noun:['Waddling March','The Honk'],verb:['Honked','Waddled','Charged'],adj:['Feather-marked','Waddling'],short:['The Honker','Warden of the Waterfowl']},
+ brave:{k:'brave bold fearless courage valiant daring hero',noun:['Great Courage','Fearless Heart'],verb:['Dared','Faced','Charged'],adj:['Fearless','Bold','Undaunted'],short:['The Undaunted','The Fearless','Heart of Courage']},
+ wise:{k:'wise wisdom smart clever sage genius knowing',noun:['Deep Wisdom','Hidden Knowing'],verb:['Divined','Perceived','Counselled'],adj:['All-Knowing','Sage','Deep-Seeing'],short:['The All-Knowing','Sage of the Eye','The Deep-Seeing']},
+ fierce:{k:'fierce fierc savage intense ferocious ruthless',noun:['Savage Spirit','The Fury'],verb:['Raged','Tore','Roared'],adj:['Savage','Ferocious','Fury-marked'],short:['The Savage','The Ferocious','Bearer of Fury']},
+ kind:{k:'kind gentle sweet caring warm nice',noun:['Gentle Heart','Warm Hand'],verb:['Comforted','Soothed','Sheltered'],adj:['Gentle','Warm-hearted','Ever-Kind'],short:['The Gentle','The Ever-Kind','Warm Heart of the Grove']},
+ weird:{k:'weird strange odd bizarre eccentric quirky freak',noun:['Strange Vision','Odd Rite'],verb:['Muttered','Wandered','Beheld'],adj:['Strange','Eccentric','Otherworldly'],short:['The Strange','The Otherworldly','Oracle of the Odd']},
+ small:{k:'small tiny short little runt shrimp petite',noun:['Small Frame','Little Shadow'],verb:['Slipped','Darted','Vanished'],adj:['Small-but-Mighty','Little','Pocket-sized'],short:['The Small','The Pocket Oracle']},
+ big:{k:'big tall huge giant large massive lanky',noun:['Great Height','Towering Frame'],verb:['Loomed','Towered'],adj:['Towering','Giant-blessed'],short:['The Towering','The Giant','Colossus of the Grove']},
+ beard:{k:'beard hairy bearded moustache mustache stubble mane',noun:['Great Beard','Wild Mane'],verb:['Grew','Groomed'],adj:['Bearded','Mane-blessed'],short:['The Bearded','Bearer of the Great Beard']},
+ bald:{k:'bald shaved smooth chrome hairless',noun:['Shining Dome','Bare Crown'],verb:['Shone','Gleamed'],adj:['Gleaming','Chrome-blessed'],short:['The Gleaming','The Shining Dome']},
+ survive:{k:'survive surviv endured conquer overcame withstood ordeal',noun:['Great Trial','Endless Ordeal'],verb:['Survived','Overcame','Conquered','Withstood'],adj:['Unbroken','Battle-worn','Trial-blessed'],short:['The Unbroken','Survivor of the Trial','The Battle-Worn']},
+ tough:{k:'tough strong mighty stubborn rugged iron-will',noun:['Iron Will','Great Strength'],verb:['Held','Endured','Hardened'],adj:['Iron-willed','Unbending','Rugged'],short:['The Unbending','Iron of the Grove','The Rugged']},
+ grumpy:{k:'grumpy grouch cranky sullen moody sour',noun:['Deep Scowl','Bitter Mood'],verb:['Scowled','Grumbled','Brooded'],adj:['Sullen','Ever-Grumbling','Sour'],short:['The Sullen Oracle','The Ever-Grumbling']},
+ chatty:{k:'chatty talkative rambl yap motormouth',noun:['Endless Chatter','Unceasing Word'],verb:['Rambled','Prattled','Chattered'],adj:['Ever-Talking','Silver-Tongued'],short:['The Ever-Talking','Tongue That Never Rests']},
+ mysterious:{k:'mysterious mystery secretive enigma cryptic shadowy',noun:['Deep Mystery','Veiled Path'],verb:['Vanished','Concealed','Watched'],adj:['Veiled','Shadow-cloaked','Unknowable'],short:['The Veiled','The Unknowable','Shadow of the Grove']},
+};
+[EYE_MORE,EYE_MORE2].forEach(M=>{ for(const _k in M){ const _e=M[_k];
   if(EYE_DOM[_k]){ ['noun','verb','adj','short'].forEach(_f=>{ if(_e[_f]) EYE_DOM[_k][_f]=EYE_DOM[_k][_f].concat(_e[_f]); }); if(_e.k) EYE_DOM[_k].k+=' '+_e.k; }
   else { EYE_DOM[_k]={k:_e.k||'',noun:_e.noun||[],verb:_e.verb||EYE_GVERB,adj:_e.adj||EYE_GADJ,short:_e.short||[]}; }
-}
+}});
 function eyePick(a){return a[Math.floor(Math.random()*a.length)];}
 function eyeTC(s){return String(s).replace(/\b\w/g,c=>c.toUpperCase());}
 function eyeReshape(input,cat){
@@ -4822,9 +4848,12 @@ function eyeReshape(input,cat){
   const plain=s=>/^[a-z]+$/i.test(String(s));   // one clean word, no hyphen/space — safe to suffix
   let T;
   if(cat==='title'){
-    T=[()=>`Keeper of the ${N()}`,()=>`Warden of the ${N()}`,()=>`High Priest of the ${N()}`,()=>`${N()} of the Eye`,()=>`Hand of the ${N()}`,()=>`The ${A()} ${N()}`,()=>`Priest of the ${N()}`,()=>`Bearer of the ${N()}`,()=>`${A()} Warden of the ${N()}`,E,E];
-    if(tone==='heroic')T=T.concat([()=>`Champion of the ${N()}`,()=>`The Unbroken ${N()}`,()=>`The Valiant ${N()}`,()=>`Vanquisher of the ${N()}`]);
-    if(tone==='mishap')T=T.concat([()=>`Martyr of the ${N()}`,()=>`The ${N()}-Cursed`,()=>`The Blessed Fool of the ${N()}`,()=>`Penitent of the ${N()}`]);
+    // titles stay short — 2–3 words: prefer single-word nouns and short epithets
+    const _ns=D.noun.filter(single), N1=()=>{let n=String(eyePick(_ns.length?_ns:D.noun)); if(n.indexOf(' ')>=0){const p=n.split(' ');n=p[p.length-1];} return n;};   // always one word → titles stay 2–3
+    const _ss=D.short.filter(x=>String(x).split(' ').length<=3), E2=()=>eyePick(_ss.length?_ss:D.short);
+    T=[()=>`${A()} ${N1()}`,()=>`The ${A()} ${N1()}`,()=>`The ${A()}`,()=>`${N1()}-Warden`,()=>`${N1()}-Keeper`,()=>`Warden of ${N1()}`,()=>`Keeper of ${N1()}`,()=>`The ${A()} One`,E2,E2,E2];
+    if(tone==='heroic')T=T.concat([()=>`The Unbroken`,()=>`The Valiant ${N1()}`,()=>`${N1()}-Champion`]);
+    if(tone==='mishap')T=T.concat([()=>`The Cursed ${N1()}`,()=>`${N1()}-Martyr`,()=>`The Fallen`]);
   } else if(cat==='deed'){
     T=[()=>`${V()} the ${N()}`,()=>`Offered the ${N()} to the Eye`,()=>`Kept the ${N()}`,()=>`Bore the ${N()}`,()=>`${V()} for the Circle`,()=>`Tended the ${N()}`,()=>`Walked the Path of the ${N()}`,()=>`${V()} beneath the Eye`];
     if(tone==='heroic')T=T.concat([()=>`Braved the ${N()}`,()=>`${V()} the ${N()} for the Circle`,()=>`Bore Witness to the ${N()}`]);

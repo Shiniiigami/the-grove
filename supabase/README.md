@@ -40,10 +40,32 @@ The `2026-07-01b` set is hardening surfaced by adversarial testing:
   full coverage — a recommended follow-up.)
 - `grove_ver` — stamped `2026-07-01b`.
 
+The `2026-07-01c` set fixes two anomalies surfaced by the lifecycle audit:
+
+- `grove_action` — a matched wager left in dispute past the 1h window used to go
+  `forfeit` and **burn both stakes** (a silent points sink). It now refunds both
+  and settles as a tie, matching the group-wager `void` path.
+- `grove_action` — the fire **stoke cooldown** was 6h server-side but 3h in the
+  client, so a stoke between 3h and 6h passed on the client then got silently
+  reverted ("the log didn't count"). Server aligned to 3h.
+- `grove_ver` — stamped `2026-07-01c`.
+
+The client build carries matching UX: `flushQueue` now toasts when a queued
+offline action is dropped/rejected ("… couldn't apply — the grove had moved on")
+and summarises "synced N · M couldn't apply"; live-state settlement actions
+(wager/challenge/group interactions) are gated offline instead of queuing doomed
+replays; and the dispute-timeout wording says the pot is returned.
+
 ### Known follow-ups (not yet applied)
 
+- **Blessing scope (planned):** widen the ×2/×3 wheel blessing to also apply to
+  the next community deed rite, Devotion wheel (Test of Devotion) spin, Trial of
+  the Chalice total, and normal (non-group) wager win — currently it only applies
+  to challenge approvals and Keeper awards.
 - A passing offering that hits the "Eye is full" (3 offered) cap at apply time is
   consumed with no effect (no +150 / robe / +50). Rare but reachable; needs a
   product decision on desired behaviour.
 - The remaining `grove_*` RMW functions (`grove_action`, `grove_save`,
   `grove_chalice`, `grove_wheel`, …) should also take `FOR UPDATE`.
+- Latent: `grove_action`'s fire-goal default is 8 while the client's is 6 (the
+  live `fire.goal` is 6, so it only matters on a fresh reseed).

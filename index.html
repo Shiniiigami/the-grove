@@ -683,12 +683,12 @@ async function flushQueue(){
   // prune stale ops so we never replay an action into a world that has long moved on
   { const q=oqLoad(); const cut=Date.now()-OQ_TTL_MS; const fresh=q.filter(it=>!(it&&it.t&&it.t<cut)); if(fresh.length!==q.length){ oqSave(fresh); syncBadge(); } }
   if(!oqCount()) return; _flushing=true;
-  let _heldRot=0;
+  let _heldRot=0, _synced=0, _dropped=0;
   try{
     while(true){
       try{ if(typeof navigator!=='undefined' && !navigator.onLine) break; }catch(_){}
       const q=oqLoad(); if(!q.length) break; const item=q[0];
-      let drop=true;
+      let drop=true, _ok=false;
       // re-inject the Keeper passphrase from memory at replay time — it is never persisted to the queue.
       const _passOp=(item.fn==='grove_remove_rite'||item.fn==='grove_save');
       // If the passphrase is gone (e.g. the page reloaded since), don't fire an empty pass (4xx-drop =
@@ -697,21 +697,29 @@ async function flushQueue(){
       if(_passOp && !SESSION_PASS){ if(_heldRot>=q.length) break; _heldRot++; const q4=oqLoad(); if(q4[0]&&q4[0].id===item.id){ q4.push(q4.shift()); oqSave(q4); } continue; }
       _heldRot=0;
       const _args=_passOp?Object.assign({},item.args,{p_pass:SESSION_PASS}):item.args;
-      try{ await sbRpc(item.fn, _args); }
+      try{ await sbRpc(item.fn, _args); _ok=true; }
       catch(e){
         if(oqTransient(e)){
           drop=false;
           // count the attempt; a permanently-stuck op must not block the whole queue forever
           const q3=oqLoad();
-          if(q3[0]&&q3[0].id===item.id){ q3[0].tries=(q3[0].tries||0)+1; if(q3[0].tries>=OQ_MAX_TRIES){ q3.shift(); oqSave(q3); syncBadge(); continue; } oqSave(q3); }
+          if(q3[0]&&q3[0].id===item.id){ q3[0].tries=(q3[0].tries||0)+1; if(q3[0].tries>=OQ_MAX_TRIES){ q3.shift(); oqSave(q3); syncBadge(); _dropped++; continue; } oqSave(q3); }
         } /* else 4xx: the server rejected the replay (stale/invalid) — drop it; refreshRemote below reconciles local state */
       }
       if(!drop) break;
+      // the head is leaving the queue: either it synced, or the server rejected it (4xx / stale)
+      if(_ok) _synced++; else _dropped++;
       const q2=oqLoad(); if(q2[0]&&q2[0].id===item.id){ q2.shift(); oqSave(q2); syncBadge(); } else { oqSave(q2); }
     }
   } finally { _flushing=false; }
   try{ await refreshRemote(); if(typeof trialsRefresh==='function') trialsRefresh(); if(typeof renderRites==='function') renderRites(); if(typeof layoutGrove==='function') layoutGrove(); }catch(e){}
   syncBadge();
+  // Let people know when a queued offline action didn't make it — a 4xx/stale drop or a
+  // retry-exhausted op would otherwise just vanish. Only speak up when something was dropped.
+  if(_dropped>0){ try{ toast(_synced>0
+      ? ('Synced '+_synced+' · '+_dropped+' couldn’t apply — the grove had moved on.')
+      : (_dropped+' offline action'+(_dropped>1?'s':'')+' couldn’t be applied — the grove had moved on.')); }catch(_){}
+  }
 }
 function syncBadge(){ try{
   let el=document.getElementById('syncPill'); const n=oqCount();
@@ -886,7 +894,7 @@ window.relinkPush=async function(){ try{
   try{ renderRules(); }catch(e){}
 }catch(e){ toast('Re-link failed: '+((e&&e.message)||'unknown')); } };
 
-const EXPECTED_DB='2026-07-01b';
+const EXPECTED_DB='2026-07-01c';
 function showDbBanner(msg){
   let b=document.getElementById('dbBanner');
   if(!b){ b=document.createElement('div'); b.id='dbBanner'; b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:300;background:#7A2E2E;color:#FFE8C8;font-family:Silkscreen,monospace;font-size:11px;line-height:1.4;text-align:center;padding:9px 14px;box-shadow:0 2px 12px rgba(0,0,0,.55)'; document.body.appendChild(b); }
@@ -4340,7 +4348,7 @@ function renderRules(){
     <div class="ritehdr">Challenges</div>
     <p class="rtext">Stake a bounty from your challenge budget; one spirit may take it on. You or the Keeper approve it within 24h and the stake passes to them. Want out of an accepted challenge? Asking to withdraw lets the doer <b>agree to drop it</b>, or <b>stick it out</b> with one hour to finish before it lapses.</p>
     <div class="ritehdr">The Wager Ring</div>
-    <p class="rtext">Stake your <b>own</b> Devotion head-to-head, up to <b>100</b> a wager — another spirit must match it. Settle by conceding or agreeing a tie. Can't agree? Raise a <b>dispute</b> and the grove votes (5 settles it); left unresolved an hour later, both forfeit the pot.</p>
+    <p class="rtext">Stake your <b>own</b> Devotion head-to-head, up to <b>100</b> a wager — another spirit must match it. Settle by conceding or agreeing a tie. Can't agree? Raise a <b>dispute</b> and the grove votes (5 settles it); left unresolved an hour later, the pot is returned to both.</p>
     <div class="ritehdr">The Reckoning · Group Wagers</div>
     <p class="rtext">Rally two sides — up to <b>6</b> a side, even lopsided (6 v 1). Everyone stakes the same; the starter <b>locks</b> the wager and the winning side <b>splits the whole pot</b>, so fewer winners each take a bigger share. All players must agree who won; if they can’t, the grove votes to settle it.</p>
     <div class="ritehdr">Test of Devotion</div>
@@ -4529,7 +4537,7 @@ function wagerById(id){ return (MEM.wagers||[]).find(w=>w.id===id); }
 function sweepWagers(now){ let changed=false; (MEM.wagers||[]).forEach(w=>{
   if(w.status==='open' && now-(w.created||now)>=24*3600){ const p=memByName(w.proposer); if(p)adjPts(p,w.amount||0); w.status='expired'; changed=true; }
   else if(w.status==='matched' && now-(w.matchedAt||w.created||now)>=24*3600){ w.status='disputed'; w.disputeAt=now; changed=true; }
-  else if(w.status==='disputed' && now-(w.disputeAt||now)>=1*3600){ w.status='forfeit'; w.winner='forfeit'; changed=true; }
+  else if(w.status==='disputed' && now-(w.disputeAt||now)>=1*3600){ const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); w.status='settled'; w.winner='tie'; changed=true; }
 }); return changed; }
 /* ---------- multi-person GROUP WAGERS ---------- */
 const GROUP_CAP=100, GROUP_SIDE_MAX=6, GROUP_LOCK_SEC=3600, GROUP_ACTIVE_SEC=86400, GROUP_DISPUTE_VOTES=5, GROUP_DISPUTE_SEC=3600;
@@ -4581,6 +4589,10 @@ function applyAction(a){
 }
 async function communityAction(a){
   let okR=false;
+  // settlement / live-state actions hinge on the CURRENT shared state — queuing them offline just
+  // produces doomed replays (the wager/challenge/group has moved on by sync time). Gate them like
+  // the wheel: require a connection. Creation (wager_new/group_new/chal_new), stoke and oath still queue.
+  const _live=!!(a && ['wager_accept','wager_concede','wager_dispute','wager_tie','wager_vote','chal_accept','chal_approve','chal_remove','chal_remove_resolve','group_join','group_leave','group_lock','group_claim','group_vote','group_revoke'].indexOf(a.t)>=0);
   if(MODE==="remote"){
     let online=true; try{ online=navigator.onLine; }catch(_){}
     if(online){
@@ -4592,8 +4604,8 @@ async function communityAction(a){
           else if(a&&a.t==='chal_new'){ grovePush({targets:'all', exclude:(a.owner||''), title:'\u2694 A challenge is set', body:((a.owner||'A spirit')+' offers '+(a.reward||0)+' \u2726'+(a.title?(' \u2014 \u201c'+a.title+'\u201d'):'')+'. Take it up.'), url:'./#trials'}); }
         }catch(e){}
       }
-      catch(e){ if(isNetErr(e)){ applyAction(a); cacheRemote(); enqueueOp("grove_action",{p_action:a}); toast("No signal — saved. It'll sync when you're back."); okR=true; } else { toast("The Eye did not answer — is grove_trials.sql installed?"); return false; } }
-    } else { applyAction(a); cacheRemote(); enqueueOp("grove_action",{p_action:a}); toast("Offline — saved. It'll sync when you're back."); okR=true; }
+      catch(e){ if(isNetErr(e)){ if(_live){ toast("The Eye needs a connection to settle this — try again when you're back."); return false; } applyAction(a); cacheRemote(); enqueueOp("grove_action",{p_action:a}); toast("No signal — saved. It'll sync when you're back."); okR=true; } else { toast("The Eye did not answer — is grove_trials.sql installed?"); return false; } }
+    } else { if(_live){ toast("The Eye needs a connection to settle this — try again when you're back."); return false; } applyAction(a); cacheRemote(); enqueueOp("grove_action",{p_action:a}); toast("Offline — saved. It'll sync when you're back."); okR=true; }
   }
   else { applyAction(a); await saveData(); okR=true; }
   try{ Snd.action(a.t); }catch(e){}
@@ -5252,7 +5264,7 @@ function wagerMatchedCard(w){
         <button class="rapprove ${mine==='taker'?'voted':''}" ${mine?'disabled':''} onclick="voteWager('${w.id}','taker')">${w.taker} (${tv}/5)</button>
       </div>`;
     } else if(VOTER && party){ voteRow=`<div style="text-align:center;font-size:11px;color:var(--sage);margin-top:4px">votes ${w.proposer} ${pv} · ${w.taker} ${tv} — others decide</div>`; }
-    rows = `<div style="text-align:center;font-size:11px;color:#E8A88F;margin-top:8px">⚖ Disputed — 5 votes settle it, or in <b>${lbl}</b> both forfeit the pot</div>${voteRow}${rows}`;
+    rows = `<div style="text-align:center;font-size:11px;color:#E8A88F;margin-top:8px">⚖ Disputed — 5 votes settle it, or in <b>${lbl}</b> the pot is returned to both</div>${voteRow}${rows}`;
   }
   const keeperExtra = keeperUnlocked? `<div style="margin-top:8px;text-align:center;font-size:11px">Keeper · <a onclick="resolveWager('${w.id}','${w.proposer.replace(/'/g,"\\'")}')" style="cursor:pointer;color:var(--sage)">${w.proposer} won</a> · <a onclick="resolveWager('${w.id}','${w.taker.replace(/'/g,"\\'")}')" style="cursor:pointer;color:var(--sage)">${w.taker} won</a> · <a onclick="voidWager('${w.id}')" style="cursor:pointer;color:#E8A88F">void</a></div>`:"";
   return `<div class="ritecard" style="flex-direction:column;align-items:stretch"><div class="rbody"><div class="rdesc"><b>${w.proposer}</b> vs <b>${w.taker}</b> &nbsp;<span style="color:var(--candle)">${w.amount} ✦</span> each — ${w.title}</div><div class="rmeta">${disputed?'disputed':'matched'} · pot ${2*w.amount} ✦</div></div>${rows}${keeperExtra}</div>`;
@@ -5298,7 +5310,7 @@ window.concedeWager=async function(id){ const w=wagerById(id); if(!w)return; con
 window.resolveWager=async function(id,winner){ if(!keeperUnlocked)return; if(!confirm(`Award the ${2*(wagerById(id)?.amount||0)} pot to ${winner}?`))return; applyAction({t:'wager_resolve',id,winner,keeper:true}); await saveData(); trialsRefresh(); toast(`${winner} takes the pot.`); };
 window.voidWager=async function(id){ if(!keeperUnlocked)return; if(!confirm("Void this wager and refund both stakes?"))return; applyAction({t:'wager_void',id,keeper:true}); await saveData(); trialsRefresh(); toast("Wager voided — stakes refunded."); };
 window.voteWager=async function(id,side){ if(!VOTER){ toast("Choose your spirit first."); return; } const w=wagerById(id); if(!w)return; const ok=await communityAction({t:'wager_vote',id,voter:VOTER,side}); if(!ok)return; trialsRefresh(); toast("Your vote is cast."); };
-window.disputeWager=async function(id){ if(!VOTER)return; if(!confirm("Raise a dispute? The grove will vote (5 settles it). If no verdict in 1 hour, BOTH of you forfeit the pot."))return; const ok=await communityAction({t:'wager_dispute',id,by:VOTER}); if(!ok)return; trialsRefresh(); toast("Dispute raised — the grove decides."); };
+window.disputeWager=async function(id){ if(!VOTER)return; if(!confirm("Raise a dispute? The grove will vote (5 settles it). If no verdict in 1 hour, the pot is returned to both."))return; const ok=await communityAction({t:'wager_dispute',id,by:VOTER}); if(!ok)return; trialsRefresh(); toast("Dispute raised — the grove decides."); };
 /* ---------- GROUP WAGER UI ---------- */
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 // Input sanitisers — names flow into dozens of innerHTML/attr/onclick sites, so strip anything

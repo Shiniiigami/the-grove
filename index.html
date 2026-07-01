@@ -1835,22 +1835,19 @@ window.keeperDeleteFromCreator=async function(){
   if(!memByName(name)){ CHIBI_EDIT=null; CHIBI_MEMBER=null; try{ closeSheet(); }catch(e){} }
   else { renderCreator(); }
 };
-window.keeperForceApproveRites=async function(){
+window.keeperForceApproveRite=async function(id){
   if(!keeperUnlocked){ toast("Only the Keeper may force a rite."); return; }
-  const pend=(MEM.rites||[]).filter(r=>r && !r.applied);
-  const err=document.getElementById("kerr");
-  if(!pend.length){ if(err) err.textContent="No rites are waiting — the ledger is clear."; return; }
+  const r=(MEM.rites||[]).find(x=>x.id===id); if(!r) return;
+  if(r.applied){ toast("It has already passed."); return; }
   const KIND_LBL={deed:'deed',newdeed:'new deed',title:'title',badge:'badge',offer:'offering',oath:'oath'};
-  const lines=pend.slice(0,8).map(r=>`• ${(KIND_LBL[r.kind]||r.kind)}${r.target?` — ${r.target}`:''}`).join("\n");
-  const more=pend.length>8?`\n…and ${pend.length-8} more`:'';
-  if(!confirm(`Force the Eye's approval on all ${pend.length} waiting rite${pend.length===1?'':'s'}? They pass at once, no matter the count.\n\n${lines}${more}`)) return;
-  let done=0;
-  pend.forEach(r=>{ try{ applyRiteEffect(r); r.applied=true; r.approvers=r.approvers||[]; r.forcedBy=VOTER||'Keeper'; done++; }catch(e){} });
+  const what=`${KIND_LBL[r.kind]||r.kind}${r.target?` — ${r.target}`:''}`;
+  if(!confirm(`Force the Eye's approval on this ${what}? It passes at once, no matter the count.`)) return;
+  try{ applyRiteEffect(r); r.applied=true; r.approvers=r.approvers||[]; r.forcedBy=VOTER||'Keeper'; }
+  catch(e){ toast("Could not force that rite."); return; }
   await saveData();
   try{ layoutGrove(); }catch(e){} try{ renderLedger(); }catch(e){} try{ renderRites(); }catch(e){}
-  try{ if(typeof scrim!=='undefined' && scrim && scrim.classList.contains('show') && keeperUnlocked) keeperPanel(); }catch(e){}
   try{ Snd.sfx('approve'); }catch(e){}
-  toast(`The Keeper's word is law — ${done} rite${done===1?'':'s'} passed.`);
+  toast("The Keeper's word is law — it is done.");
 };
 window.keeperResetOfferCooldowns=async function(){
   if(!keeperUnlocked){ toast("Only the Keeper may reset cooldowns."); return; }
@@ -2078,7 +2075,6 @@ function keeperPanel(){
       <button class="ghostbtn" onclick="trialsKeeperForm()">⚖ Trials override · wagers · groups · challenges</button>
       <button class="ghostbtn" onclick="fireForm()">🔥 Tend the fire · logs &amp; blessing level</button>
       <button class="ghostbtn" onclick="keeperOfferForm()">▲ Offer / release a spirit</button>
-      <button class="ghostbtn" style="border-color:rgba(212,175,90,.5);color:var(--candle)" onclick="keeperForceApproveRites()">${(function(){var _n=(MEM.rites||[]).filter(function(r){return r&&!r.applied;}).length;return '✔ Force-approve all rites'+(_n?(' · '+_n+' waiting'):' · none waiting');})()}</button>
       <button class="ghostbtn" style="border-color:rgba(232,168,143,.5);color:#E8A88F" onclick="keeperResetOfferCooldowns()">\u21ba Allow one more offering${(function(){var _p=publicOfferCool();return _p>0?(' \u00b7 public '+Math.floor(_p/3600)+'h '+Math.floor((_p%3600)/60)+'m'):' \u00b7 clear';})()}</button>
       <div class="kgroup">Members &amp; oaths</div>
       <button class="ghostbtn" onclick="addMemberForm()">+ Initiate a new member</button>
@@ -2174,7 +2170,7 @@ window.setOathStatus=async function(sworn){
   const m=MEM.members.find(x=>x.name===name); if(!m) return;
   m.oath=!!sworn;
   m.badges=m.badges||[];
-  if(sworn){ if(!m.badges.includes('Initiated')) m.badges.push('Initiated'); }
+  if(sworn){ if(!m.badges.includes('Initiated')) m.badges.push('Initiated'); grantRiteOfPassage(m); }
   else { m.badges=m.badges.filter(b=>b!=='Initiated'); }
   await saveData(); layoutGrove(); renderLedger(); renderRites();
   const tr=document.getElementById('trials'); if(tr && tr.style.display!=='none') renderTrials();
@@ -3815,12 +3811,13 @@ function riteCard(r){
   const canWithdraw = VOTER && r.nominator===VOTER && !r.applied && (fresh || (n*2 < thr)) && ['deed','title','badge','offer'].includes(r.kind);
   const approveBtn = `<button class="rapprove ${voted?"voted":""}" ${voted?"disabled":""} onclick="approveRite('${r.id}')">${voted?(isOath?"✓ Witnessed":"✓ Approved"):(isOath?"Witness":"Approve")}</button>`;
   const withdrawBtn = canWithdraw ? `<button class="rwithdraw" onclick="withdrawRite('${r.id}')">Withdraw</button>` : "";
+  const keeperPassBtn = (keeperUnlocked && !r.applied) ? `<button class="rwithdraw" style="background:rgba(212,175,90,.16);border-color:rgba(212,175,90,.6);color:var(--candle)" onclick="keeperForceApproveRite('${r.id}')">✔ Force pass</button>` : "";
   const keeperRmBtn = keeperUnlocked ? `<button class="rwithdraw" style="background:rgba(150,40,40,.18);border-color:rgba(210,80,70,.6);color:#F0A090" onclick="keeperRemoveRite('${r.id}')">✕ Remove</button>` : "";
   return `<div class="ritecard">
     <div class="rbody"><div class="rdesc">${desc}</div>
       <div class="rmeta">${countLbl} &nbsp; <span class="rby">by ${esc(r.nominator)} · ${left}</span></div>
       ${(()=>{ const ap=(r.approvers||[]).filter(a=>a!==r.nominator); return ap.length?`<div class="rmeta" style="opacity:.62;font-size:11px;margin-top:2px">✓ ${ap.map(esc).join(', ')}</div>`:''; })()}</div>
-    <div class="rbtns">${approveBtn}${withdrawBtn}${keeperRmBtn}</div>
+    <div class="rbtns">${approveBtn}${withdrawBtn}${keeperPassBtn}${keeperRmBtn}</div>
   </div>`;
 }
 window.approveRite=function(id){
@@ -3828,7 +3825,7 @@ window.approveRite=function(id){
   Snd.sfx('approve');
   voteRite(id, VOTER);
 };
-async function refreshRemote(){ try{ const d=await sbRead(); if(d){ MEM=d; ensureDefaults(); cacheRemote(); try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectOfferPassed(); }catch(e){} try{ detectBetEndings(); }catch(e){} } }catch(e){} }
+async function refreshRemote(){ try{ const d=await sbRead(); if(d){ MEM=d; ensureDefaults(); cacheRemote(); try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectOfferPassed(); }catch(e){} try{ detectBetEndings(); }catch(e){} try{ reconcileRiteOfPassage(); }catch(e){} } }catch(e){} }
 
 window.proposeRite=async function(item){
   let off=false;
@@ -3919,6 +3916,7 @@ function applyRiteEffect(r){
   }
   else if(r.kind==="oath"){
     m.oath=true; m.badges=m.badges||[]; if(!m.badges.includes('Initiated')) m.badges.push('Initiated');
+    grantRiteOfPassage(m);
   }
 }
 const TENETS=[
@@ -3928,6 +3926,26 @@ const TENETS=[
   "I give myself to the Grove."
 ];
 function isSworn(name){ const m=MEM.members.find(x=>x.name===name); return !m || m.oath!==false; }
+// +100 Rite of Passage, granted once, the moment a spirit is initiated (m.rop guards against a second grant)
+function grantRiteOfPassage(m){
+  if(!m || m.rop) return false;
+  m.rop=true;
+  m.points=Math.max(0,(m.points||0)+100);
+  m.season=Math.max(0,(m.season||0)+100);
+  m.history=m.history||[]; m.history.push({l:"Rite of Passage",d:100,n:1,t:Date.now()/1000});
+  return true;
+}
+// oaths that pass server-side (remote communal rite) don't run applyRiteEffect here, so the Keeper's
+// device reconciles: any Initiated spirit missing their Rite of Passage is granted it and saved.
+function reconcileRiteOfPassage(){
+  try{
+    if(typeof keeperUnlocked==='undefined' || !keeperUnlocked) return false;
+    let any=false;
+    (MEM.members||[]).forEach(m=>{ if(m && m.oath!==false && !m.rop && (m.badges||[]).indexOf('Initiated')>=0){ if(grantRiteOfPassage(m)) any=true; } });
+    if(any){ try{ saveData(); }catch(e){} }
+    return any;
+  }catch(e){ return false; }
+}
 function oathPending(name){ return (MEM.rites||[]).find(r=>r.kind==='oath' && r.target===name && !r.applied && (Date.now()/1000-(r.created||0) < 3*3600)); }
 function oathGateHTML(name){
   const pend=oathPending(name);
@@ -4214,7 +4232,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30be · Fixed the Roman numeral on the soul card — a Keeper award made with the ledger's Multiplier now shows its ×tally (e.g. ×III) on the deed, instead of nothing.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bf · The unsworn are now locked out of every Trial, the Chalice included — no joining, no being seated by another phone. The Keeper force-approves nominations one at a time (a ✔ on each rite) rather than all at once. And every spirit earns a one-time +100 Rite of Passage the moment they are initiated.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4401,7 +4419,7 @@ function applyAction(a){
       // instead of the inflated payout, the cheat costs the doer 100 Devotion.
       if(mult>1 && base>=150){ adjPts(w,-100); w.history=w.history||[]; w.history.push({l:"Cheated the Eye — gamed a maxed trial with a wheel buff",d:-100,n:1,t:Date.now()/1000}); c.cheated=true; }
       else { adjPts(w,base*mult); maybeEarnLog(w,base*mult); } } c.status='done'; }
-  else if(a.t==='oath'){ const m=memByName(a.name); if(!m)return; m.oath=true; m.badges=m.badges||[]; if(!m.badges.includes('Initiated'))m.badges.push('Initiated'); }
+  else if(a.t==='oath'){ const m=memByName(a.name); if(!m)return; m.oath=true; m.badges=m.badges||[]; if(!m.badges.includes('Initiated'))m.badges.push('Initiated'); grantRiteOfPassage(m); }
   else if(a.t==='thought'){ const m=memByName(a.name); if(!m)return; const txt=clampThought(a.text); if(txt){ m.thought={text:txt, at:Date.now()/1000}; } else { delete m.thought; } }
   else if(a.t==='wager_new'){ const m=memByName(a.proposer); if(!m)return; const amt=Math.max(1,Math.min(WAGER_CAP,a.amount|0)); if((m.points||0)<amt)return; adjPts(m,-amt); MEM.wagers=MEM.wagers||[]; MEM.wagers.push({id:'w'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),proposer:a.proposer,amount:amt,title:a.title,taker:null,status:'open',winner:null,created:now,votes:{},tie:[]}); }
   else if(a.t==='wager_accept'){ const w=wagerById(a.id); if(!w||w.status!=='open')return; if(a.name===w.proposer)return; const m=memByName(a.name); if(!m||(m.points||0)<w.amount)return; adjPts(m,-w.amount); w.taker=a.name; w.status='matched'; w.matchedAt=now; }
@@ -6015,6 +6033,7 @@ CR.forEach(R=>{ R.act4=function(){ return ({
 /* ---------- helpers ---------- */
 function GC(){ return MEM.chalice||null; }
 function me(){ return (typeof VOTER!=='undefined'&&VOTER)?VOTER:''; }
+function chalUnsworn(nm){ return typeof isSworn==='function' && nm && !isSworn(nm); }   // the unsworn are locked out of the Trial
 function curGid(){ var g=GC(); return (g&&g.gid)||''; }
 function hands(){ try{ var o=JSON.parse(localStorage.getItem('chal-hands')||'null'); if(!o||typeof o!=='object'||Array.isArray(o)||o.gid!==curGid()||!Array.isArray(o.names)) return []; return o.names.slice(); }catch(e){ return []; } }
 function setHands(a, gid){ try{ localStorage.setItem('chal-hands', JSON.stringify({gid:(gid!=null?gid:curGid()), names:(a||[])})); }catch(e){} }
@@ -6076,6 +6095,7 @@ async function send(state, commit){
 /* ---------- transitions ---------- */
 function openLobby(){
   const who=me(); if(!who){ try{ switchIdentity(); }catch(e){} return; }
+  if(chalUnsworn(who)){ toast('Only the sworn may enter the Trials — swear your oath first.'); return; }
   const g={ status:'lobby', nominee:who, spirits:[who], deck:[], drawn:0, turn:0, kings:0,
     current:null, phase:'lobby', tally:{}, laws:[], reports:[], reportCd:{}, bind:null, feed:[],
     away:{}, kicked:{}, kicks:[], deadline:0, started:0, ended:0, lobbyAt:nowS(),
@@ -6085,6 +6105,7 @@ function openLobby(){
 function joinGame(){
   const g=GC(); if(!g||g.status!=='lobby') return; const who=me();
   if(!who){ try{ switchIdentity(); }catch(e){} return; }
+  if(chalUnsworn(who)){ toast('Only the sworn may join the Trial — swear your oath first.'); return; }
   if(g.spirits.indexOf(who)>=0){ if(!controls(who)){ if(hands().length>=3){ toast('A single phone may seat at most 3 spirits.'); return; } setHands(hands().concat([who])); } render(); return; }
   if(hands().length>=3){ toast('A single phone may seat at most 3 spirits.'); return; }
   if(g.spirits.length>=20){ toast('The circle is full (20).'); return; }
@@ -6094,17 +6115,19 @@ function addSpirit(){
   const g=GC(); if(!g||g.status!=='lobby') return;
   if((g.spirits||[]).indexOf(me())<0){ toast('Join the trial yourself first.'); return; }
   if(hands().length>=3){ toast('A single phone may seat at most 3 spirits.'); return; }
-  const pool=memNames().filter(nm=>g.spirits.indexOf(nm)<0);
-  if(!pool.length){ toast('Every spirit has joined.'); return; }
+  const pool=memNames().filter(nm=>g.spirits.indexOf(nm)<0 && !chalUnsworn(nm));
+  if(!pool.length){ toast('Every sworn spirit has joined.'); return; }
   const nm=prompt('Add another spirit to THIS phone:\n'+pool.join(', '));
   if(!nm) return; const match=pool.find(p=>p.toLowerCase()===nm.trim().toLowerCase());
-  if(!match){ toast('No unjoined spirit by that name.'); return; }
+  if(!match){ toast('No unjoined sworn spirit by that name.'); return; }
+  if(chalUnsworn(match)){ toast(match+' is not yet sworn — they cannot join the Trial.'); return; }
   if(g.spirits.length>=20){ toast('The circle is full (20).'); return; }
   const n=clone(g); n.spirits.push(match); setHands(hands().concat([match])); send(n);
 }
 function addSel(nm){
   const g=GC(); if(!g||g.status!=='lobby'||!nm) return;
   if((g.spirits||[]).indexOf(me())<0){ toast('Join the trial yourself first.'); return; }
+  if(chalUnsworn(nm)){ toast(nm+' is not yet sworn — they cannot join the Trial.'); return; }
   if((g.spirits||[]).indexOf(nm)>=0){ toast(nm+' already joined.'); return; }
   if(hands().length>=3){ toast('A single phone may seat at most 3 spirits.'); return; }
   if(g.spirits.length>=20){ toast('The circle is full (20).'); return; }
@@ -6479,7 +6502,7 @@ function renderLobby(g){
   let h='<div class="chal-body"><div class="chal-sub">The circle is forming \u00b7 '+g.spirits.length+'/20</div>';
   h+='<div class="chal-pills">'+list+'</div>';
   if(!joined) h+='<button class="chal-btn gold" onclick="chalAPI.join()">Join the trial</button>';
-  const pool=memNames().filter(s=>(g.spirits||[]).indexOf(s)<0);
+  const pool=memNames().filter(s=>(g.spirits||[]).indexOf(s)<0 && !chalUnsworn(s));
   const seated=hands().length;
   if(joined && seated>=3) h+='<p class="chal-hint" style="opacity:.65">This phone is full \u2014 3 spirits is the most one device may seat.</p>';
   else if(joined && pool.length) h+='<select class="chal-sel" onchange="chalAPI.addSel(this.value);this.value=\'\'"><option value="">+ add another spirit to this phone ('+seated+'/3)\u2026</option>'+pool.map(p=>'<option value="'+p+'">'+p+'</option>').join('')+'</select>';
@@ -6690,6 +6713,7 @@ function chalTotem(active, kings){
 }
 function injectLauncher(){
   const el=document.getElementById('trials'); if(!el) return; if(document.getElementById('chalLaunch')) return;
+  if(typeof VOTER!=='undefined' && VOTER && typeof isSworn==='function' && !isSworn(VOTER)) return;   // the unsworn see only the oath gate
   const slot=document.getElementById('chalSlot');   // sits directly beneath Stoke the Fire
   const g=GC(); const active=g&&(g.status==='lobby'||g.status==='playing');
   const box=document.createElement('div'); box.id='chalLaunch'; box.style.cssText='max-width:520px;margin:22px auto 0;text-align:center';

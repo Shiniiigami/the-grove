@@ -4177,7 +4177,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ax · The Eye Totem is now the Devotion Weirwood — a heart-tree whose blood-red canopy grows with the Order's collective devotion this season, its carved Eye open and watching, closing while the offering cooldown runs. The Eye's verdict now blooms or blights the tree (gold blessings, ×3 and a +250 blaze, or a red mark, dimming, or full wrath). The Trial of the Chalice now sits beneath Stoke the Fire, and titles/badges/deed nominations have tighter character caps.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ay · The Eye Totem is now the Devotion Weirwood — a heart-tree whose blood-red canopy grows with the Order's collective devotion this season, its carved Eye open and watching, closing while the offering cooldown runs. The Eye's verdict now blooms or blights the tree (gold blessings, ×3 and a +250 blaze, or a red mark, dimming, or full wrath). The Trial of the Chalice now sits beneath Stoke the Fire, and titles/badges/deed nominations have tighter character caps.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4560,7 +4560,7 @@ function renderTrials(){
   const open=(MEM.challenges||[]).filter(c=>c.status==='open'||c.status==='accepted').sort((a,b)=>(b.created||0)-(a.created||0));
   const cards = open.length? open.map(c=>challengeCard(c,now)).join("") : `<p class="hint" style="margin:12px 0">No open challenges. Stake some of your budget below.</p>`;
   const chalHTML=`
-    <div class="ritehdr" style="margin-top:22px">The Challenge Board</div>
+    <div class="ritehdr" style="margin-top:22px">${secGlyph('target')}The Challenge Board</div>
     <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Stake from your <b style="color:var(--candle)">150</b>-point challenge budget; one spirit takes it on and earns the stake once you approve it done.</p>
     ${ me? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage);margin-bottom:8px">${esc(VOTER)} · budget <b style="color:var(--candle)">${budget}</b>/150 · committed ${commits}/3${(()=>{const s=myStaked(VOTER); return s.total>0?` · <b style="color:#E8C45A">${s.total}✦</b> at stake (${s.n})`:'';})()}</div>`:""}
     <div id="chalList">${cards}</div>
@@ -4569,7 +4569,7 @@ function renderTrials(){
   const wmatched=(MEM.wagers||[]).filter(w=>w.status==='matched'||w.status==='disputed').sort((a,b)=>(a.status==='disputed'?-1:0)-(b.status==='disputed'?-1:0)||(b.created||0)-(a.created||0));
   const wagerCards=[...wmatched.map(wagerMatchedCard),...wopen.map(wagerOpenCard)].join("") || `<p class="hint" style="margin:12px 0">No wagers yet. Stake some of your own points below.</p>`;
   const wagerHTML=`
-    <div class="ritehdr" style="margin-top:22px">The Wager Ring</div>
+    <div class="ritehdr" style="margin-top:22px">${secGlyph('dice')}The Wager Ring</div>
     <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Stake your <b>own</b> Devotion head-to-head, up to <b style="color:var(--candle)">${WAGER_CAP}</b> a wager. Settle by conceding or a tie — or raise a <b>dispute</b> and let the grove vote.</p>
     ${ me? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage);margin-bottom:8px">staking as <b style="color:var(--candle)">${VOTER}</b></div>`:""}
     <div id="wagerList">${wagerCards}</div>
@@ -4715,6 +4715,15 @@ function wwTrunkPath(){ const C=WW_CFG,bY=C.baseY,tY=C.topY,bHW=C.baseHW,tHW=C.t
   return `M${(100-bHW).toFixed(1)},${bY} Q${(100-flareHW).toFixed(1)},${flareY.toFixed(1)} ${(100-cLHW).toFixed(1)},${cLY.toFixed(1)} Q${(100-tHW*1.15).toFixed(1)},${(tY+span*0.12).toFixed(1)} ${(100-tHW).toFixed(1)},${tY} L${(100+tHW).toFixed(1)},${tY} Q${(100+tHW*1.15).toFixed(1)},${(tY+span*0.12).toFixed(1)} ${(100+cLHW).toFixed(1)},${cLY.toFixed(1)} Q${(100+flareHW).toFixed(1)},${flareY.toFixed(1)} ${(100+bHW).toFixed(1)},${bY} Z`; }
 // collective season devotion → 0..1 canopy fill (Keeper-tunable via MEM.devotionGoal)
 function devotionProgress(){ try{ const tot=(MEM.members||[]).reduce((s,m)=>s+Math.max(0,+m.season||0),0); const goal=(MEM&&+MEM.devotionGoal>0)?+MEM.devotionGoal:Math.max(1200,(MEM.members||[]).length*400); return Math.max(0,Math.min(1,tot/goal)); }catch(e){ return 0.4; } }
+// small engraved header glyphs for the trial sections (amber line-art, matches the rest)
+function secGlyph(name){
+  const wrap=s=>`<svg viewBox="0 0 100 100" style="width:19px;height:19px;vertical-align:-4px;margin-right:7px">${s}</svg>`;
+  const L='fill="none" stroke="#E8C45A" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"', F='fill="#E8C45A"';
+  if(name==='target') return wrap(`<g ${L}><circle cx="46" cy="55" r="23"/><circle cx="46" cy="55" r="12"/><path d="M80,21 L55,46"/><path d="M80,21 l-9,1 M80,21 l1,-9"/></g><circle cx="46" cy="55" r="5" ${F}/><path ${F} d="M46,55 L59,49 L52,42 Z"/>`);
+  if(name==='dice') return wrap(`<g ${L}><rect x="18" y="44" width="32" height="32" rx="7"/><rect x="50" y="24" width="32" height="32" rx="7"/></g><g ${F}><circle cx="27" cy="53" r="3.4"/><circle cx="41" cy="67" r="3.4"/><circle cx="34" cy="60" r="3.4"/><circle cx="58" cy="32" r="3.2"/><circle cx="74" cy="32" r="3.2"/><circle cx="58" cy="48" r="3.2"/><circle cx="74" cy="48" r="3.2"/></g>`);
+  if(name==='pot') return wrap(`<g ${L}><path d="M28,52 q0,26 22,26 q22,0 22,-26"/><ellipse cx="50" cy="52" rx="22" ry="6"/><circle cx="40" cy="33" r="7"/><circle cx="58" cy="29" r="7"/><path d="M40,30 v6 M37,33 h6"/></g>`);
+  return '';
+}
 let WW_N=0;
 function buildTotemSVG(opts){ opts=opts||{};
   const closed=!!opts.closed, anim=opts.anim!==false && !closed;
@@ -4991,7 +5000,7 @@ function groupSectionHTML(me){
   const forming=gs.filter(g=>g.status==='pending').sort((a,b)=>(b.created||0)-(a.created||0));
   const cards=[...live.map(groupCard),...forming.map(groupCard)].join("") || `<p class="hint" style="margin:12px 0">No group wagers yet. Rally two sides and let the pot decide.</p>`;
   return `
-    <div class="ritehdr" style="margin-top:22px">The Reckoning · group wagers</div>
+    <div class="ritehdr" style="margin-top:22px">${secGlyph('pot')}The Reckoning · group wagers</div>
     <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:38ch">Two sides stake the same; the winning side <b>splits the whole pot</b>, so fewer winners take a bigger share.</p>
     ${ me? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:var(--sage);margin-bottom:8px">acting as <b style="color:var(--candle)">${esc(VOTER)}</b></div>`:""}
     <div id="groupList">${cards}</div>

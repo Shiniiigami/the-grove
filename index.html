@@ -777,6 +777,7 @@ function lastOfferRaise(){ let t=0; (MEM.rites||[]).forEach(r=>{ if(r&&r.kind===
 function publicOfferCool(){ const now=Date.now()/1000; const base=lastOfferRaise(); const cleared=(typeof MEM!=='undefined'&&MEM&&MEM.offerGateClearedAt)||0; if(cleared>=base) return 0; const cd=PUB_OFFER_COOL-(now-base); return cd>0?cd:0; }
 function initOfferSnap(){ OFFER_SNAP=offerIds(); APPLIED_OFFER_SNAP=appliedOfferIds(); }
 let APPLIED_OFFER_SNAP=null;
+let OFFER_CEREMONY_AT=0;   // when the most recent offering passed (stamped locally, so the sky ceremony is independent of the offering window length)
 function appliedOfferIds(){ const s={}; (MEM.rites||[]).forEach(r=>{ if(r&&r.kind==='offer'&&r.applied&&r.id) s[r.id]=1; }); return s; }
 // When an offering lands, the whole grove dons the robe of their rank in tribute —
 // except the offered, who stay in the Offering Robe, locked to their own timer. Anyone
@@ -810,23 +811,24 @@ function detectOfferPassed(){ try{
   if(!APPLIED_OFFER_SNAP){ APPLIED_OFFER_SNAP=appliedOfferIds(); return; }
   const fresh=(MEM.rites||[]).filter(r=>r&&r.kind==='offer'&&r.applied&&r.id&&!APPLIED_OFFER_SNAP[r.id]);
   APPLIED_OFFER_SNAP=appliedOfferIds();
-  if(fresh.length){ try{ offeringCeremony(fresh[0].target); }catch(e){} try{ applyOfferSky(); }catch(e){} try{ robeGroveAfterOffering(fresh[0].id); }catch(e){} }
+  if(fresh.length){ OFFER_CEREMONY_AT=Date.now()/1000; try{ offeringCeremony(fresh[0].target); }catch(e){} try{ applyOfferSky(); }catch(e){} try{ robeGroveAfterOffering(fresh[0].id); }catch(e){} }
 }catch(e){} }
 function detectNewOffers(){ try{
   if(!OFFER_SNAP){ OFFER_SNAP=offerIds(); return; }
   const fresh=(MEM.rites||[]).filter(r=>r&&r.kind==='offer'&&!r.applied&&r.id&&!OFFER_SNAP[r.id]);
   OFFER_SNAP=offerIds();
   const me=(typeof VOTER!=='undefined')?VOTER:null;
-  fresh.slice(0,3).forEach(r=>{ if(r.nominator && r.nominator===me) return; offerPop(r.target, r.nominator); });
+  fresh.slice(0,3).forEach(r=>{ if(r.nominator && r.nominator===me) return; offerPop(r.target, r.nominator, r.label); });
 }catch(e){} }
-function offerPop(target, nominator){ try{
+function offerPop(target, nominator, reason){ try{
   if(typeof ensureReactStyle==='function') ensureReactStyle();
   const m=memByName(target);
   const card=document.createElement('div'); card.className='spreact';
   card.style.bottom='150px'; card.style.borderColor='rgba(214,160,90,.55)'; card.style.cursor='pointer';
   const cw=document.createElement('div'); cw.className='sr-chibi'; const cnv=document.createElement('canvas'); cw.appendChild(cnv);
   const info=document.createElement('div');
-  info.innerHTML='<div class="sr-name">\ud83d\udd2e Offered to the Eye</div><div class="sr-lbl" style="color:#E0B466;font-size:15px">'+esc(target||'a soul')+'</div>';
+  const _rz=(reason&&reason!=='The Offered')?('<div class="sr-lbl" style="color:#B9A88A;font-size:12px;font-style:italic">"'+esc(reason)+'"</div>'):'';
+  info.innerHTML='<div class="sr-name">\ud83d\udd2e Offered to the Eye</div><div class="sr-lbl" style="color:#E0B466;font-size:15px">'+esc(target||'a soul')+'</div>'+_rz;
   card.appendChild(cw); card.appendChild(info); document.body.appendChild(card);
   try{ if(m){ const soul=buildSoul(m.name,m.points,m.sprite); drawSoul(cnv,soul,4,0); } }catch(e){}
   try{ if(Snd&&Snd.isOn&&Snd.isOn()) Snd.sfx('gong'); }catch(e){}
@@ -1833,6 +1835,23 @@ window.keeperDeleteFromCreator=async function(){
   if(!memByName(name)){ CHIBI_EDIT=null; CHIBI_MEMBER=null; try{ closeSheet(); }catch(e){} }
   else { renderCreator(); }
 };
+window.keeperForceApproveRites=async function(){
+  if(!keeperUnlocked){ toast("Only the Keeper may force a rite."); return; }
+  const pend=(MEM.rites||[]).filter(r=>r && !r.applied);
+  const err=document.getElementById("kerr");
+  if(!pend.length){ if(err) err.textContent="No rites are waiting — the ledger is clear."; return; }
+  const KIND_LBL={deed:'deed',newdeed:'new deed',title:'title',badge:'badge',offer:'offering',oath:'oath'};
+  const lines=pend.slice(0,8).map(r=>`• ${(KIND_LBL[r.kind]||r.kind)}${r.target?` — ${r.target}`:''}`).join("\n");
+  const more=pend.length>8?`\n…and ${pend.length-8} more`:'';
+  if(!confirm(`Force the Eye's approval on all ${pend.length} waiting rite${pend.length===1?'':'s'}? They pass at once, no matter the count.\n\n${lines}${more}`)) return;
+  let done=0;
+  pend.forEach(r=>{ try{ applyRiteEffect(r); r.applied=true; r.approvers=r.approvers||[]; r.forcedBy=VOTER||'Keeper'; done++; }catch(e){} });
+  await saveData();
+  try{ layoutGrove(); }catch(e){} try{ renderLedger(); }catch(e){} try{ renderRites(); }catch(e){}
+  try{ if(typeof scrim!=='undefined' && scrim && scrim.classList.contains('show') && keeperUnlocked) keeperPanel(); }catch(e){}
+  try{ Snd.sfx('approve'); }catch(e){}
+  toast(`The Keeper's word is law — ${done} rite${done===1?'':'s'} passed.`);
+};
 window.keeperResetOfferCooldowns=async function(){
   if(!keeperUnlocked){ toast("Only the Keeper may reset cooldowns."); return; }
   const _pub=publicOfferCool();
@@ -1915,7 +1934,8 @@ function openSoul(name){
   const hist=deedLedgerHTML(m,keeperUnlocked);
   const epiLine = m.epithet ? `<div style="font-style:italic;color:var(--sage);font-size:14px;margin:1px 0 4px">"${esc(m.epithet)}"</div>` : "";
   const _now=Date.now()/1000; const _off=(m.offered&&m.offered>_now)?(m.offered-_now):0;
-  const offMark = _off>0 ? `<div style="display:inline-block;margin:4px 0 2px;padding:3px 9px;border-radius:8px;background:rgba(232,168,143,.14);border:1px solid rgba(232,168,143,.55);color:#E8A88F;font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.06em">▲ THE OFFERED · ${Math.floor(_off/3600)}h ${Math.floor((_off%3600)/60)}m left</div>` : "";
+  const _offTxt = _off>=3600 ? `${Math.floor(_off/3600)}h ${Math.floor((_off%3600)/60)}m` : `${Math.ceil(_off/60)}m`;
+  const offMark = _off>0 ? `<div style="display:inline-block;margin:4px 0 2px;padding:3px 9px;border-radius:8px;background:rgba(232,168,143,.14);border:1px solid rgba(232,168,143,.55);color:#E8A88F;font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.06em">▲ THE OFFERED · ${_offTxt} left</div>` : "";
   const _OFCOOL=12*3600; const _ocd=(m.lastOffer && (m.lastOffer+_OFCOOL)>_now)?(m.lastOffer+_OFCOOL-_now):0;
   const cdMark = "";
   const cwItems=[];
@@ -2058,6 +2078,7 @@ function keeperPanel(){
       <button class="ghostbtn" onclick="trialsKeeperForm()">⚖ Trials override · wagers · groups · challenges</button>
       <button class="ghostbtn" onclick="fireForm()">🔥 Tend the fire · logs &amp; blessing level</button>
       <button class="ghostbtn" onclick="keeperOfferForm()">▲ Offer / release a spirit</button>
+      <button class="ghostbtn" style="border-color:rgba(212,175,90,.5);color:var(--candle)" onclick="keeperForceApproveRites()">${(function(){var _n=(MEM.rites||[]).filter(function(r){return r&&!r.applied;}).length;return '✔ Force-approve all rites'+(_n?(' · '+_n+' waiting'):' · none waiting');})()}</button>
       <button class="ghostbtn" style="border-color:rgba(232,168,143,.5);color:#E8A88F" onclick="keeperResetOfferCooldowns()">\u21ba Allow one more offering${(function(){var _p=publicOfferCool();return _p>0?(' \u00b7 public '+Math.floor(_p/3600)+'h '+Math.floor((_p%3600)/60)+'m'):' \u00b7 clear';})()}</button>
       <div class="kgroup">Members &amp; oaths</div>
       <button class="ghostbtn" onclick="addMemberForm()">+ Initiate a new member</button>
@@ -2095,7 +2116,7 @@ window.keeperOfferForm=function(){
     <div class="grip"></div>
     <div class="kpanel">
       <h3>The Offering</h3>
-      <p class="sub">Mark a spirit as The Offered — robed in the Offering Robe with a 4-hour mark on their soul card — or release them early. Max 3 at once.</p>
+      <p class="sub">Mark a spirit as The Offered — robed in the Offering Robe with a 30-minute mark on their soul card — or release them early. Max 3 at once.</p>
       <div class="field"><label>Spirit</label><select id="koTarget">${opts}</select></div>
       <button class="gold" onclick="keeperSetOffer(true)">▲ Mark as Offered</button>
       <button class="ghostbtn" onclick="keeperSetOffer(false)">Release this spirit</button>
@@ -2114,7 +2135,7 @@ window.keeperSetOffer=async function(on){
     const wasOffered=m.offered && m.offered>now;
     m.unlocks=m.unlocks||[]; if(!m.unlocks.includes('robes')) m.unlocks.push('robes');
     const c=cloneChibi(m); if(!(m.offered&&m.offered>now)) m._preTop=c.top_style; c.top_style='robes'; m.sprite={chibi:c};
-    m.offered=now+4*3600;
+    m.offered=now+30*60;
     m.badges=m.badges||[]; if(!m.badges.includes("Of the Eye")) m.badges.push("Of the Eye");
     if(!wasOffered){ m.points=(m.points||0)+150; m.season=(m.season||0)+150; m.history=m.history||[]; m.history.push({l:"Offered to the Eye",d:150,t:Date.now()/1000}); }
     try{ robeGroveByRank(); }catch(e){}   // the grove dons rank robes; the offered (and any already offered) keep theirs
@@ -3464,7 +3485,11 @@ function chronicleEvents(limit){
   // The fire's blessing has its own single Chronicle line above — skip the per-stoker deed
   // rows here so the feed isn't flooded, but they still appear in each spirit's ledger of deeds.
   const FIRE_DEEDS={'Tended the Sacred Fire':1,'Struck the Final Spark':1};
-  (MEM.members||[]).forEach(m=>{ (m.history||[]).forEach(h=>{ if(h&&h.t&&!FIRE_DEEDS[deedBase(h.l)]){ const up=(h.d||0)>=0; ev.push({t:h.t,ic:up?"✶":"☄",tx:`<b>${esc(m.name)}</b> ${up?'earned':'lost'} ${up?'+':''}${h.d} ✦ — <i>${esc(deedBase(h.l)||h.l)}</i>`}); } }); });
+  // the offering gets its own Chronicle line (with the citation) from the rite, so keep the
+  // plain "+150 Offered to the Eye" ledger rows out of the feed (they still show on the soul card)
+  const CHRON_SKIP=Object.assign({'Offered to the Eye':1,'Named the offering':1},FIRE_DEEDS);
+  (MEM.rites||[]).forEach(r=>{ if(r&&r.kind==='offer'&&r.applied&&r.target){ const cit=(typeof clampText==='function')?clampText(r.label||'',60):(r.label||''); ev.push({t:r.created||0,ic:"🔮",tx:`<b>${esc(r.target)}</b> was offered to the Eye${(cit&&cit!=='The Offered')?` — <i>${esc(cit)}</i>`:''}`}); } });
+  (MEM.members||[]).forEach(m=>{ (m.history||[]).forEach(h=>{ if(h&&h.t&&!CHRON_SKIP[deedBase(h.l)]){ const up=(h.d||0)>=0; ev.push({t:h.t,ic:up?"✶":"☄",tx:`<b>${esc(m.name)}</b> ${up?'earned':'lost'} ${up?'+':''}${h.d} ✦ — <i>${esc(deedBase(h.l)||h.l)}</i>`}); } }); });
   const since=MEM.seasonStart||0;
   ev.sort((a,b)=>(b.t||0)-(a.t||0));
   return ev.filter(e=>(e.t||0)>=since).slice(0, limit||30);
@@ -3773,7 +3798,7 @@ function riteCard(r){
   else if(r.kind==="newdeed") desc=`New deed · <b>${_l}</b> <span style="color:${r.points<0?'#E8A88F':'var(--candle)'}">${r.points>=0?'+':''}${r.points}</span>`;
   else if(r.kind==="title") desc=`<b>${_t}</b> → <span style="font-style:italic;color:var(--sage)">"${_l}"</span>`;
   else if(r.kind==="badge") desc=`<b>${_t}</b> earns badge &nbsp;<span style="color:${r.color||badgeColor(r.label)}">✦ ${_l}</span>`;
-  else if(r.kind==="offer") desc=`<b>${_t}</b> is offered to the Eye &nbsp;<span style="color:#E8A88F">▲ Offering Robe</span>`;
+  else if(r.kind==="offer") desc=`<b>${_t}</b> is offered to the Eye &nbsp;<span style="color:#E8A88F">▲ Offering Robe</span>${(_l&&_l!=='The Offered')?`<div style="font-style:italic;color:var(--sage);font-size:12px;margin-top:2px">"${_l}"</div>`:''}`;
   else if(r.kind==="oath") desc=`<b>${_t}</b> seeks to be sworn &nbsp;<span style="color:var(--sage)">— Rite of Passage</span>`;
   const isOath=r.kind==="oath";
   const countLbl = isOath ? `${Math.max(0,n-1)} / 3 witnesses` : `${n} / ${thr} ✦`;
@@ -3880,7 +3905,7 @@ function applyRiteEffect(r){
     const wasOffered=m.offered && m.offered>Date.now()/1000;
     m.unlocks=m.unlocks||[]; if(!m.unlocks.includes('robes')) m.unlocks.push('robes');
     const c=cloneChibi(m); c.top_style='robes'; m.sprite={chibi:c};
-    m.offered=Date.now()/1000 + 4*3600;
+    m.offered=Date.now()/1000 + 30*60;
     m.badges=m.badges||[]; if(!m.badges.includes("Of the Eye")) m.badges.push("Of the Eye");
     if(!wasOffered){ m.points=(m.points||0)+150; m.season=(m.season||0)+150; m.history=m.history||[]; m.history.push({l:"Offered to the Eye",d:150,t:Date.now()/1000}); const _nom=(r&&r.nominator&&r.nominator!==m.name)?memByName(r.nominator):null; if(_nom){ _nom.points=(_nom.points||0)+25; _nom.season=(_nom.season||0)+25; _nom.history=_nom.history||[]; _nom.history.push({l:"Named the offering",d:25,t:Date.now()/1000}); } }
   }
@@ -4087,7 +4112,7 @@ window.nominateOfferForm=function(){
   const opts=sortedMembers().map(m=>{ const _o=m.offered&&m.offered>_now2; const _p=_pend[m.name]; const _d=(_o||_p); return `<option ${_d?'disabled':''}>${m.name}${_o?' \u00b7 offered':(_p?' \u00b7 pending':'')}</option>`; }).join("");
   const _meM=memByName(VOTER), _OC=12*3600, _nw=Date.now()/1000;
   const _cd=(_meM&&_meM.lastOffer&&(_meM.lastOffer+_OC)>_nw)?(_meM.lastOffer+_OC-_nw):0;
-  const _hm=(x)=>`${Math.floor(x/3600)}h ${Math.floor((x%3600)/60)}m`;
+  const _hm=(x)=>{x=Math.max(0,x|0);const h=Math.floor(x/3600),m=Math.floor((x%3600)/60);return h?`${h}h ${m}m`:`${m}m`;};
   const _cdTxt=_cd>0?`You · next offering in ${_hm(_cd)}.`:`You may raise an offering now.`;
   const _pub=publicOfferCool();
   const _pubTxt=_pub>0?`Grove · next offering can be chosen in ${_hm(_pub)}.`:`Grove · an offering may be chosen now.`;
@@ -4105,6 +4130,7 @@ window.nominateOfferForm=function(){
       <h3>The Offering</h3>
       <p class="sub">Offer a spirit to the Eye. With 7 approvals the grove robes them in the Offering Robe — chosen by communal vote, not by rank. What the offering must do is for the fireside to decide.</p>
       <div class="field"><label>Who is offered?</label><select id="ofTarget">${opts}</select></div>
+      <div class="field"><label>Why are they worthy? · a citation the grove will remember</label><input id="ofReason" maxlength="60" placeholder="e.g. carried three packs across the portage">${reshapeBtn('ofReason','deed')}</div>
       ${_timer}
       ${_btn}
       <button class="ghostbtn" onclick="closeSheet()">Cancel</button>
@@ -4127,8 +4153,11 @@ window.submitNomOffer=function(){
   if(publicOfferCool()>0){ document.getElementById("kerr").textContent=`The grove must wait — the next offering can be chosen in ${Math.ceil(publicOfferCool()/3600)}h.`; return; }
   const _me=memByName(VOTER), OFFER_COOL=12*3600;
   if(_me && _me.lastOffer && now-_me.lastOffer < OFFER_COOL){ const left=Math.ceil((OFFER_COOL-(now-_me.lastOffer))/3600); document.getElementById("kerr").textContent=`You raised an offering recently — wait about ${left}h before raising another.`; return; }
+  const _reason=(typeof clampText==='function'?clampText(document.getElementById("ofReason").value,60):document.getElementById("ofReason").value.trim());
+  if(!_reason){ document.getElementById("kerr").textContent="Name why they are worthy — an offering is an honour."; return; }
+  { const pe=profanityError(_reason); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
   if(_me && MODE!=="remote") _me.lastOffer=now;
-  proposeRite({kind:"offer",target,label:"The Offered",threshold:7,nominator:VOTER});
+  proposeRite({kind:"offer",target,label:_reason,threshold:7,nominator:VOTER});
 };
 
 function renderRules(){
@@ -4166,10 +4195,10 @@ function renderRules(){
     <div class="rulerow"><span>↳ scales by size</span><span class="rmin" style="color:var(--sage)">≤20·3 ≤49·4 ≤69·5<br>≤100·6 ≤150·7 ≤200·8</span></div>
     <div class="rulerow"><span>Nominate a badge</span><span class="rmin">7 ✦</span></div>
     <div class="rulerow"><span>Nominate a title</span><span class="rmin">10 ✦</span></div>
-    <div class="rulerow"><span>The Offering · robe + 4h mark</span><span class="rmin">7 ✦</span></div>
+    <div class="rulerow"><span>The Offering · robe + 30m mark</span><span class="rmin">7 ✦</span></div>
     <p class="rtext" style="margin-top:8px">Points are capped at ±200 per nomination. Open rites expire after 3 hours if they do not pass.</p>
     <div class="ritehdr">The Offering</div>
-    <p class="rtext">The grove’s highest rite (7 ✦ to raise). Nominate a spirit to be offered to the Eye; when it passes they are robed in the <b>Offering Robe</b> with a <b>4-hour</b> mark on their soul card, gain <b>+150</b> Devotion and the <b>Of the Eye</b> badge, while the whole grove’s sky turns — a blood moon and the open Eye — in their honour. The one who raised it earns <b>+25</b>, and only one offering can be made every few hours.</p>
+    <p class="rtext">The grove’s highest rite (7 ✦ to raise). Nominate a spirit to be offered to the Eye; when it passes they are robed in the <b>Offering Robe</b> with a <b>30-minute</b> mark on their soul card, gain <b>+150</b> Devotion and the <b>Of the Eye</b> badge, while the whole grove’s sky turns — a blood moon and the open Eye — in their honour. The one who raised it earns <b>+25</b>, and only one offering can be made every few hours.</p>
     <div class="ritehdr">Titles & Badges</div>
     <p class="rtext">A <b>title</b> is your single epithet beneath your rank — a new one replaces the old. <b>Badges</b> are collectible ✦ marks; hold as many as you earn. A spirit can’t be nominated for a title or badge they already hold, and you can’t raise the same nomination on them twice.</p>
     <div class="ritehdr">Your Spirit</div>
@@ -4177,7 +4206,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bb · The Eye Totem is now the Devotion Weirwood — a heart-tree whose blood-red canopy grows with the Order's collective devotion this season, its carved Eye open and watching, closing while the offering cooldown runs. The Eye's verdict now blooms or blights the tree (gold blessings, ×3 and a +250 blaze, or a red mark, dimming, or full wrath). The Trial of the Chalice now sits beneath Stoke the Fire, and titles/badges/deed nominations have tighter character caps.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bc · An offering now carries a citation — say why the spirit is worthy, and the grove remembers it in the Chronicle. The Offered mark now lasts 30 minutes, and the Keeper can force-approve every waiting rite at once from the Keeper's Ledger.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -5564,7 +5593,7 @@ function skyGradient(ph){
 }
 function placeBody(el,frac){ if(!el) return; const x=8+frac*84; const y=44-Math.sin(frac*Math.PI)*34; el.style.left=x+'%'; el.style.top=y+'%'; el.style.transform='translate(-50%,-50%)'; }
 function drawStars(){ const c=document.getElementById('stars'); if(!c) return; const dpr=Math.min(1.5,devicePixelRatio||1); c.width=innerWidth*dpr; c.height=innerHeight*dpr; c.style.width=innerWidth+'px'; c.style.height=innerHeight+'px'; const x=c.getContext('2d'); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,innerWidth,innerHeight); const rnd=rng(42); const N=innerWidth<480?70:120; for(let i=0;i<N;i++){ const sx=rnd()*innerWidth, sy=rnd()*innerHeight*0.62, r=rnd()*1.2+0.3, a=0.35+rnd()*0.6; x.fillStyle='rgba(255,250,235,'+a.toFixed(2)+')'; x.beginPath(); x.arc(sx,sy,r,0,7); x.fill(); } }
-function offerEffectRemain(){ try{ const now=Date.now()/1000; let newest=0; (MEM.members||[]).forEach(m=>{ if(m&&m.offered){ const at=m.offered-14400; if(at>newest) newest=at; } }); const rem=900-(now-newest); return (newest>0&&rem>0)?rem:0; }catch(e){ return 0; } }
+function offerEffectRemain(){ try{ const rem=900-(Date.now()/1000-OFFER_CEREMONY_AT); return (OFFER_CEREMONY_AT>0&&rem>0)?rem:0; }catch(e){ return 0; } }
 function offerEyeSVG(stroke,iris,pupil,glow){ return '<svg class="ofeye" viewBox="0 0 100 100"><g style="filter:drop-shadow(0 0 5px '+glow+')"><path d="M9 50 Q50 19 91 50 Q50 81 9 50 Z" fill="none" stroke="'+stroke+'" stroke-width="5" stroke-linejoin="round"/><circle cx="50" cy="50" r="16.5" fill="'+iris+'"/><circle cx="50" cy="50" r="7.2" fill="'+pupil+'"/><circle cx="44.5" cy="44.5" r="2.3" fill="rgba(255,255,255,.55)"/></g></svg>'; }
 const ECLIPSE_SKY='radial-gradient(120% 95% at 50% 13%, #3a241f 0%, #1c151a 32%, #0d0a10 64%, #06060a 100%)';
 /* ===== lake: far shore + water tint + moon/sun reflection (reads sky + offering state) ===== */

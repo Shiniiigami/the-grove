@@ -2118,6 +2118,7 @@ window.keeperOfferForm=function(){
       <h3>The Offering</h3>
       <p class="sub">Mark a spirit as The Offered — robed in the Offering Robe with a 30-minute mark on their soul card — or release them early. Max 3 at once.</p>
       <div class="field"><label>Spirit</label><select id="koTarget">${opts}</select></div>
+      <div class="field"><label>Why are they worthy? · a citation the grove will remember</label><input id="koReason" maxlength="60" placeholder="e.g. carried three packs across the portage">${reshapeBtn('koReason','deed')}</div>
       <button class="gold" onclick="keeperSetOffer(true)">▲ Mark as Offered</button>
       <button class="ghostbtn" onclick="keeperSetOffer(false)">Release this spirit</button>
       <p class="sub" style="margin-top:8px">Currently offered (${active.length}/3): ${list}</p>
@@ -2130,6 +2131,10 @@ window.keeperSetOffer=async function(on){
   const m=MEM.members.find(x=>x.name===name); if(!m) return;
   const now=Date.now()/1000;
   if(on){
+    const _rEl=document.getElementById("koReason");
+    const _reason=_rEl?(typeof clampText==='function'?clampText(_rEl.value,60):(_rEl.value||'').trim()):'';
+    if(!_reason){ document.getElementById("kerr").textContent="Name why they are worthy — an offering is an honour."; return; }
+    { const pe=(typeof profanityError==='function')?profanityError(_reason):''; if(pe){ document.getElementById("kerr").textContent=pe; return; } }
     const active=(MEM.members||[]).filter(x=>x.offered&&x.offered>now&&x.name!==name).length;
     if(active>=3){ document.getElementById("kerr").textContent="Three are already offered — release one first."; return; }
     const wasOffered=m.offered && m.offered>now;
@@ -2138,6 +2143,8 @@ window.keeperSetOffer=async function(on){
     m.offered=now+30*60;
     m.badges=m.badges||[]; if(!m.badges.includes("Of the Eye")) m.badges.push("Of the Eye");
     if(!wasOffered){ m.points=(m.points||0)+150; m.season=(m.season||0)+150; m.history=m.history||[]; m.history.push({l:"Offered to the Eye",d:150,t:Date.now()/1000}); }
+    // record the citation as an applied offer rite so it lands in the Chronicle, same as a communal offering
+    MEM.rites=MEM.rites||[]; MEM.rites.push({id:"r"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36), kind:"offer", target:name, label:_reason, threshold:7, nominator:(typeof VOTER!=='undefined'&&VOTER)?VOTER:"the Keeper", approvers:[], applied:true, created:Date.now()/1000, keeperSet:true});
     try{ robeGroveByRank(); }catch(e){}   // the grove dons rank robes; the offered (and any already offered) keep theirs
   } else { m.offered=0; m.unlocks=(m.unlocks||[]).filter(u=>u!=='robes'); if(m.sprite&&m.sprite.chibi&&m.sprite.chibi.top_style==='robes'){ const c=cloneChibi(m); c.top_style=(m._preTop||(c.sleeves===false?'tank':'tee')); delete m._preTop; m.sprite={chibi:c}; } }
   await saveData(); layoutGrove(); renderLedger(); keeperOfferForm();
@@ -4206,7 +4213,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bc · An offering now carries a citation — say why the spirit is worthy, and the grove remembers it in the Chronicle. The Offered mark now lasts 30 minutes, and the Keeper can force-approve every waiting rite at once from the Keeper's Ledger.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bd · The Keeper's own offering now takes a citation too — say why the spirit is worthy and it's remembered in the Chronicle, same as a communal offering.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

@@ -2562,8 +2562,9 @@ window.awardPoints=async function(){
   else if(netPts<0 && m.lossMult>1){ const lm=m.lossMult; delete m.lossMult; netPts=netPts*lm; reason+=` (×${lm} curse)`; }
   m.points=Math.max(0,m.points+netPts);
   m.season=Math.max(0,(m.season||0)+netPts);
-  // a single award is ONE deed — store the wheel multiplier separately, never as the stack-count `n`
-  m.history=m.history||[];m.history.push({l:reason,d:netPts,n:1,t:Date.now()/1000});
+  // the wheel/curse multiplier is folded into the points + noted in the label; the Keeper's
+  // manual multiplier (the ledger's × field) is the deed's tally, so it shows as ×roman on the soul card
+  m.history=m.history||[];m.history.push({l:reason,d:netPts,n:Math.max(1,mult),t:Date.now()/1000});
   const after=tierIndex(m.points);
   // advance this member's rank snapshot now, so a later poll doesn't re-celebrate the same rank-up
   try{ if(after!==before){ const s=loadRankSnap(); s[m.name]=after; saveRankSnap(s); } }catch(e){}
@@ -4213,7 +4214,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bd · The Keeper's own offering now takes a citation too — say why the spirit is worthy and it's remembered in the Chronicle, same as a communal offering.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30be · Fixed the Roman numeral on the soul card — a Keeper award made with the ledger's Multiplier now shows its ×tally (e.g. ×III) on the deed, instead of nothing.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

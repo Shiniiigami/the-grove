@@ -4177,7 +4177,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30aw · The Eye Totem is now the Devotion Weirwood — a heart-tree whose blood-red canopy grows with the Order's collective devotion this season, its carved Eye open and watching, closing while the offering cooldown runs. The Eye's verdict now blooms or blights the tree (gold blessings, ×3 and a +250 blaze, or a red mark, dimming, or full wrath). The Trial of the Chalice now sits beneath Stoke the Fire, and titles/badges/deed nominations have tighter character caps.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ax · The Eye Totem is now the Devotion Weirwood — a heart-tree whose blood-red canopy grows with the Order's collective devotion this season, its carved Eye open and watching, closing while the offering cooldown runs. The Eye's verdict now blooms or blights the tree (gold blessings, ×3 and a +250 blaze, or a red mark, dimming, or full wrath). The Trial of the Chalice now sits beneath Stoke the Fire, and titles/badges/deed nominations have tighter character caps.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4709,8 +4709,8 @@ function wwCrown(){ if(_WWSK) return _WWSK; const C=WW_CFG, rng=wwRng(C.seed), s
     if(s.depth===0)anch.push([s.x1,s.y1,rnd(),0.8+rnd()*0.6]);});
   anch.forEach(p=>p._k=p[2]*0.55+(1-p[1]/300)*0.45);anch.sort((a,b)=>b._k-a._k);segs.sort((a,b)=>b.w0-a.w0);
   let cx=0,cy=0;tips.forEach(t=>{cx+=t[0];cy+=t[1];});cx/=tips.length;cy/=tips.length;
-  let minY=C.topY; segs.forEach(s=>{minY=Math.min(minY,s.y0,s.y1);}); anch.forEach(a=>{minY=Math.min(minY,a[1]-(2+a[3]*1.7));});
-  _WWSK={segs,anch,cx,cy,minY:Math.floor(minY)}; return _WWSK; }
+  let minY=C.topY,minX=100,maxX=100; segs.forEach(s=>{minY=Math.min(minY,s.y0,s.y1);minX=Math.min(minX,s.x0,s.x1);maxX=Math.max(maxX,s.x0,s.x1);}); anch.forEach(a=>{const r=2+a[3]*1.7;minY=Math.min(minY,a[1]-r);minX=Math.min(minX,a[0]-r);maxX=Math.max(maxX,a[0]+r);});
+  _WWSK={segs,anch,cx,cy,minY:Math.floor(minY),minX:Math.floor(minX),maxX:Math.ceil(maxX)}; return _WWSK; }
 function wwTrunkPath(){ const C=WW_CFG,bY=C.baseY,tY=C.topY,bHW=C.baseHW,tHW=C.topHW,span=bY-tY,cLY=tY+span*0.55,cLHW=(tHW+(bHW-tHW)*0.5)*0.96,flareY=bY-span*0.12,flareHW=bHW*0.86;
   return `M${(100-bHW).toFixed(1)},${bY} Q${(100-flareHW).toFixed(1)},${flareY.toFixed(1)} ${(100-cLHW).toFixed(1)},${cLY.toFixed(1)} Q${(100-tHW*1.15).toFixed(1)},${(tY+span*0.12).toFixed(1)} ${(100-tHW).toFixed(1)},${tY} L${(100+tHW).toFixed(1)},${tY} Q${(100+tHW*1.15).toFixed(1)},${(tY+span*0.12).toFixed(1)} ${(100+cLHW).toFixed(1)},${cLY.toFixed(1)} Q${(100+flareHW).toFixed(1)},${flareY.toFixed(1)} ${(100+bHW).toFixed(1)},${bY} Z`; }
 // collective season devotion → 0..1 canopy fill (Keeper-tunable via MEM.devotionGoal)
@@ -4723,7 +4723,8 @@ function buildTotemSVG(opts){ opts=opts||{};
   const EX=WW_EX,EY=WW_EY,EHW=WW_EHW,EVH=WW_EVH,bY=C.baseY,tY=C.topY,bHW=C.baseHW,tHW=C.topHW;
   const almond=(hw,vh)=>`M${(EX-hw).toFixed(1)},${EY} Q${EX},${(EY-vh).toFixed(1)} ${(EX+hw).toFixed(1)},${EY} Q${EX},${(EY+vh).toFixed(1)} ${(EX-hw).toFixed(1)},${EY} Z`;
   const ALM=almond(EHW,EVH), tp=wwTrunkPath();
-  const vbTop=Math.min(0,(SK.minY!=null?SK.minY:0)-8), vbH=(C.baseY+8)-vbTop;   // headroom so the crown is never clipped
+  const vbTop=Math.min(0,(SK.minY!=null?SK.minY:0)-8), vbH=(C.baseY+8)-vbTop;   // headroom so the crown is never clipped (top)
+  const vbLeft=Math.min(0,(SK.minX!=null?SK.minX:0)-6), vbRight=Math.max(200,(SK.maxX!=null?SK.maxX:200)+6), vbW=vbRight-vbLeft;   // ...and sides
   const segStroke=SK.segs.map(s=>`<path d="M${s.x0.toFixed(1)},${s.y0.toFixed(1)} L${s.x1.toFixed(1)},${s.y1.toFixed(1)}" stroke-width="${((s.w0+s.w1)/2).toFixed(1)}"/>`).join('');
   const segUnder=SK.segs.map(s=>`<path d="M${s.x0.toFixed(1)},${s.y0.toFixed(1)} L${s.x1.toFixed(1)},${s.y1.toFixed(1)}" stroke-width="${((s.w0+s.w1)/2+0.8).toFixed(1)}"/>`).join('');
   const ln=Math.round(progress*SK.anch.length); let leaves='';
@@ -4739,7 +4740,7 @@ function buildTotemSVG(opts){ opts=opts||{};
         <ellipse class="${pupCls}" style="transform-box:fill-box;transform-origin:center" cx="${EX}" cy="${EY}" rx="${(EHW*0.2).toFixed(1)}" ry="${(EVH*0.62).toFixed(1)}" fill="#0c0604"/>
         <circle cx="${(EX-EHW*0.24).toFixed(1)}" cy="${(EY-EVH*0.3).toFixed(1)}" r="2.1" fill="#FFE9C0" opacity=".55"/>
       </g></g></g>`;
-  return `<svg viewBox="0 ${vbTop} 200 ${vbH}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+  return `<svg viewBox="${vbLeft} ${vbTop} ${vbW} ${vbH}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
    <defs>
     <linearGradient id="bk_${id}" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="${WW_BARK.sh}"/><stop offset="24%" stop-color="${WW_BARK.hi}"/><stop offset="52%" stop-color="${WW_BARK.lo}"/><stop offset="80%" stop-color="${WW_BARK.hi}"/><stop offset="100%" stop-color="${WW_BARK.sh}"/></linearGradient>
     <radialGradient id="knot_${id}" cx="50%" cy="44%" r="58%"><stop offset="0%" stop-color="${wwMix(WW_BARK.lo,'#000000',0.2)}"/><stop offset="58%" stop-color="${wwMix(WW_BARK.sh,'#000000',0.28)}"/><stop offset="100%" stop-color="#140b06"/></radialGradient>

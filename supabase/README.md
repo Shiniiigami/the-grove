@@ -75,14 +75,36 @@ heavy activity, and the server over 600 randomised actions with forced
 sweeps/forfeits — point conservation (`members + locked-in-bets + burned == start`)
 held at every step, with no negatives or crashes on fuzzed names/notes/amounts.
 
+The `2026-07-01e` set is the fixes from a five-agent audit:
+
+- **grove_chalice** — clamp the client-supplied commit `delta` to ±500. Previously
+  uncapped: an anon caller could `grove_chalice({commit:[{name,delta:999999}]})` and
+  set any spirit to any value (unlimited point minting). Now bounded to a real
+  game's range.
+- **FOR UPDATE** rolled out to `grove_action`, `grove_chalice`, `grove_withdraw`,
+  `grove_set_chibi`, `grove_clear_rites` — closes the lost-update race for the
+  read-modify-write RPCs (propose/vote already had it).
+- **grove_wheel** now writes the Test-of-Devotion tally (`devotion.{spins,total}`)
+  server-side, so it persists in hosted play instead of only existing on the
+  device that spun.
+- **grove_save** optimistic concurrency: rejects a stale full-blob save (a keeper
+  saving an out-of-date snapshot could otherwise revert everyone's concurrent
+  activity). Client threads `updated_at` through `sbRead`→`grove_save`.
+- **Self-nomination**: allowed for deeds (you get the deed points, not the
+  nominator bounty) and oaths (self by design); blocked for title/badge/offer,
+  server-side and in the nomination forms.
+
 ### Known follow-ups (not yet applied)
 
 - A passing offering that hits the "Eye is full" (3 offered) cap at apply time is
   consumed with no effect (no +150 / robe / +50). Rare but reachable; needs a
   product decision on desired behaviour.
-- The remaining `grove_*` RMW functions (`grove_action`, `grove_save`,
-  `grove_chalice`, `grove_wheel`, …) should also take `FOR UPDATE`.
-- Latent: `grove_action`'s fire-goal default is 8 while the client's is 6 (the
-  live `fire.goal` is 6, so it only matters on a fresh reseed).
+- The `chal_approve` maxed-trial cheat guard is a hard cliff at reward ≥150; a
+  reward-149 challenge + ×3 buff pays ~+447 with no penalty (agent finding).
+- `grove_chalice` still trusts the client for `drained` (a free "Drained the
+  Chalice" badge) and the game state blob generally; the ±500 delta clamp bounds
+  the point impact but the chalice remains a client-refereed mini-game.
+- Latent: `grove_action`'s fire-goal default is 8 while the client's is 6 (live
+  `fire.goal` is 6, only matters on a fresh reseed).
 - `grove_action.wheel_spin` is dead (remote clients use `grove_wheel`) and still
   charges 50 vs the live 15 — safe to remove.

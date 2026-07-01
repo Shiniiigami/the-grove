@@ -653,10 +653,13 @@ let liveStorage = (typeof window!=="undefined" && window.storage && window.stora
 
 function stripPass(o){ const c=structuredClone(o); delete c.pass; return c; }
 function sbHeaders(){ return {apikey:SUPABASE.anonKey, Authorization:"Bearer "+SUPABASE.anonKey, "Content-Type":"application/json"}; }
+let SB_VER=null;   // last-seen grove_state.updated_at — carried into grove_save for optimistic concurrency
 async function sbRead(){
-  const r=await fetch(`${SUPABASE.url}/rest/v1/grove_state?id=eq.1&select=data`,{headers:sbHeaders()});
+  const r=await fetch(`${SUPABASE.url}/rest/v1/grove_state?id=eq.1&select=data,updated_at`,{headers:sbHeaders()});
   if(!r.ok) throw new Error("read "+r.status);
-  const j=await r.json(); return (Array.isArray(j)&&j[0])?j[0].data:null;
+  const j=await r.json(); const row=(Array.isArray(j)&&j[0])?j[0]:null;
+  if(row){ SB_VER=row.updated_at||null; return row.data; }
+  return null;
 }
 async function sbRpc(fn,args){
   const r=await fetch(`${SUPABASE.url}/rest/v1/rpc/${fn}`,{method:"POST",headers:sbHeaders(),body:JSON.stringify(args)});
@@ -894,7 +897,7 @@ window.relinkPush=async function(){ try{
   try{ renderRules(); }catch(e){}
 }catch(e){ toast('Re-link failed: '+((e&&e.message)||'unknown')); } };
 
-const EXPECTED_DB='2026-07-01d';
+const EXPECTED_DB='2026-07-01e';
 function showDbBanner(msg){
   let b=document.getElementById('dbBanner');
   if(!b){ b=document.createElement('div'); b.id='dbBanner'; b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:300;background:#7A2E2E;color:#FFE8C8;font-family:Silkscreen,monospace;font-size:11px;line-height:1.4;text-align:center;padding:9px 14px;box-shadow:0 2px 12px rgba(0,0,0,.55)'; document.body.appendChild(b); }
@@ -929,8 +932,8 @@ async function loadData(){
 }
 async function saveData(){
   if(MODE==="remote"){
-    try{ await sbRpc("grove_save",{p_pass:SESSION_PASS||"",p_data:MEM}); }
-    catch(e){ console.warn("save failed",e.message); toast("Save failed — check passphrase / connection."); }
+    try{ const _nv=await sbRpc("grove_save",{p_pass:SESSION_PASS||"",p_data:MEM,p_expected:SB_VER}); if(_nv) SB_VER=_nv; }
+    catch(e){ if(/stale grove/i.test(String((e&&e.message)||e))){ try{ await refreshRemote(); }catch(_){} toast("The grove changed elsewhere — reloaded, so your change wasn't saved over it. Re-apply it."); } else { console.warn("save failed",e.message); toast("Save failed — check passphrase / connection."); } }
     takeSnap();
     return;
   }
@@ -4206,6 +4209,7 @@ window.nominateTitleForm=function(){
 };
 window.submitNomTitle=function(){
   const target=document.getElementById("ntTarget").value;
+  if(target===VOTER){ document.getElementById("kerr").textContent="You can't nominate yourself for a title."; return; }
   const label=clampText(document.getElementById("ntTitle").value,28);
   if(!label){ document.getElementById("kerr").textContent="Enter a title."; return; }
   { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
@@ -4261,6 +4265,7 @@ window.nominateBadgeForm=function(){
 };
 window.submitNomBadge=function(){
   const target=document.getElementById("nbTarget").value;
+  if(target===VOTER){ document.getElementById("kerr").textContent="You can't nominate yourself for a badge."; return; }
   const label=clampText(document.getElementById("nbBadge").value,30);
   if(!label){ document.getElementById("kerr").textContent="Name the badge."; return; }
   { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
@@ -4310,6 +4315,7 @@ window.nominateOfferForm=function(){
 window.submitNomOffer=function(){
   const target=document.getElementById("ofTarget").value;
   if(!target){ document.getElementById("kerr").textContent="Choose who is offered."; return; }
+  if(target===VOTER){ document.getElementById("kerr").textContent="You can't offer yourself to the Eye."; return; }
   const now=Date.now()/1000;
   const _tm=memByName(target);
   if(_tm && _tm.offered && _tm.offered>now){ document.getElementById("kerr").textContent=`${target} already stands offered to the Eye — none may be offered twice.`; return; }

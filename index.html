@@ -2372,7 +2372,7 @@ function renderBadgeForm(){
       <p class="sub">Collectible marks of honour — a member can hold many. Each badge gets its own colour automatically; tap the swatch to recolour, ✎ to rename, ✕ to remove, or award a new one below.</p>
       <div class="field"><label>Member</label><select onchange="badgePick(this.value)">${opts}</select></div>
       <div class="badgewrap" style="margin:4px 0 10px">${have}</div>
-      <div class="field"><label>New badge</label><input id="bgVal" maxlength="24" oninput="clearChipsHL('bgChips')" placeholder="e.g. Polar Bear">${reshapeBtn('bgVal','badge')}</div>
+      <div class="field"><label>New badge</label><input id="bgVal" maxlength="30" oninput="clearChipsHL('bgChips')" placeholder="e.g. Polar Bear">${reshapeBtn('bgVal','badge')}</div>
       <div class="quick" id="bgChips">${chips}</div>
       <div class="field" style="margin-top:8px"><label>Badge colour</label>${swatchBtns(NEW_BADGE_COL, c=>`pickNewBadgeCol('${c}')`, 'nbc')}</div>
       <button class="gold" style="margin-top:12px" onclick="commitBadge()">Award badge</button>
@@ -2391,7 +2391,7 @@ window.editBadge=async function(i){
 };
 window.commitBadge=async function(){
   const m=MEM.members.find(x=>x.name===BADGE_MEMBER);
-  const b=clampText(document.getElementById("bgVal").value,24);
+  const b=clampText(document.getElementById("bgVal").value,30);
   if(!b){ document.getElementById("kerr").textContent="Name the badge."; return; }
   m.badges=m.badges||[]; if(!m.badges.includes(b)) m.badges.push(b);
   MEM.badgeColors=MEM.badgeColors||{}; MEM.badgeColors[b]=NEW_BADGE_COL;
@@ -4031,9 +4031,9 @@ function syncBadgeIdeas(){ if(!BADGEIDEAS_EDIT)return; BADGEIDEAS_EDIT.forEach((
 window.badgeIdeaAdd=function(){ syncBadgeIdeas(); BADGEIDEAS_EDIT.push("New badge"); renderBadgeIdeas(); };
 window.badgeIdeaDel=function(i){ syncBadgeIdeas(); BADGEIDEAS_EDIT.splice(i,1); renderBadgeIdeas(); };
 window.badgeIdeasRestore=function(){ if(!confirm("Replace the list with the default cult badges? Nothing saves until you Inscribe."))return; BADGEIDEAS_EDIT=DEFAULT_BADGE_IDEAS.slice(); renderBadgeIdeas(); };
-window.badgeIdeasSave=async function(){ syncBadgeIdeas(); MEM.badgeIdeas=BADGEIDEAS_EDIT.map(b=>clampText(b,24)).filter(Boolean); await saveData(); toast("Preset badges inscribed."); keeperPanel(); };
+window.badgeIdeasSave=async function(){ syncBadgeIdeas(); MEM.badgeIdeas=BADGEIDEAS_EDIT.map(b=>clampText(b,30)).filter(Boolean); await saveData(); toast("Preset badges inscribed."); keeperPanel(); };
 function renderBadgeIdeas(){
-  const rows=(BADGEIDEAS_EDIT||[]).map((b,i)=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:7px"><input id="bi_${i}" maxlength="24" value="${String(b).replace(/"/g,'&quot;')}" style="flex:1;min-width:0;${inp}font-family:'Spectral',serif;font-size:13px"><button onclick="badgeIdeaDel(${i})" title="Remove" style="background:none;border:none;color:var(--ember);font-size:18px;cursor:pointer">✕</button></div>`).join('')||`<p class="sub">No badge ideas yet — add some.</p>`;
+  const rows=(BADGEIDEAS_EDIT||[]).map((b,i)=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:7px"><input id="bi_${i}" maxlength="30" value="${String(b).replace(/"/g,'&quot;')}" style="flex:1;min-width:0;${inp}font-family:'Spectral',serif;font-size:13px"><button onclick="badgeIdeaDel(${i})" title="Remove" style="background:none;border:none;color:var(--ember);font-size:18px;cursor:pointer">✕</button></div>`).join('')||`<p class="sub">No badge ideas yet — add some.</p>`;
   sheet.innerHTML=`
     <div class="grip"></div>
     <div class="kpanel">
@@ -4058,7 +4058,7 @@ window.nominateBadgeForm=function(){
       <h3>Nominate a Badge</h3>
       <p class="sub">A collectible mark of honour — members can hold many. Needs 7 approvals. Keep it witty and the Eye is pleased.</p>
       <div class="field"><label>Member</label><select id="nbTarget">${opts}</select></div>
-      <div class="field"><label>Badge</label><input id="nbBadge" maxlength="24" oninput="clearChipsHL('nbChips')" placeholder="e.g. Polar Bear">${reshapeBtn('nbBadge','badge')}</div>
+      <div class="field"><label>Badge</label><input id="nbBadge" maxlength="30" oninput="clearChipsHL('nbChips')" placeholder="e.g. Polar Bear">${reshapeBtn('nbBadge','badge')}</div>
       <div class="quick" id="nbChips">${chips}</div>
       <div class="field" style="margin-top:8px"><label>Badge colour</label>${swatchBtns(NOM_BADGE_COL, c=>`pickNomBadgeCol('${c}')`, 'nmc')}</div>
       <button class="gold" style="margin-top:12px" onclick="submitNomBadge()">Raise nomination</button>
@@ -4069,7 +4069,7 @@ window.nominateBadgeForm=function(){
 };
 window.submitNomBadge=function(){
   const target=document.getElementById("nbTarget").value;
-  const label=clampText(document.getElementById("nbBadge").value,24);
+  const label=clampText(document.getElementById("nbBadge").value,30);
   if(!label){ document.getElementById("kerr").textContent="Name the badge."; return; }
   { const pe=profanityError(label); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
   const _m=memByName(target); const _lc=label.toLowerCase();
@@ -4177,7 +4177,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30az · The Eye Totem is now the Devotion Weirwood — a heart-tree whose blood-red canopy grows with the Order's collective devotion this season, its carved Eye open and watching, closing while the offering cooldown runs. The Eye's verdict now blooms or blights the tree (gold blessings, ×3 and a +250 blaze, or a red mark, dimming, or full wrath). The Trial of the Chalice now sits beneath Stoke the Fire, and titles/badges/deed nominations have tighter character caps.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ba · The Eye Totem is now the Devotion Weirwood — a heart-tree whose blood-red canopy grows with the Order's collective devotion this season, its carved Eye open and watching, closing while the offering cooldown runs. The Eye's verdict now blooms or blights the tree (gold blessings, ×3 and a +250 blaze, or a red mark, dimming, or full wrath). The Trial of the Chalice now sits beneath Stoke the Fire, and titles/badges/deed nominations have tighter character caps.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4727,10 +4727,10 @@ function secGlyph(name){
 
 /* ===== The Eye's Tongue — reshape a plain nomination into an on-theme name (fully offline) ===== */
 const EYE_FILL=new Set('the a an of my our master guy gal person king queen lord god best champion pro expert and to at on in is was i who that all too much very really so lot lots totally kinda'.split(' '));
-const EYE_GADJ=['Sacred','Blessed','Unburnt','Devout','Anointed','Wayward','Eternal','Ember-blessed','Eye-marked','Grove-touched','Hollow'];
-const EYE_GVERB=['Offered','Kept','Bore','Walked','Answered','Honoured'];
-const EYE_MISHAP=/\b(lost|fell|fall|sick|late|fool|drunk)\b|(drank|hammer|snor|trip|burnt|burned|forgot|spill|puke|cried|hungover|clumsy|overslept|stuck|sunburn|fail|drop)/;
-const EYE_HEROIC=/\b(won|led|first|brave)\b|(carri|saved|built|caught|climb|swam|haul|rescu|finish|conquer|strong|portage|fastest|brav)/;
+const EYE_GADJ=['Sacred','Blessed','Unburnt','Devout','Anointed','Wayward','Eternal','Ember-blessed','Eye-marked','Grove-touched','Hollow','Forsaken','Chosen','Radiant','Shrouded','Ordained','Feral','Sanctified','Weathered','Nameless','Twice-Marked'];
+const EYE_GVERB=['Offered','Kept','Bore','Walked','Answered','Honoured','Endured','Braved','Witnessed','Upheld','Carried','Sought'];
+const EYE_MISHAP=/\b(lost|fell|fall|sick|late|fool|drunk|slow|last)\b|(drank|hammer|snor|trip|burnt|burned|forgot|spill|puke|vomit|barf|nause|cried|hungover|hangover|clumsy|overslept|tardy|stuck|sunburn|fail|drop|fart|burp|mud|muck)/;
+const EYE_HEROIC=/\b(won|led|first|brave|gave|fast)\b|(carri|saved|shared|built|caught|climb|swam|haul|rescu|finish|conquer|strong|portage|fastest|brav|summit|rally|race|sprint)/;
 const EYE_DOM={
  fire:{k:'fire flame spark bonfire campfire ember kindl stoke pyre',noun:['Sacred Fire','Flame','Ember','First Spark','Pyre'],verb:['Kindled','Stoked','Tended','Fed'],adj:['Unburnt','Ember-blessed','Kindled'],short:['The Kindler','First Spark','The Unburnt','Keeper of the Flame']},
  cook:{k:'bbq barbecue grill cook chef meat steak burger bacon food kitchen breakfast dinner roast',noun:['Cauldron','Coals','Sacred Feast','Ember-Meat'],verb:['Cooked','Roasted','Blessed','Fed'],adj:['Coal-blessed','Charred','Well-Fed'],short:['Coal High Priest','Keeper of the Cauldron','High Priest of the Coals']},
@@ -4759,6 +4759,53 @@ const EYE_DOM={
  sun:{k:'sunburn tan burnt burned',noun:['Sun','Kiss-of-Fire'],verb:['Burned','Endured'],adj:['Sun-kissed','Kissed-by-Fire'],short:['The Sunburnt Saint','The Kissed-by-Fire']},
  loon:{k:'loon bird owl birdsong hoot',noun:['Loon-Call','Night Choir'],verb:['Answered','Called'],adj:['Loon-touched','Owl-eyed'],short:['Owl of the Eye','The Loon-Touched']},
 };
+// ---- word-bank expansion: enlarge existing domains and add many more (≈10× the vocabulary) ----
+const EYE_MORE={
+ fire:{noun:['Blaze','Sacred Coals','Living Flame','Bonfire','Everflame'],verb:['Sparked','Nursed','Coaxed','Rekindled'],adj:['Ash-marked','Fire-touched','Ever-Burning'],short:['The Ember-Tender','Warden of the Blaze','Bearer of the Everflame']},
+ cook:{noun:['Grill-Altar','Cook-Fire','Communal Pot','Sacred Grease','Charred Offering'],verb:['Seared','Charred','Simmered','Basted'],adj:['Grease-anointed','Smoke-touched','Feast-blessed'],short:['The Grease-Anointed','Warden of the Feast','Tender of the Cook-Fire']},
+ drink:{noun:['Bottomless Cask','Golden Draught','Communal Cup','Sacred Brew'],verb:['Quaffed','Swilled','Toasted','Guzzled'],adj:['Cask-blessed','Ever-Thirsty','Deep-drowned'],short:['The Bottomless','Keeper of the Cask','The Ever-Thirsty']},
+ water:{noun:['Black Lake','Frozen Shallows','Sunless Deep','Still Water','Cold Current'],verb:['Dove','Waded','Submerged','Surfaced'],adj:['Lake-touched','Frost-kissed','Deep-blessed'],short:['The Frost-Kissed','Warden of the Deep','Diver of the Black Lake']},
+ music:{noun:['Grove-Anthem','Sacred Rhythm','Night-Song','Drum'],verb:['Drummed','Hummed','Serenaded'],adj:['Rhythm-blessed','Song-marked'],short:['The Grove-Sung','Drummer of the Deep Night']},
+ sleep:{noun:['Deep Slumber','Endless Doze','Sacred Nap'],verb:['Dozed','Drifted','Slumbered'],adj:['Slumber-blessed','Ever-Tired'],short:['The Ever-Tired','Warden of the Deep Slumber']},
+ bug:{noun:['Biting Cloud','Feast of Flesh','Ten Thousand Wings'],verb:['Bled','Swatted','Suffered'],adj:['Bite-marked','Welt-blessed'],short:['The Welt-Blessed','Feast of the Swarm']},
+ carry:{noun:['Twin Packs','Groaning Yoke','Endless Haul'],verb:['Shouldered','Lugged','Dragged'],adj:['Yoke-bearing','Ever-Laden'],short:['The Ever-Laden','Shoulderer of the Yoke']},
+ navigate:{noun:['Trackless Wood','Faint Blaze','North Star'],verb:['Guided','Blazed','Homed'],adj:['Star-guided','Trackless'],short:['Blazer of the Trail','The Star-Guided']},
+ fish:{noun:['Silver Catch','Patient Line','Deep Lurker'],verb:['Reeled','Lured','Netted'],adj:['Line-blessed','Ever-Patient'],short:['The Ever-Patient','Reeler of the Deep']},
+ wood:{noun:['Split Round','Kindling Heap','Ringing Axe'],verb:['Bucked','Stacked','Felled'],adj:['Axe-blessed','Splinter-marked'],short:['Feller of the Round','The Splinter-Marked']},
+ // --- new domains ---
+ paddle:{k:'paddle canoe kayak oar row portage stroke steer',noun:['Long Paddle','Silent Wake','Bent Oar','Far Shore','Aching Stroke'],verb:['Paddled','Rowed','Steered','Crossed'],adj:['Oar-blessed','Tireless','Wake-leaving'],short:['The Tireless Oar','Keeper of the Far Shore','The Silent Wake']},
+ hike:{k:'hike hik trek march summit ridge mile',noun:['Long Trail','Endless Path','Far Ridge','Aching Mile'],verb:['Trekked','Climbed','Summited','Marched'],adj:['Trail-worn','Blister-blessed','Mile-eating'],short:['The Trail-Worn','The Mile-Eater','Walker of the Endless Path']},
+ cards:{k:'card poker deck bluff bet gamble euchre cribbage',noun:['Fated Deck','Painted Cards','Game of Chance','Bluff'],verb:['Dealt','Bluffed','Fleeced','Gambled'],adj:['Fated','Sharp-eyed','Bluff-blessed'],short:['The Fated Dealer','Card Shark of the Eye','The Bluff-Blessed']},
+ clean:{k:'dish wash clean scrub tidy sweep rinse',noun:['Sacred Vessels','Cleansing','Grease-Basin'],verb:['Cleansed','Scoured','Purified','Scrubbed'],adj:['Cleansing','Ever-Scrubbing'],short:['Cleanser of the Vessels','The Ever-Scrubbing','Warden of the Basin']},
+ medic:{k:'medic heal bandage wound aid nurse blister',noun:['Wounds','Mending','Broken','Ailing'],verb:['Mended','Healed','Tended','Bound'],adj:['Mending','Balm-handed'],short:['Mender of the Faithful','The Balm-Handed','Binder of Wounds']},
+ comedy:{k:'joke funny comedy laugh hilarious prankster witty',noun:['Great Jest','Laughter','Sacred Folly'],verb:['Jested','Cackled','Amused'],adj:['Jesting','Ever-Grinning'],short:['Jester of the Eye','The Ever-Grinning','Keeper of the Jest']},
+ leader:{k:'leader organiz organis boss captain',noun:['Pilgrimage','Grand Plan','Order','March'],verb:['Marshalled','Ordered','Shepherded','Rallied'],adj:['Order-keeping','Far-Seeing'],short:['Shepherd of the Pilgrimage','Architect of the Rite','The Far-Seeing']},
+ gossip:{k:'gossip rumor rumour secret tea snitch',noun:['Whispered Word','Sacred Secret','Rumor'],verb:['Whispered','Spread','Divined'],adj:['Silver-Tongued','Whisper-blessed'],short:['The Silver-Tongued','Keeper of Secrets','Whisperer of the Grove']},
+ romance:{k:'flirt romance crush love kiss couple cuddle',noun:['Fond Glance','Kindled Heart','Sweet Vow'],verb:['Wooed','Charmed','Vowed'],adj:['Fond','Honey-tongued'],short:['The Honey-Tongued','Keeper of Fond Glances','The Fond']},
+ snack:{k:'snack chip candy hungry munch chocolate',noun:['Sacred Snacks','Bottomless Hunger','Hidden Stash','Feast'],verb:['Devoured','Feasted','Craved'],adj:['Ever-Hungry','Crumb-blessed'],short:['Warden of Snacks','The Bottomless','Hoarder of the Stash']},
+ rain:{k:'rain storm downpour drizzle deluge soaked',noun:['Endless Rain','Grey Deluge','Weeping Sky'],verb:['Weathered','Withstood','Braved'],adj:['Rain-soaked','Storm-worn'],short:['The Rain-Soaked','The Storm-Worn','Warden Against the Deluge']},
+ mud:{k:'mud muck filth swamp grime bog',noun:['Sacred Mire','Deep Mud','Filth'],verb:['Sank','Trudged','Wallowed'],adj:['Mud-caked','Mire-blessed'],short:['The Mud-Caked','Child of the Mire']},
+ cold:{k:'cold freezing frost chill shiver frozen numb',noun:['Long Cold','Bitter Frost','Deep Chill'],verb:['Shivered','Withstood','Froze'],adj:['Frost-bitten','Cold-forged'],short:['The Frost-Bitten','The Cold-Forged']},
+ hangover:{k:'hangover hungover headache queasy rough',noun:['Morning Reckoning','Grey Dawn','Pounding Skull'],verb:['Suffered','Repented','Endured'],adj:['Hollow-eyed','Repentant'],short:['The Hollow-Eyed','Penitent of the Grey Dawn']},
+ sick:{k:'sick vomit puke barf nausea nause ill',noun:['Purging','Reckoning','Returned Feast'],verb:['Purged','Returned','Offered'],adj:['Green-gilled','Purged'],short:['The Green-Gilled','Martyr of the Feast']},
+ gross:{k:'fart burp gross smell stink foul odor rank',noun:['Foul Wind','Great Miasma','Silent Curse'],verb:['Loosed','Unleashed','Cursed'],adj:['Miasma-marked','Foul-blessed'],short:['Herald of the Foul Wind','The Miasma-Marked']},
+ gear:{k:'gear kit equipment supplies quartermaster provision',noun:['Kit of the Order','Sacred Gear','Provisions'],verb:['Provisioned','Furnished','Readied'],adj:['Well-Provisioned','Gear-blessed'],short:['Quartermaster of the Order','Keeper of the Kit','The Well-Provisioned']},
+ knot:{k:'knot rope tie lash tether hitch bind',noun:['Sacred Bond','Woven Knot','Tether'],verb:['Bound','Wove','Lashed'],adj:['Bond-weaving','Knot-blessed'],short:['Weaver of Bonds','Keeper of the Knot']},
+ craft:{k:'whittle carve craft build make fix repair handmade',noun:['Carved Idol','Whittled Charm','Handmade Relic'],verb:['Carved','Whittled','Shaped','Forged'],adj:['Deft-handed','Whittle-blessed'],short:['The Deft-Handed','Carver of Idols']},
+ smore:{k:'smore marshmallow toasted',noun:['Sacred Marshmallow','Golden Char','Sugar-Fire'],verb:['Toasted','Charred','Blessed'],adj:['Sugar-blessed','Char-touched'],short:['The Charred Devout','Marshmallow Martyr','Keeper of the Sugar-Fire']},
+ story:{k:'story tale legend myth storyteller',noun:['Fireside Tale','Long Legend','Spoken Myth'],verb:['Told','Spun','Recited'],adj:['Tale-spinning','Legend-touched'],short:['Tongue of the Fireside','Spinner of Tales','Keeper of the Legend']},
+ lazy:{k:'lazy lazi sloth idle relax lounge slack',noun:['Great Rest','Long Idleness','Sacred Sloth'],verb:['Rested','Idled','Lounged'],adj:['Ever-Resting','Sloth-blessed'],short:['The Ever-Resting','High Priest of Sloth','The Unmoving']},
+ hype:{k:'hype energy hyper party wild rally pump vibe',noun:['Wild Spirit','Boundless Fire','Frenzy'],verb:['Roused','Ignited','Rallied'],adj:['Ever-Burning','Frenzy-touched'],short:['The Ever-Burning','Rouser of the Grove']},
+ give:{k:'generous share gave kind selfless bestow',noun:['Open Hand','Great Giving','Shared Bounty'],verb:['Gave','Shared','Bestowed'],adj:['Open-handed','Ever-Giving'],short:['The Open-Handed','Giver of the Bounty']},
+ speed:{k:'fast speed race quick sprint swift zoom',noun:['Swift Foot','Racing Wind','Blur'],verb:['Raced','Outran','Sprinted'],adj:['Swift-footed','Wind-blessed'],short:['The Swift-Footed','The Racing Wind']},
+ late:{k:'late tardy overslept behind delay',noun:['Long Delay','Ever-Lateness','Missed Hour'],verb:['Tarried','Lingered','Delayed'],adj:['Ever-Late','Hour-losing'],short:['The Ever-Late','Warden of the Missed Hour']},
+ swear:{k:'swear curse cuss profan potty-mouth',noun:['Foul Tongue','Blistering Word','Great Oath'],verb:['Swore','Cursed','Bellowed'],adj:['Foul-mouthed','Oath-blessed'],short:['The Foul-Tongued','Bellower of Oaths']},
+ quiet:{k:'quiet shy silent reserved introvert',noun:['Long Silence','Still Water','Unspoken Word'],verb:['Watched','Listened','Held'],adj:['Silent','Still-souled'],short:['Keeper of the Long Silence','The Still-Souled']},
+};
+for(const _k in EYE_MORE){ const _e=EYE_MORE[_k];
+  if(EYE_DOM[_k]){ ['noun','verb','adj','short'].forEach(_f=>{ if(_e[_f]) EYE_DOM[_k][_f]=EYE_DOM[_k][_f].concat(_e[_f]); }); if(_e.k) EYE_DOM[_k].k+=' '+_e.k; }
+  else { EYE_DOM[_k]={k:_e.k||'',noun:_e.noun||[],verb:_e.verb||EYE_GVERB,adj:_e.adj||EYE_GADJ,short:_e.short||[]}; }
+}
 function eyePick(a){return a[Math.floor(Math.random()*a.length)];}
 function eyeTC(s){return String(s).replace(/\b\w/g,c=>c.toUpperCase());}
 function eyeReshape(input,cat){
@@ -4772,19 +4819,22 @@ function eyeReshape(input,cat){
   const tone=EYE_MISHAP.test(t)?'mishap':(EYE_HEROIC.test(t)?'heroic':'neutral');
   const N=()=>eyePick(D.noun),A=()=>eyePick(D.adj),V=()=>eyePick(D.verb),E=()=>eyePick(D.short);
   const single=s=>String(s).split(' ').length===1;
+  const plain=s=>/^[a-z]+$/i.test(String(s));   // one clean word, no hyphen/space — safe to suffix
   let T;
   if(cat==='title'){
-    T=[()=>`Keeper of the ${N()}`,()=>`Warden of the ${N()}`,()=>`High Priest of the ${N()}`,()=>`${N()} of the Eye`,()=>`Hand of the ${N()}`,()=>`The ${A()} ${N()}`,E,E];
-    if(tone==='heroic')T=T.concat([()=>`Champion of the ${N()}`,()=>`The Unbroken ${N()}`,()=>`The Valiant ${N()}`]);
-    if(tone==='mishap')T=T.concat([()=>`Martyr of the ${N()}`,()=>`The ${N()}-Cursed`,()=>`The Blessed Fool of the ${N()}`]);
+    T=[()=>`Keeper of the ${N()}`,()=>`Warden of the ${N()}`,()=>`High Priest of the ${N()}`,()=>`${N()} of the Eye`,()=>`Hand of the ${N()}`,()=>`The ${A()} ${N()}`,()=>`Priest of the ${N()}`,()=>`Bearer of the ${N()}`,()=>`${A()} Warden of the ${N()}`,E,E];
+    if(tone==='heroic')T=T.concat([()=>`Champion of the ${N()}`,()=>`The Unbroken ${N()}`,()=>`The Valiant ${N()}`,()=>`Vanquisher of the ${N()}`]);
+    if(tone==='mishap')T=T.concat([()=>`Martyr of the ${N()}`,()=>`The ${N()}-Cursed`,()=>`The Blessed Fool of the ${N()}`,()=>`Penitent of the ${N()}`]);
   } else if(cat==='deed'){
-    T=[()=>`${V()} the ${N()}`,()=>`Offered the ${N()} to the Eye`,()=>`Kept the ${N()}`,()=>`Bore the ${N()}`,()=>`${V()} for the Circle`];
-    if(tone==='heroic')T=T.concat([()=>`Braved the ${N()}`,()=>`${V()} the ${N()} for the Circle`]);
-    if(tone==='mishap')T=T.concat([()=>`Fell to the ${N()}`,()=>`Was Marked by the ${N()}`,()=>`Faltered Before the ${N()}`]);
+    T=[()=>`${V()} the ${N()}`,()=>`Offered the ${N()} to the Eye`,()=>`Kept the ${N()}`,()=>`Bore the ${N()}`,()=>`${V()} for the Circle`,()=>`Tended the ${N()}`,()=>`Walked the Path of the ${N()}`,()=>`${V()} beneath the Eye`];
+    if(tone==='heroic')T=T.concat([()=>`Braved the ${N()}`,()=>`${V()} the ${N()} for the Circle`,()=>`Bore Witness to the ${N()}`]);
+    if(tone==='mishap')T=T.concat([()=>`Fell to the ${N()}`,()=>`Was Marked by the ${N()}`,()=>`Faltered Before the ${N()}`,()=>`Answered the ${N()} and Broke`]);
   } else {
-    T=[E,()=>`The ${A()}`,()=>`Warden of the ${N()}`,()=>`The ${A()} ${N()}`,()=>{const n=N();return single(n)?n+'-Touched':'Keeper of the '+n;}];
-    if(tone==='heroic')T=T.concat([()=>'The Unbroken',()=>`Champion of the ${N()}`]);
-    if(tone==='mishap')T=T.concat([()=>{const n=N();return single(n)?n+'-Martyr':'Martyr of the '+n;},()=>'The Fallen']);
+    T=[E,()=>`The ${A()}`,()=>`Warden of the ${N()}`,()=>`The ${A()} ${N()}`,()=>`Bearer of the ${N()}`,
+       ()=>A(), ()=>{const n=N();return single(n)?n:A();}, ()=>{const a=A();return plain(a)?a+'-Marked':'The '+a;},
+       ()=>{const n=N();return plain(n)?n+'-Touched':'Keeper of the '+n;},()=>{const n=N();return plain(n)?n+'-Blessed':'The '+A()+' '+n;}];
+    if(tone==='heroic')T=T.concat([()=>'The Unbroken',()=>`Champion of the ${N()}`,()=>`The Valiant`]);
+    if(tone==='mishap')T=T.concat([()=>{const n=N();return single(n)?n+'-Martyr':'Martyr of the '+n;},()=>'The Fallen',()=>'The Cursed']);
   }
   return eyePick(T)();
 }

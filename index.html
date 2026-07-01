@@ -3847,7 +3847,7 @@ window.approveRite=function(id){
   Snd.sfx('approve');
   voteRite(id, VOTER);
 };
-async function refreshRemote(){ try{ const d=await sbRead(); if(d){ MEM=d; ensureDefaults(); cacheRemote(); try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectOfferPassed(); }catch(e){} try{ detectBetEndings(); }catch(e){} try{ reconcileRiteOfPassage(); }catch(e){} } }catch(e){} }
+async function refreshRemote(){ try{ const d=await sbRead(); if(d){ MEM=d; ensureDefaults(); cacheRemote(); try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectOfferPassed(); }catch(e){} try{ detectBetEndings(); }catch(e){} try{ reconcileRiteOfPassage(); }catch(e){} try{ detectSelfSworn(); }catch(e){} } }catch(e){} }
 
 window.proposeRite=async function(item){
   let off=false;
@@ -3873,6 +3873,7 @@ window.voteRite=async function(id, voter){
   markVotedHere(id);
   renderRites(); layoutGrove(); renderLedger(); try{ syncOffering(); }catch(e){}
   try{ detectOfferPassed(); }catch(e){}
+  try{ detectSelfSworn(); }catch(e){}
   const r=(MEM.rites||[]).find(x=>x.id===id);
   if(r && r.applied) toast("The grove has spoken — it is done.");
   // an offering just passed → tell the grove (the offered spirit gets their own ping on their device)
@@ -3942,11 +3943,14 @@ function applyRiteEffect(r){
   }
 }
 const TENETS=[
-  "I will carry my own pack and my share of the load.",
-  "I will keep the fire and respect the Eye.",
-  "I will answer the Order when it calls, and stand witness for others.",
-  "I give myself to the Grove."
+  "I will carry my own pack, and my share of the load.",
+  "I will keep the fire, and respect the Eye.",
+  "I will keep the peace, and let quarrels die at the fire’s edge.",
+  "I will hold my kindred dear, and leave no spirit alone in the dark.",
+  "I will take my share of joy, and deny the Order no pleasure freely given.",
+  "I will answer the Order when it calls, and stand witness for others."
 ];
+const OATH_FINAL_VOW="I give myself to the Grove.";
 function isSworn(name){ const m=MEM.members.find(x=>x.name===name); return !m || m.oath!==false; }
 // +100 Rite of Passage, granted once, the moment a spirit is initiated (m.rop guards against a second grant)
 function grantRiteOfPassage(m){
@@ -3972,19 +3976,83 @@ function oathPending(name){ return (MEM.rites||[]).find(r=>r.kind==='oath' && r.
 function oathGateHTML(name){
   const pend=oathPending(name);
   const wit = pend? Math.max(0,(pend.approvers||[]).length-1) : 0;
-  const tenets=TENETS.map(t=>`<div class="rulerow"><span>${t}</span></div>`).join("");
+  const nm=name.replace(/'/g,"\\'");
   return `<div class="ritehdr">Rite of Passage</div>
-    <p class="rtext" style="text-align:center;max-width:38ch;margin:0 auto 4px">You are not yet sworn, <b>${esc(name)}</b>. The Rites and Trials open only to the initiated. Agree to the tenets and gather <b>three witnesses</b> to attest your oath.</p>
-    <div class="ritehdr" style="margin-top:14px">The Tenets of the Order</div>${tenets}
+    <p class="rtext" style="text-align:center;max-width:40ch;margin:0 auto 4px">You are not yet sworn, <b>${esc(name)}</b>. The Rites and Trials open only to the initiated. Speak the tenets, and gather <b>three witnesses</b> to attest your oath.</p>
     ${ pend
-      ? `<p class="rtext" style="text-align:center;color:var(--candle);margin-top:14px">Your oath stands before the grove — <b>${wit}/3</b> witnesses have attested. Ask three sworn spirits to witness you from their Rites.</p>`
-      : `<div style="text-align:center;margin-top:16px"><button class="gold" onclick="swearOath('${name.replace(/'/g,"\\'")}')">I agree to the tenets — swear my oath</button></div>` }`;
+      ? `<p class="rtext" style="text-align:center;color:var(--candle);margin-top:16px">Your oath stands before the grove — <b>${wit}/3</b> witnesses have attested. Ask three sworn spirits to witness you from their Rites.</p>`
+      : `<div style="text-align:center;margin-top:18px"><button class="gold" onclick="beginOathCeremony('${nm}')">Speak the tenets</button></div>` }`;
 }
+function ensureOathStyle(){
+  if(document.getElementById('oathStyle')) return;
+  const s=document.createElement('style'); s.id='oathStyle';
+  s.textContent=`.oathcer{position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;padding:26px;background:radial-gradient(125% 90% at 50% 18%,#141e18 0%,#0b120d 55%,#060907 100%);animation:ocFade .5s ease;cursor:pointer}
+  .oathcer .oc-card{max-width:34ch;text-align:center;color:#ECE3CC;font-family:'Spectral',Georgia,serif;cursor:default}
+  .oc-eye{width:60px;margin:0 auto 18px}.oc-eye.big{width:82px}
+  .oc-step{font-family:'Silkscreen','Courier New',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#C9A24B;margin-bottom:14px}
+  .oc-vow{font-size:21px;line-height:1.5;color:#F0E7D2;margin:0 auto 22px;animation:ocRise .55s ease}
+  .oc-vow.seal{font-style:italic;color:#F2C45A;font-size:23px}
+  .oc-title{font-family:'Cinzel',serif;font-size:25px;color:#FFE08A;margin-bottom:12px;animation:ocRise .55s ease}
+  .oc-tap{font-family:'Silkscreen','Courier New',monospace;font-size:9px;letter-spacing:.1em;color:#8FA89B;animation:ocPulse 1.9s ease-in-out infinite}
+  .oathcer .gold,.oathcer .ghostbtn{margin-top:6px}
+  @keyframes ocFade{from{opacity:0}to{opacity:1}}
+  @keyframes ocRise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+  @keyframes ocPulse{0%,100%{opacity:.35}50%{opacity:.9}}`;
+  document.head.appendChild(s);
+}
+let OATH_STEP=0;
+window.beginOathCeremony=function(name){ if(oathPending(name)){ toast("Your oath already stands before the grove."); return; } ensureOathStyle(); OATH_STEP=0; renderOathCeremony(name); };
+function renderOathCeremony(name){
+  let ov=document.getElementById('oathCer'); if(ov) ov.remove();
+  ov=document.createElement('div'); ov.id='oathCer'; ov.className='oathcer';
+  const nm=name.replace(/'/g,"\\'"); const total=TENETS.length;
+  const eyeDim=(typeof offerEyeSVG==='function')?offerEyeSVG('#7E8C82','#3a4a3f','#20281f','rgba(0,0,0,0)'):'';
+  const eyeBright=(typeof offerEyeSVG==='function')?offerEyeSVG('#F2C45A','#C97A3A','#1a120a','rgba(242,196,90,.6)'):'';
+  let inner;
+  if(OATH_STEP<total){
+    inner=`<div class="oc-eye">${eyeDim}</div><div class="oc-step">The Tenets · ${OATH_STEP+1} of ${total}</div>`
+      +`<div class="oc-vow">${esc(TENETS[OATH_STEP])}</div><div class="oc-tap">tap to speak the next</div>`;
+    ov.onclick=()=>{ OATH_STEP++; renderOathCeremony(name); };
+  } else {
+    inner=`<div class="oc-eye">${eyeBright}</div><div class="oc-step">The final vow</div>`
+      +`<div class="oc-vow seal">${esc(OATH_FINAL_VOW)}</div>`
+      +`<button class="gold" onclick="sealOath('${nm}')">Give myself to the Grove</button>`
+      +`<button class="ghostbtn" onclick="closeOathCer()">Not yet</button>`;
+    ov.onclick=null;
+  }
+  ov.innerHTML=`<div class="oc-card">${inner}</div>`;
+  document.body.appendChild(ov);
+}
+window.closeOathCer=function(){ const ov=document.getElementById('oathCer'); if(ov) ov.remove(); };
+window.sealOath=function(name){ closeOathCer(); swearOath(name); };
 window.swearOath=async function(name){
   if(oathPending(name)){ toast("Your oath already stands before the grove."); return; }
+  try{ localStorage.setItem('grove-oath-pending-'+name,'1'); }catch(e){}
   await proposeRite({kind:'oath', target:name, label:'Rite of Passage', threshold:4, nominator:name});
+  toast("Your vow is spoken — three witnesses must now attest it.");
   renderRites(); const tr=document.getElementById('trials'); if(tr && tr.style.display!=='none') renderTrials();
 };
+// the confirmation moment — plays once, when a spirit who swore on this device becomes sworn
+function detectSelfSworn(){
+  try{
+    const me=(typeof VOTER!=='undefined')?VOTER:null; if(!me) return;
+    const key='grove-oath-pending-'+me;
+    if(!localStorage.getItem(key)) return;
+    if(isSworn(me)){ localStorage.removeItem(key); oathSwornMoment(me); }
+  }catch(e){}
+}
+function oathSwornMoment(name){
+  try{ ensureOathStyle(); }catch(e){}
+  let ov=document.getElementById('oathSworn'); if(ov) ov.remove();
+  ov=document.createElement('div'); ov.id='oathSworn'; ov.className='oathcer';
+  const eyeBright=(typeof offerEyeSVG==='function')?offerEyeSVG('#F2C45A','#C97A3A','#1a120a','rgba(242,196,90,.7)'):'';
+  ov.innerHTML=`<div class="oc-card"><div class="oc-eye big">${eyeBright}</div><div class="oc-title">The Eye opens</div>`
+    +`<div class="oc-vow">You are sworn, <b>${esc(name)}</b> — an Initiate of the Order.<br>The Rites and Trials lie open to you now.</div>`
+    +`<button class="gold" onclick="closeOathSworn()">Enter the grove</button></div>`;
+  ov.onclick=null; document.body.appendChild(ov);
+  try{ if(Snd&&Snd.isOn&&Snd.isOn()) Snd.sfx('gong'); }catch(e){}
+}
+window.closeOathSworn=function(){ const ov=document.getElementById('oathSworn'); if(ov) ov.remove(); try{ trialsRefresh(); }catch(e){} };
 window.nominateDeedForm=function(){
   if(!VOTER){ toast("Pick your name first."); return; }
   NOSIGN=1; NOM_TARGETS=new Set();
@@ -4259,7 +4327,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bj · The Eye's verdicts now ride one running Test of Devotion line in your ledger, the one who raises an offering earns +75, and the Rules are refreshed (with the join QR kept for new spirits).</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bk · The oath is now a ceremony — speak the six tenets one at a time, seal it with "I give myself to the Grove", and when three witnesses attest, the Eye opens to welcome you as an Initiate.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

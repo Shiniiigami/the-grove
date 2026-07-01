@@ -3511,7 +3511,7 @@ function chronicleEvents(limit){
   const FIRE_DEEDS={'Tended the Sacred Fire':1,'Struck the Final Spark':1};
   // the offering gets its own Chronicle line (with the citation) from the rite, so keep the
   // plain "+150 Offered to the Eye" ledger rows out of the feed (they still show on the soul card)
-  const CHRON_SKIP=Object.assign({'Offered to the Eye':1,'Named the offering':1},FIRE_DEEDS);
+  const CHRON_SKIP=Object.assign({'Offered to the Eye':1,'Named the offering':1,'Named a deed':1,'Named a title':1,'Named a badge':1},FIRE_DEEDS);
   (MEM.rites||[]).forEach(r=>{ if(r&&r.kind==='offer'&&r.applied&&r.target){ const cit=(typeof clampText==='function')?clampText(r.label||'',60):(r.label||''); ev.push({t:r.created||0,ic:"🔮",tx:`<b>${esc(r.target)}</b> was offered to the Eye${(cit&&cit!=='The Offered')?` — <i>${esc(cit)}</i>`:''}`}); } });
   (MEM.members||[]).forEach(m=>{ (m.history||[]).forEach(h=>{ if(h&&h.t&&!CHRON_SKIP[deedBase(h.l)]){ const up=(h.d||0)>=0; ev.push({t:h.t,ic:up?"✶":"☄",tx:`<b>${esc(m.name)}</b> ${up?'earned':'lost'} ${up?'+':''}${h.d} ✦ — <i>${esc(deedBase(h.l)||h.l)}</i>`}); } }); });
   const since=MEM.seasonStart||0;
@@ -3913,6 +3913,15 @@ function applyVoteLocal(id, voter){
   r.approvers.push(voter);
   if(r.approvers.length>=(r.threshold||5)){ applyRiteEffect(r); r.applied=true; }
 }
+// the spirit who raises a passing deed nomination is rewarded on the same scale that sets its
+// approval threshold: ≤20 → +5, ≤49 → +10, ≤69 → +15, ≤100 → +20, ≤150 → +25, else +30
+function nominatorDeedReward(pts){ const p=Math.abs(pts||0); if(p<=20)return 5; if(p<=49)return 10; if(p<=69)return 15; if(p<=100)return 20; if(p<=150)return 25; return 30; }
+function rewardNominator(r,amt,label){
+  if(!r||!amt||!r.nominator||r.nominator===r.target) return;
+  const nm=memByName(r.nominator); if(!nm) return;
+  nm.points=Math.max(0,(nm.points||0)+amt); nm.season=Math.max(0,(nm.season||0)+amt);
+  nm.history=nm.history||[]; nm.history.push({l:label,d:amt,t:Date.now()/1000});
+}
 function applyRiteEffect(r){
   // sanitise the free-text label here — the rite chokepoint — so a hostile/remote rite payload
   // can't land raw HTML in m.epithet / m.badges / MEM.deeds / m.history (rendered at several sites).
@@ -3922,12 +3931,13 @@ function applyRiteEffect(r){
     MEM.deeds=MEM.deeds||[]; MEM.deeds.push([_lbl,p]); return;
   }
   const m=MEM.members.find(x=>x.name===r.target); if(!m) return;
-  if(r.kind==="title"){ m.epithet=_lbl; }
-  else if(r.kind==="badge"){ m.badges=m.badges||[]; if(!m.badges.includes(_lbl)) m.badges.push(_lbl); if(r.color){ MEM.badgeColors=MEM.badgeColors||{}; if(!MEM.badgeColors[_lbl]) MEM.badgeColors[_lbl]=r.color; } }
+  if(r.kind==="title"){ m.epithet=_lbl; rewardNominator(r,25,"Named a title"); }
+  else if(r.kind==="badge"){ m.badges=m.badges||[]; if(!m.badges.includes(_lbl)) m.badges.push(_lbl); if(r.color){ MEM.badgeColors=MEM.badgeColors||{}; if(!MEM.badgeColors[_lbl]) MEM.badgeColors[_lbl]=r.color; } rewardNominator(r,20,"Named a badge"); }
   else if(r.kind==="deed"){
     m.points=Math.max(0,(m.points||0)+r.points);
     m.season=Math.max(0,(m.season||0)+r.points);
     m.history=m.history||[]; m.history.push({l:_lbl,d:r.points,t:Date.now()/1000});
+    rewardNominator(r,nominatorDeedReward(r.points),"Named a deed");
   }
   else if(r.kind==="offer"){
     const wasOffered=m.offered && m.offered>Date.now()/1000;
@@ -3935,7 +3945,7 @@ function applyRiteEffect(r){
     const c=cloneChibi(m); c.top_style='robes'; m.sprite={chibi:c};
     m.offered=Date.now()/1000 + OFFER_ROBE_SECS;
     m.badges=m.badges||[]; if(!m.badges.includes("Of the Eye")) m.badges.push("Of the Eye");
-    if(!wasOffered){ m.points=(m.points||0)+150; m.season=(m.season||0)+150; m.history=m.history||[]; m.history.push({l:"Offered to the Eye",d:150,t:Date.now()/1000}); const _nom=(r&&r.nominator&&r.nominator!==m.name)?memByName(r.nominator):null; if(_nom){ _nom.points=(_nom.points||0)+75; _nom.season=(_nom.season||0)+75; _nom.history=_nom.history||[]; _nom.history.push({l:"Named the offering",d:75,t:Date.now()/1000}); } }
+    if(!wasOffered){ m.points=(m.points||0)+150; m.season=(m.season||0)+150; m.history=m.history||[]; m.history.push({l:"Offered to the Eye",d:150,t:Date.now()/1000}); rewardNominator(r,50,"Named the offering"); }
   }
   else if(r.kind==="oath"){
     m.oath=true; m.badges=m.badges||[]; if(!m.badges.includes('Initiated')) m.badges.push('Initiated');
@@ -3973,15 +3983,26 @@ function reconcileRiteOfPassage(){
   }catch(e){ return false; }
 }
 function oathPending(name){ return (MEM.rites||[]).find(r=>r.kind==='oath' && r.target===name && !r.applied && (Date.now()/1000-(r.created||0) < 3*3600)); }
+let OATH_CONFIRMED=new Set();
+function oathRerender(){ try{ renderRites(); }catch(e){} try{ const tr=document.getElementById('trials'); if(tr && tr.style.display!=='none') renderTrials(); }catch(e){} }
+window.toggleTenet=function(i){ i=+i; if(OATH_CONFIRMED.has(i)) OATH_CONFIRMED.delete(i); else OATH_CONFIRMED.add(i); oathRerender(); };
 function oathGateHTML(name){
+  try{ ensureOathStyle(); }catch(e){}
   const pend=oathPending(name);
   const wit = pend? Math.max(0,(pend.approvers||[]).length-1) : 0;
   const nm=name.replace(/'/g,"\\'");
-  return `<div class="ritehdr">Rite of Passage</div>
-    <p class="rtext" style="text-align:center;max-width:40ch;margin:0 auto 4px">You are not yet sworn, <b>${esc(name)}</b>. The Rites and Trials open only to the initiated. Speak the tenets, and gather <b>three witnesses</b> to attest your oath.</p>
-    ${ pend
-      ? `<p class="rtext" style="text-align:center;color:var(--candle);margin-top:16px">Your oath stands before the grove — <b>${wit}/3</b> witnesses have attested. Ask three sworn spirits to witness you from their Rites.</p>`
-      : `<div style="text-align:center;margin-top:18px"><button class="gold" onclick="beginOathCeremony('${nm}')">Speak the tenets</button></div>` }`;
+  const intro=`<div class="ritehdr">Rite of Passage</div>
+    <p class="rtext" style="text-align:center;max-width:40ch;margin:0 auto 4px">You are not yet sworn, <b>${esc(name)}</b>. The Rites and Trials open only to the initiated. Speak the tenets, and gather <b>three witnesses</b> to attest your oath.</p>`;
+  if(pend){
+    return intro+`<p class="rtext" style="text-align:center;color:var(--candle);margin-top:16px">Your oath stands before the grove — <b>${wit}/3</b> witnesses have attested. Ask three sworn spirits to witness you from their Rites.</p>`;
+  }
+  const boxes=TENETS.map((t,i)=>{ const on=OATH_CONFIRMED.has(i); return `<div class="oathbox${on?' on':''}" onclick="toggleTenet(${i})"><span class="oathtick">${on?'✓':''}</span><span>${esc(t)}</span></div>`; }).join("");
+  const all=OATH_CONFIRMED.size>=TENETS.length;
+  const seal = all
+    ? `<div class="oathbox seal on" style="cursor:default"><span class="oathtick">✦</span><span><i>${esc(OATH_FINAL_VOW)}</i></span></div>
+       <div style="text-align:center;margin-top:14px"><button class="gold" onclick="sealOath('${nm}')">Give myself to the Grove</button></div>`
+    : `<p class="rtext" style="text-align:center;color:var(--sage);margin-top:12px">Tap each tenet to speak it — <b>${OATH_CONFIRMED.size}/${TENETS.length}</b> spoken.</p>`;
+  return intro+`<div class="ritehdr" style="margin-top:14px">The Tenets of the Order</div>${boxes}${seal}`;
 }
 function ensureOathStyle(){
   if(document.getElementById('oathStyle')) return;
@@ -3991,47 +4012,28 @@ function ensureOathStyle(){
   .oc-eye{width:60px;margin:0 auto 18px}.oc-eye.big{width:82px}
   .oc-step{font-family:'Silkscreen','Courier New',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#C9A24B;margin-bottom:14px}
   .oc-vow{font-size:21px;line-height:1.5;color:#F0E7D2;margin:0 auto 22px;animation:ocRise .55s ease}
-  .oc-vow.seal{font-style:italic;color:#F2C45A;font-size:23px}
   .oc-title{font-family:'Cinzel',serif;font-size:25px;color:#FFE08A;margin-bottom:12px;animation:ocRise .55s ease}
-  .oc-tap{font-family:'Silkscreen','Courier New',monospace;font-size:9px;letter-spacing:.1em;color:#8FA89B;animation:ocPulse 1.9s ease-in-out infinite}
   .oathcer .gold,.oathcer .ghostbtn{margin-top:6px}
+  .oathbox{display:flex;align-items:center;gap:11px;max-width:40ch;margin:8px auto;padding:11px 14px;border:1px solid rgba(242,196,90,.2);border-radius:12px;background:rgba(12,20,16,.5);color:#D3C8AD;font-size:14px;line-height:1.4;cursor:pointer;transition:border-color .18s ease,background .18s ease,color .18s ease;text-align:left}
+  .oathbox:hover{border-color:rgba(242,196,90,.42)}
+  .oathbox.on{background:linear-gradient(180deg,rgba(242,196,90,.14),rgba(242,196,90,.04));border-color:rgba(242,196,90,.55);color:#F0E7D2}
+  .oathbox.seal{font-style:italic}
+  .oathbox .oathtick{flex:0 0 21px;width:21px;height:21px;border-radius:6px;border:1px solid rgba(242,196,90,.5);display:flex;align-items:center;justify-content:center;font-size:12px;color:#F2C45A;background:rgba(0,0,0,.2)}
+  .oathbox.on .oathtick{background:rgba(242,196,90,.85);color:#1a120a;border-color:transparent}
   @keyframes ocFade{from{opacity:0}to{opacity:1}}
-  @keyframes ocRise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
-  @keyframes ocPulse{0%,100%{opacity:.35}50%{opacity:.9}}`;
+  @keyframes ocRise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}`;
   document.head.appendChild(s);
 }
-let OATH_STEP=0;
-window.beginOathCeremony=function(name){ if(oathPending(name)){ toast("Your oath already stands before the grove."); return; } ensureOathStyle(); OATH_STEP=0; renderOathCeremony(name); };
-function renderOathCeremony(name){
-  let ov=document.getElementById('oathCer'); if(ov) ov.remove();
-  ov=document.createElement('div'); ov.id='oathCer'; ov.className='oathcer';
-  const nm=name.replace(/'/g,"\\'"); const total=TENETS.length;
-  const eyeDim=(typeof offerEyeSVG==='function')?offerEyeSVG('#7E8C82','#3a4a3f','#20281f','rgba(0,0,0,0)'):'';
-  const eyeBright=(typeof offerEyeSVG==='function')?offerEyeSVG('#F2C45A','#C97A3A','#1a120a','rgba(242,196,90,.6)'):'';
-  let inner;
-  if(OATH_STEP<total){
-    inner=`<div class="oc-eye">${eyeDim}</div><div class="oc-step">The Tenets · ${OATH_STEP+1} of ${total}</div>`
-      +`<div class="oc-vow">${esc(TENETS[OATH_STEP])}</div><div class="oc-tap">tap to speak the next</div>`;
-    ov.onclick=()=>{ OATH_STEP++; renderOathCeremony(name); };
-  } else {
-    inner=`<div class="oc-eye">${eyeBright}</div><div class="oc-step">The final vow</div>`
-      +`<div class="oc-vow seal">${esc(OATH_FINAL_VOW)}</div>`
-      +`<button class="gold" onclick="sealOath('${nm}')">Give myself to the Grove</button>`
-      +`<button class="ghostbtn" onclick="closeOathCer()">Not yet</button>`;
-    ov.onclick=null;
-  }
-  ov.innerHTML=`<div class="oc-card">${inner}</div>`;
-  document.body.appendChild(ov);
-}
-window.closeOathCer=function(){ const ov=document.getElementById('oathCer'); if(ov) ov.remove(); };
-window.sealOath=function(name){ closeOathCer(); swearOath(name); };
-window.swearOath=async function(name){
+window.sealOath=async function(name){
+  if(OATH_CONFIRMED.size<TENETS.length){ toast("Speak every tenet first."); return; }
   if(oathPending(name)){ toast("Your oath already stands before the grove."); return; }
   try{ localStorage.setItem('grove-oath-pending-'+name,'1'); }catch(e){}
   await proposeRite({kind:'oath', target:name, label:'Rite of Passage', threshold:4, nominator:name});
+  OATH_CONFIRMED=new Set();
   toast("Your vow is spoken — three witnesses must now attest it.");
-  renderRites(); const tr=document.getElementById('trials'); if(tr && tr.style.display!=='none') renderTrials();
+  oathRerender();
 };
+window.swearOath=function(name){ return sealOath(name); };
 // the confirmation moment — plays once, when a spirit who swore on this device becomes sworn
 function detectSelfSworn(){
   try{
@@ -4310,6 +4312,7 @@ function renderRules(){
     <p class="rtext">The <b>fourth King</b> is the reckoning — the <b>Eye itself opens</b> over the circle: that drawer either <b>drinks the Chalice</b> (gaining Devotion and the <i>Drained the Chalice</i> badge) or <b>braves a ritual</b> the circle sets aloud — 3 minutes, half must approve. Succeed for the badge and a communal cup (up to four sip, +10 each); fail or refuse and lose <b>40</b>. Break a law and a spirit can <b>report you by tapping your name</b> — reports lapse after 30 seconds, and if enough agree you’re judged (−5); you may even own up and vote on your own report. Spirits may step away (the host passes on), be <b>cast out by tapping a name</b> and a half-vote (the named may vote too), or rejoin — and a lobby that never begins dissolves after <b>3 minutes</b>.</p>
     <div class="ritehdr">The Rites · Voting</div>
     <p class="rtext">Anyone may raise and approve rites — pick your name, then nominate or approve. Honour-based: one vote per name, and each device votes once per rite.</p>
+    <p class="rtext">When a nomination you raised <b>passes</b>, the Eye rewards you: a deed pays by its size (<b>+5</b> ≤20 · <b>+10</b> ≤49 · <b>+15</b> ≤69 · <b>+20</b> ≤100 · <b>+25</b> ≤150 · <b>+30</b> to 200), a badge earns <b>+20</b>, a title <b>+25</b>, and an offering <b>+50</b>.</p>
     <div class="rulerow"><span>Award / deduct Devotion</span><span class="rmin">3–8 ✦</span></div>
     <div class="rulerow"><span>↳ scales by size</span><span class="rmin" style="color:var(--sage)">≤20·3 ≤49·4 ≤69·5<br>≤100·6 ≤150·7 ≤200·8</span></div>
     <div class="rulerow"><span>Nominate a badge</span><span class="rmin">7 ✦</span></div>
@@ -4317,7 +4320,7 @@ function renderRules(){
     <div class="rulerow"><span>The Offering · robe + 3h mark</span><span class="rmin">7 ✦</span></div>
     <p class="rtext" style="margin-top:8px">Points are capped at ±200 per nomination. Open rites expire after 3 hours if they do not pass.</p>
     <div class="ritehdr">The Offering</div>
-    <p class="rtext">The grove’s highest rite (7 ✦ to raise). A nomination sits before the grove for <b>30 minutes</b>. When it passes the spirit is robed in the <b>Offering Robe</b> for <b>3 hours</b>, gains <b>+150</b> Devotion and the <b>Of the Eye</b> badge, while the whole grove’s sky turns — a blood moon and the open Eye — in their honour. The one who raised it earns <b>+75</b>. Up to <b>three</b> may stand offered at once; only <b>one</b> offering can be raised every <b>6 hours</b>, and the same spirit can’t be offered twice within <b>24 hours</b>.</p>
+    <p class="rtext">The grove’s highest rite (7 ✦ to raise). A nomination sits before the grove for <b>30 minutes</b>. When it passes the spirit is robed in the <b>Offering Robe</b> for <b>3 hours</b>, gains <b>+150</b> Devotion and the <b>Of the Eye</b> badge, while the whole grove’s sky turns — a blood moon and the open Eye — in their honour. The one who raised it earns <b>+50</b>. Up to <b>three</b> may stand offered at once; only <b>one</b> offering can be raised every <b>6 hours</b>, and the same spirit can’t be offered twice within <b>24 hours</b>.</p>
     <div class="ritehdr">Titles & Badges</div>
     <p class="rtext">A <b>title</b> is your single epithet beneath your rank — a new one replaces the old. <b>Badges</b> are collectible ✦ marks; hold as many as you earn. A spirit can’t be nominated for a title or badge they already hold, and you can’t raise the same nomination on them twice.</p>
     <div class="ritehdr">The Oath &amp; Initiation</div>
@@ -4327,7 +4330,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bk · The oath is now a ceremony — speak the six tenets one at a time, seal it with "I give myself to the Grove", and when three witnesses attest, the Eye opens to welcome you as an Initiate.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bl · The oath now lives in the Rites & Trials tabs — tap each of the six tenets to speak it, then seal it. And raising a nomination that passes now rewards you: deeds by size (+5 to +30), badges +20, titles +25, offerings +50.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

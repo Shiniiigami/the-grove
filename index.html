@@ -4666,7 +4666,11 @@ function thoughtComposerHTML(m){
       ${liveT?`<button class="ghostbtn" style="margin:0;color:#E8A88F;border-color:rgba(232,168,143,.5)" onclick="clearThoughtFromSoul('${m.name.replace(/'/g,"\\'")}')">Clear it</button>`:''}
     </div></div>`;
 }
-function syncOffering(){ try{ if(typeof Snd==='undefined'||!Snd.offering) return; const has=((MEM&&MEM.rites)||[]).some(r=>r&&r.kind==='offer' && !r.applied); Snd.offering(has); }catch(e){} }
+function syncOffering(){ try{ if(typeof Snd==='undefined'||!Snd.offering) return; const _now=Date.now()/1000;
+  // only an offering still within its 30-min window counts — the server never sweeps stale
+  // unapplied offer rites, so without this age check a long-dead offering keeps the offering
+  // chant looping on every refresh/interval ("randomly plays the offering music").
+  const has=((MEM&&MEM.rites)||[]).some(r=>r&&r.kind==='offer' && !r.applied && (_now-(r.created||0) < OFFER_RITE_TTL)); Snd.offering(has); }catch(e){} }
 /* ===== shared bonfire visual (Stoke the Fire) ===== */
 let _fbRAF=0,_fbCv=null,_fbCtx=null;
 const _fb={cur:0,surge:0,flash:0,last:0,lvl:0,flames:[],embers:[],sparks:[]};

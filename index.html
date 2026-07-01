@@ -595,7 +595,7 @@ function ensureDefaults(){ if(!MEM)return;
   // white-screen the app. Coerce collections to arrays-of-objects and heal numeric/string fields.
   if(!Array.isArray(MEM.members)) MEM.members=[];
   MEM.members=MEM.members.filter(m=>m&&typeof m==='object');
-  MEM.members.forEach(m=>{ if(typeof m.name!=='string') m.name=String(m.name==null?'':m.name); if(!Array.isArray(m.history)) m.history=[]; if(!Number.isFinite(m.points)) m.points=Math.max(0,(+m.points)||0); if(!Number.isFinite(m.season)) m.season=Math.max(0,(+m.season)||0); if(m.chalice && !Number.isFinite(m.chalice.total)) m.chalice.total=0; if(!Number.isFinite(m.logs)) m.logs=Math.max(0,m.logs|0); if(!Number.isFinite(m.fireLogs)) m.fireLogs=Math.max(0,m.fireLogs|0); });
+  MEM.members.forEach(m=>{ if(typeof m.name!=='string') m.name=String(m.name==null?'':m.name); if(!Array.isArray(m.history)) m.history=[]; if(!Number.isFinite(m.points)) m.points=Math.max(0,(+m.points)||0); if(!Number.isFinite(m.season)) m.season=Math.max(0,(+m.season)||0); if(m.chalice && !Number.isFinite(m.chalice.total)) m.chalice.total=0; if(m.devotion && (!Number.isFinite(m.devotion.total)||!Number.isFinite(m.devotion.spins))){ m.devotion.total=Number.isFinite(m.devotion.total)?m.devotion.total:0; m.devotion.spins=Number.isFinite(m.devotion.spins)?m.devotion.spins:0; } if(!Number.isFinite(m.logs)) m.logs=Math.max(0,m.logs|0); if(!Number.isFinite(m.fireLogs)) m.fireLogs=Math.max(0,m.fireLogs|0); });
   ['wagers','groups','challenges','rites','seasonHistory'].forEach(k=>{ if(!Array.isArray(MEM[k])) MEM[k]=[]; else MEM[k]=MEM[k].filter(x=>x&&typeof x==='object'); });
   if(Array.isArray(MEM.tiers)) MEM.tiers.forEach(t=>{ if(t&&typeof t==='object'){ if(typeof t.hex!=='string'||t.hex[0]!=='#') t.hex='#8FA89B'; if(!Number.isFinite(t.min)) t.min=0; } });
   if(MEM.fire && typeof MEM.fire==='object'){ const F=MEM.fire; ['level','streak','lastDecay','lastBlessed','lastBless'].forEach(k=>{ if(!Number.isFinite(F[k])) F[k]=0; }); if(!Number.isFinite(F.goal)||F.goal<1) F.goal=6; if(F.level<0)F.level=0; if(!Array.isArray(F.stokers))F.stokers=[]; }
@@ -1908,13 +1908,21 @@ function chaliceDeedRow(m){
   const val = `<b class="${ch.total<0?'neg':''}">${ch.total>0?'+':''}${ch.total}</b>`;
   return `<div class="h"><em>🍷 Trial of the Chalice${cnt}${dr}</em>${val}</div>`;
 }
+function devotionDeedRow(m){
+  const d=m.devotion; if(!d||!d.spins) return '';
+  const cnt = d.spins>1 ? ` <span style="opacity:.7">×${roman(d.spins)}</span>` : '';
+  const val = `<b class="${(d.total||0)<0?'neg':''}">${(d.total||0)>0?'+':''}${d.total||0}</b>`;
+  return `<div class="h"><em>🔮 Test of Devotion${cnt}</em>${val}</div>`;
+}
 function deedLedgerHTML(m,keeper){
   const gs=histGroups(m).filter(g=>g.base!=='Rite of the Chalice' && g.base!=='Trial of the Chalice');
   const chal=chaliceDeedRow(m);
-  if(!gs.length && !chal) return `<div class="h"><em>The Eye has yet to record their deeds.</em></div>`;
+  const dev=devotionDeedRow(m);
+  if(!gs.length && !chal && !dev) return `<div class="h"><em>The Eye has yet to record their deeds.</em></div>`;
   // greatest Devotion first, least last
   const rows=[];
   if(chal) rows.push({sum:(m.chalice&&m.chalice.total)||0, html:chal});
+  if(dev) rows.push({sum:(m.devotion&&m.devotion.total)||0, html:dev});
   gs.forEach(g=>{
     const label = g.count>1 ? `${g.base} <span style="opacity:.7">×${roman(g.count)}</span>` : g.base;
     const val = `<b class="${g.sum<0?'neg':''}">${g.sum>0?'+':''}${g.sum}</b>`;
@@ -2325,7 +2333,7 @@ window.confirmFreshSlate=async function(){
   const v=document.getElementById("fsPass").value;
   if(!(await verifyPass(v))){ document.getElementById("kerr").textContent="Wrong passphrase — nothing was changed."; return; }
   if(!confirm("Last warning: wipe ALL Devotion Points, titles, badges and history for everyone? This cannot be undone."))return;
-  MEM.members.forEach(m=>{ m.points=0; m.season=0; m.epithet=""; m.badges=[]; m.history=[]; m.offered=0; m.chalBudget=150; m.chalice={total:0,games:0,drained:0};
+  MEM.members.forEach(m=>{ m.points=0; m.season=0; m.epithet=""; m.badges=[]; m.history=[]; m.offered=0; m.chalBudget=150; m.chalice={total:0,games:0,drained:0}; m.devotion={total:0,spins:0};
     if(m.sprite&&m.sprite.chibi&&m.sprite.chibi.top_style==='robes'){ const c=cloneChibi(m); c.top_style=(m._preTop||(c.sleeves===false?'tank':'tee')); delete m._preTop; m.sprite={chibi:c}; }
   });
   MEM.challenges=[]; MEM.wagers=[]; MEM.groups=[]; MEM.rites=[];
@@ -3429,7 +3437,7 @@ function installRulesHTML(){
       ? '<p class="rtext">On iPhone, open this in <b>Safari</b>, tap the <b>Share</b> button (\u2191), then <b>Add to Home Screen</b>.</p>'
       : '<p class="rtext">In your browser menu, choose <b>Install</b> or <b>Add to Home Screen</b>.</p>');
   return '<div class="ritehdr">Add to Home Screen</div>'
-    +'<p class="rtext">Install The Grove for a full-screen, app-like launch. Scan to open it on another phone, then add it from there:</p>'
+    +'<p class="rtext">Install The Grove for a full-screen, app-like launch. <b>New to the grove?</b> Scan this to open it on your phone, then add it to your home screen:</p>'
     +'<div style="text-align:center;margin:12px 0"><img src="'+GROVE_QR+'" alt="Scan to open The Grove" style="width:172px;height:172px;border-radius:12px;border:1px solid var(--moss)"></div>'
     +action;
 }
@@ -3609,8 +3617,10 @@ window.shareSpirit=async function(name){
     // ---- DEEDS: mirror the soul card exactly (chalice row + history, minus the dup chalice/rite groups) ----
     const dgroups=(typeof histGroups==='function'?histGroups(m):[]).filter(g=>g.base!=='Rite of the Chalice' && g.base!=='Trial of the Chalice');
     const hasChal=!!(m.chalice && m.chalice.games);
+    const hasDev=!!(m.devotion && m.devotion.spins);
     const deedItems=[];
     if(hasChal) deedItems.push({label:'🍷 Trial of the Chalice'+(m.chalice.games>1?(' ×'+_rom(m.chalice.games)):''), val:(m.chalice.total||0)});
+    if(hasDev) deedItems.push({label:'🔮 Test of Devotion'+(m.devotion.spins>1?(' ×'+_rom(m.devotion.spins)):''), val:(m.devotion.total||0)});
     dgroups.forEach(d=>deedItems.push({label:d.base+(d.count>1?(' ×'+_rom(d.count)):''), val:d.sum}));
     // ---- CHALLENGES & WAGERS: mirror the soul card ----
     const cwItems=[];
@@ -3924,7 +3934,7 @@ function applyRiteEffect(r){
     const c=cloneChibi(m); c.top_style='robes'; m.sprite={chibi:c};
     m.offered=Date.now()/1000 + OFFER_ROBE_SECS;
     m.badges=m.badges||[]; if(!m.badges.includes("Of the Eye")) m.badges.push("Of the Eye");
-    if(!wasOffered){ m.points=(m.points||0)+150; m.season=(m.season||0)+150; m.history=m.history||[]; m.history.push({l:"Offered to the Eye",d:150,t:Date.now()/1000}); const _nom=(r&&r.nominator&&r.nominator!==m.name)?memByName(r.nominator):null; if(_nom){ _nom.points=(_nom.points||0)+25; _nom.season=(_nom.season||0)+25; _nom.history=_nom.history||[]; _nom.history.push({l:"Named the offering",d:25,t:Date.now()/1000}); } }
+    if(!wasOffered){ m.points=(m.points||0)+150; m.season=(m.season||0)+150; m.history=m.history||[]; m.history.push({l:"Offered to the Eye",d:150,t:Date.now()/1000}); const _nom=(r&&r.nominator&&r.nominator!==m.name)?memByName(r.nominator):null; if(_nom){ _nom.points=(_nom.points||0)+75; _nom.season=(_nom.season||0)+75; _nom.history=_nom.history||[]; _nom.history.push({l:"Named the offering",d:75,t:Date.now()/1000}); } }
   }
   else if(r.kind==="oath"){
     m.oath=true; m.badges=m.badges||[]; if(!m.badges.includes('Initiated')) m.badges.push('Initiated');
@@ -4226,7 +4236,7 @@ function renderRules(){
     <div class="ritehdr">The Reckoning · Group Wagers</div>
     <p class="rtext">Rally two sides — up to <b>6</b> a side, even lopsided (6 v 1). Everyone stakes the same; the starter <b>locks</b> the wager and the winning side <b>splits the whole pot</b>, so fewer winners each take a bigger share. All players must agree who won; if they can’t, the grove votes to settle it.</p>
     <div class="ritehdr">Test of Devotion</div>
-    <p class="rtext"><b>15 ✦</b> laid before the Eye Totem, once every 2 hours. The Eye's verdict runs from a <b>+250</b> radiance down to <b>−100</b> wrath, with returned offerings and <b>×2 / ×3</b> blessings that boost your next <b>deed or challenge</b> (never a wager), plus a <b>×2 curse</b> on your next penalty. Roughly 56% of verdicts favor you, and the Eye can never drop you below zero.</p>
+    <p class="rtext"><b>15 ✦</b> laid before the <b>Devotion Weirwood</b>, once every 2 hours. The Eye's verdict runs from a <b>+250</b> radiance down to <b>−100</b> wrath, with returned offerings and <b>×2 / ×3</b> blessings that boost your next <b>deed or challenge</b> (never a wager), plus a <b>×2 curse</b> on your next penalty. Roughly 56% of verdicts favor you, and the Eye can never drop you below zero. Every verdict rides one running <b>Test of Devotion</b> line in your ledger — each result adds to it (say +100, then −75, −75, leaving −50).</p>
     <div class="ritehdr">Trial of the Chalice</div>
     <p class="rtext">A 52-card King’s Cup for the circle — <b>4–20 spirits</b>, and one phone may hold several. The <b>host</b> opens the lobby and begins the trial; if they don’t, the right to begin passes down the join order so the circle never stalls. Each spirit’s <b>rank shows beneath their name</b>. On your turn you draw a card and the circle acts it out aloud — sending others to drink, binding a partner, decreeing a <b>law</b> (no two laws alike), or pouring into the Chalice. Devotion rides a <b>hidden tally</b> all game and commits as a single “Trial of the Chalice” line when it ends.</p>
     <p class="rtext">The <b>fourth King</b> is the reckoning — the <b>Eye itself opens</b> over the circle: that drawer either <b>drinks the Chalice</b> (gaining Devotion and the <i>Drained the Chalice</i> badge) or <b>braves a ritual</b> the circle sets aloud — 3 minutes, half must approve. Succeed for the badge and a communal cup (up to four sip, +10 each); fail or refuse and lose <b>40</b>. Break a law and a spirit can <b>report you by tapping your name</b> — reports lapse after 30 seconds, and if enough agree you’re judged (−5); you may even own up and vote on your own report. Spirits may step away (the host passes on), be <b>cast out by tapping a name</b> and a half-vote (the named may vote too), or rejoin — and a lobby that never begins dissolves after <b>3 minutes</b>.</p>
@@ -4239,15 +4249,17 @@ function renderRules(){
     <div class="rulerow"><span>The Offering · robe + 3h mark</span><span class="rmin">7 ✦</span></div>
     <p class="rtext" style="margin-top:8px">Points are capped at ±200 per nomination. Open rites expire after 3 hours if they do not pass.</p>
     <div class="ritehdr">The Offering</div>
-    <p class="rtext">The grove’s highest rite (7 ✦ to raise). A nomination sits before the grove for <b>30 minutes</b>. When it passes the spirit is robed in the <b>Offering Robe</b> for <b>3 hours</b>, gains <b>+150</b> Devotion and the <b>Of the Eye</b> badge, while the whole grove’s sky turns — a blood moon and the open Eye — in their honour. The one who raised it earns <b>+25</b>. Up to <b>three</b> may stand offered at once; only <b>one</b> offering can be raised every <b>6 hours</b>, and the same spirit can’t be offered twice within <b>24 hours</b>.</p>
+    <p class="rtext">The grove’s highest rite (7 ✦ to raise). A nomination sits before the grove for <b>30 minutes</b>. When it passes the spirit is robed in the <b>Offering Robe</b> for <b>3 hours</b>, gains <b>+150</b> Devotion and the <b>Of the Eye</b> badge, while the whole grove’s sky turns — a blood moon and the open Eye — in their honour. The one who raised it earns <b>+75</b>. Up to <b>three</b> may stand offered at once; only <b>one</b> offering can be raised every <b>6 hours</b>, and the same spirit can’t be offered twice within <b>24 hours</b>.</p>
     <div class="ritehdr">Titles & Badges</div>
     <p class="rtext">A <b>title</b> is your single epithet beneath your rank — a new one replaces the old. <b>Badges</b> are collectible ✦ marks; hold as many as you earn. A spirit can’t be nominated for a title or badge they already hold, and you can’t raise the same nomination on them twice.</p>
+    <div class="ritehdr">The Oath &amp; Initiation</div>
+    <p class="rtext">A new spirit is an <b>unsworn initiate</b> until they take the oath — gather <b>three witnesses</b> to attest it from your Rites. The unsworn are locked out of every <b>Trial</b> (the Chalice included) and can't <b>reshape their spirit</b> until sworn. The moment a spirit is initiated they earn a one-time <b>+100 Rite of Passage</b>.</p>
     <div class="ritehdr">Your Spirit</div>
-    <p class="rtext">Tap any spirit → <b>Edit this spirit</b> to shape your form. New gear — held items and the Offering Robe — unlocks as you rise in rank.</p>
+    <p class="rtext">Tap any spirit → <b>Edit this spirit</b> to shape your form (once sworn). New gear — held items and the Offering Robe — unlocks as you rise in rank.</p>
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bi · Offering rules reworked — up to 3 offered at once, the robe worn for 3 hours, a nomination sits 30 minutes, only one offering every 6 hours, and the same spirit can't be offered twice in a day.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bj · The Eye's verdicts now ride one running Test of Devotion line in your ledger, the one who raises an offering earns +75, and the Rules are refreshed (with the join QR kept for new spirits).</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4445,7 +4457,9 @@ function applyAction(a){
   else if(a.t==='wager_void'){ const w=wagerById(a.id); if(!w||(w.status!=='matched'&&w.status!=='disputed')||!a.keeper)return; const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); MEM.wagers=(MEM.wagers||[]).filter(x=>x.id!==a.id); }
   else if(a.t==='wager_vote'){ const w=wagerById(a.id); if(!w||w.status!=='disputed')return; if(a.side!=='proposer'&&a.side!=='taker')return; if(a.voter===w.proposer||a.voter===w.taker)return; /* parties can't vote in their own dispute (matches group_vote) */ w.votes=w.votes||{}; if(w.votes[a.voter])return; w.votes[a.voter]=a.side; let pv=0,tv=0; for(const k in w.votes){ if(w.votes[k]==='proposer')pv++; else if(w.votes[k]==='taker')tv++; } if(pv>=5||tv>=5){ const winnerName=(pv>=5)?w.proposer:w.taker; const win=memByName(winnerName); if(win){ adjPts(win,2*(w.amount||0)); maybeEarnLog(win,w.amount||0); } w.status='settled'; w.winner=winnerName; } }
   else if(a.t==='wager_tie'){ const w=wagerById(a.id); if(!w||(w.status!=='matched'&&w.status!=='disputed'))return; if(a.keeper){ const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); w.status='settled'; w.winner='tie'; return; } if(a.name!==w.proposer&&a.name!==w.taker)return; w.tie=w.tie||[]; if(!w.tie.includes(a.name))w.tie.push(a.name); if(w.tie.includes(w.proposer)&&w.tie.includes(w.taker)){ const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); w.status='settled'; w.winner='tie'; } }
-  else if(a.t==='wheel_spin'){ const m=memByName(a.name); if(!m)return; if(now-(m.lastSpin||0)<2*3600)return; if((m.points||0)<15)return; const o=a.outcome||{}; adjPts(m,-15); m.lastSpin=now; if(o.special==='free'){ adjPts(m,15); m.lastSpin=0; } else if(o.special==='x2'){ m.winMult=2; } else if(o.special==='x3'){ m.winMult=3; } else if(o.special==='x2neg'){ m.lossMult=2; } else if(typeof o.pts==='number'){ adjPts(m,o.pts); if(o.pts>0)maybeEarnLog(m,o.pts); } }
+  else if(a.t==='wheel_spin'){ const m=memByName(a.name); if(!m)return; if(now-(m.lastSpin||0)<2*3600)return; if((m.points||0)<15)return; const o=a.outcome||{}; adjPts(m,-15); m.lastSpin=now; if(o.special==='free'){ adjPts(m,15); m.lastSpin=0; } else if(o.special==='x2'){ m.winMult=2; } else if(o.special==='x3'){ m.winMult=3; } else if(o.special==='x2neg'){ m.lossMult=2; } else if(typeof o.pts==='number'){ adjPts(m,o.pts); if(o.pts>0)maybeEarnLog(m,o.pts); }
+    // the Eye's verdicts ride one running "Test of Devotion" deed line — each result adds to it (e.g. +100, −75, −75 → −50)
+    m.devotion=m.devotion||{total:0,spins:0}; m.devotion.spins=(m.devotion.spins||0)+1; if(typeof o.pts==='number'&&o.pts!==0){ m.devotion.total=(m.devotion.total||0)+o.pts; } }
   else if(a.t==='group_new'){ const m=memByName(a.starter); if(!m)return; const amt=Math.max(1,Math.min(GROUP_CAP,a.stake|0)); if((m.points||0)<amt)return; if(a.side!=='A'&&a.side!=='B')return; adjPts(m,-amt); MEM.groups=MEM.groups||[]; const g={id:'g'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),starter:a.starter,title:a.title,stake:amt,sideA:[],sideB:[],status:'pending',created:now,lockedAt:null,claims:{},votes:{},winner:null}; (a.side==='A'?g.sideA:g.sideB).push(a.starter); MEM.groups.push(g); }
   else if(a.t==='group_join'){ const g=groupById(a.id); if(!g||g.status!=='pending')return; if(a.side!=='A'&&a.side!=='B')return; if(groupParts(g).includes(a.name))return; const sd=(a.side==='A')?g.sideA:g.sideB; if(sd.length>=GROUP_SIDE_MAX)return; const m=memByName(a.name); if(!m||(m.points||0)<(g.stake||0))return; adjPts(m,-(g.stake||0)); sd.push(a.name); }
   else if(a.t==='group_leave'){ const g=groupById(a.id); if(!g||g.status!=='pending')return; if(a.name===g.starter)return; if(!groupParts(g).includes(a.name))return; const m=memByName(a.name); if(m)adjPts(m,g.stake||0); g.sideA=(g.sideA||[]).filter(n=>n!==a.name); g.sideB=(g.sideB||[]).filter(n=>n!==a.name); }

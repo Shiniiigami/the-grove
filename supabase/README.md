@@ -56,12 +56,27 @@ and summarises "synced N · M couldn't apply"; live-state settlement actions
 (wager/challenge/group interactions) are gated offline instead of queuing doomed
 replays; and the dispute-timeout wording says the pot is returned.
 
+The `2026-07-01d` set:
+
+- Reverted the wager dispute-timeout to **forfeit** (both stakes burned), by
+  request — not a refund.
+- Aligned the client fire **decay** to 3h (`sweepFire`); the server already
+  decayed 1 log per 3h but the client used 2h, so the fire looked lower
+  client-side between refreshes.
+- **Blessing scope:** the ×2/×3 wheel blessing (`winMult`) now also multiplies
+  the next positive community deed, Devotion wheel spin, Chalice total, and
+  normal (non-group) wager win, then is consumed. Wager blessing multiplies the
+  net winnings (winner gets stake back + M×stake). Applied in `grove_vote`,
+  `grove_wheel`, `grove_chalice`, `grove_action`, mirrored in the client.
+- `grove_ver` → `2026-07-01d`.
+
+Both layers were fuzz-checked: the client model over 25×2 runs of 3-simulated-day
+heavy activity, and the server over 600 randomised actions with forced
+sweeps/forfeits — point conservation (`members + locked-in-bets + burned == start`)
+held at every step, with no negatives or crashes on fuzzed names/notes/amounts.
+
 ### Known follow-ups (not yet applied)
 
-- **Blessing scope (planned):** widen the ×2/×3 wheel blessing to also apply to
-  the next community deed rite, Devotion wheel (Test of Devotion) spin, Trial of
-  the Chalice total, and normal (non-group) wager win — currently it only applies
-  to challenge approvals and Keeper awards.
 - A passing offering that hits the "Eye is full" (3 offered) cap at apply time is
   consumed with no effect (no +150 / robe / +50). Rare but reachable; needs a
   product decision on desired behaviour.
@@ -69,3 +84,5 @@ replays; and the dispute-timeout wording says the pot is returned.
   `grove_chalice`, `grove_wheel`, …) should also take `FOR UPDATE`.
 - Latent: `grove_action`'s fire-goal default is 8 while the client's is 6 (the
   live `fire.goal` is 6, so it only matters on a fresh reseed).
+- `grove_action.wheel_spin` is dead (remote clients use `grove_wheel`) and still
+  charges 50 vs the live 15 — safe to remove.

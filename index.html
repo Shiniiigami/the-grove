@@ -894,7 +894,7 @@ window.relinkPush=async function(){ try{
   try{ renderRules(); }catch(e){}
 }catch(e){ toast('Re-link failed: '+((e&&e.message)||'unknown')); } };
 
-const EXPECTED_DB='2026-07-01c';
+const EXPECTED_DB='2026-07-01d';
 function showDbBanner(msg){
   let b=document.getElementById('dbBanner');
   if(!b){ b=document.createElement('div'); b.id='dbBanner'; b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:300;background:#7A2E2E;color:#FFE8C8;font-family:Silkscreen,monospace;font-size:11px;line-height:1.4;text-align:center;padding:9px 14px;box-shadow:0 2px 12px rgba(0,0,0,.55)'; document.body.appendChild(b); }
@@ -3980,9 +3980,12 @@ function applyRiteEffect(r){
   if(r.kind==="title"){ m.epithet=_lbl; rewardNominator(r,25,"Named a title"); }
   else if(r.kind==="badge"){ m.badges=m.badges||[]; if(!m.badges.includes(_lbl)) m.badges.push(_lbl); if(r.color){ MEM.badgeColors=MEM.badgeColors||{}; if(!MEM.badgeColors[_lbl]) MEM.badgeColors[_lbl]=r.color; } rewardNominator(r,20,"Named a badge"); }
   else if(r.kind==="deed"){
-    m.points=Math.max(0,(m.points||0)+r.points);
-    m.season=Math.max(0,(m.season||0)+r.points);
-    m.history=m.history||[]; m.history.push({l:_lbl,d:r.points,t:Date.now()/1000});
+    // a banked wheel blessing (winMult) multiplies a POSITIVE deed, then is spent; the
+    // nominator reward stays on the base scale (set when the rite was raised)
+    let _p=r.points; if(_p>0 && (m.winMult||1)>1){ _p=_p*m.winMult; delete m.winMult; }
+    m.points=Math.max(0,(m.points||0)+_p);
+    m.season=Math.max(0,(m.season||0)+_p);
+    m.history=m.history||[]; m.history.push({l:_lbl,d:_p,t:Date.now()/1000});
     rewardNominator(r,nominatorDeedReward(r.points),"Named a deed");
   }
   else if(r.kind==="offer"){
@@ -4348,7 +4351,7 @@ function renderRules(){
     <div class="ritehdr">Challenges</div>
     <p class="rtext">Stake a bounty from your challenge budget; one spirit may take it on. You or the Keeper approve it within 24h and the stake passes to them. Want out of an accepted challenge? Asking to withdraw lets the doer <b>agree to drop it</b>, or <b>stick it out</b> with one hour to finish before it lapses.</p>
     <div class="ritehdr">The Wager Ring</div>
-    <p class="rtext">Stake your <b>own</b> Devotion head-to-head, up to <b>100</b> a wager — another spirit must match it. Settle by conceding or agreeing a tie. Can't agree? Raise a <b>dispute</b> and the grove votes (5 settles it); left unresolved an hour later, the pot is returned to both.</p>
+    <p class="rtext">Stake your <b>own</b> Devotion head-to-head, up to <b>100</b> a wager — another spirit must match it. Settle by conceding or agreeing a tie. Can't agree? Raise a <b>dispute</b> and the grove votes (5 settles it); left unresolved an hour later, both forfeit the pot.</p>
     <div class="ritehdr">The Reckoning · Group Wagers</div>
     <p class="rtext">Rally two sides — up to <b>6</b> a side, even lopsided (6 v 1). Everyone stakes the same; the starter <b>locks</b> the wager and the winning side <b>splits the whole pot</b>, so fewer winners each take a bigger share. All players must agree who won; if they can’t, the grove votes to settle it.</p>
     <div class="ritehdr">Test of Devotion</div>
@@ -4510,7 +4513,7 @@ function memByName(n){ return (MEM.members||[]).find(x=>x.name===n); }
 function adjPts(m,d){ if(!m)return; m.points=Math.max(0,(m.points||0)+d); m.season=Math.max(0,(m.season||0)+d); }
 function consumeMult(m){ const x=(m&&m.winMult)||1; if(m&&m.winMult) delete m.winMult; return x; }
 function maybeEarnLog(m,gained){ if(!m||gained<=0)return false; if(Math.random()<Math.min(1,gained/100)){ m.logs=(m.logs||0)+1; return true; } return false; }
-function sweepFire(now){ const f=MEM.fire; if(!f)return false; if(f.lastDecay===undefined)f.lastDecay=now; const dec=Math.floor((now-f.lastDecay)/(2*3600)); if(dec>0){ f.level=Math.max(0,(f.level||0)-dec); f.lastDecay=f.lastDecay+dec*2*3600; if((f.level||0)===0)f.stokers=[]; return true; } return false; }
+function sweepFire(now){ const f=MEM.fire; if(!f)return false; if(f.lastDecay===undefined)f.lastDecay=now; const dec=Math.floor((now-f.lastDecay)/(3*3600)); if(dec>0){ f.level=Math.max(0,(f.level||0)-dec); f.lastDecay=f.lastDecay+dec*3*3600; if((f.level||0)===0)f.stokers=[]; return true; } return false; }
 function fireKeeperBadge(){ const ms=MEM.members||[]; let top=null,topN=0; ms.forEach(m=>{ if((m.fireLogs||0)>topN){topN=m.fireLogs||0;top=m;} }); ms.forEach(m=>{ m.badges=(m.badges||[]).filter(b=>b!=='Keeper of the Flame'); }); if(top&&topN>0){ top.badges=top.badges||[]; top.badges.push('Keeper of the Flame'); } }
 const WHEEL=[
   {key:'jackpot',label:'JACKPOT  +250',pts:250,w:3},
@@ -4537,7 +4540,7 @@ function wagerById(id){ return (MEM.wagers||[]).find(w=>w.id===id); }
 function sweepWagers(now){ let changed=false; (MEM.wagers||[]).forEach(w=>{
   if(w.status==='open' && now-(w.created||now)>=24*3600){ const p=memByName(w.proposer); if(p)adjPts(p,w.amount||0); w.status='expired'; changed=true; }
   else if(w.status==='matched' && now-(w.matchedAt||w.created||now)>=24*3600){ w.status='disputed'; w.disputeAt=now; changed=true; }
-  else if(w.status==='disputed' && now-(w.disputeAt||now)>=1*3600){ const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); w.status='settled'; w.winner='tie'; changed=true; }
+  else if(w.status==='disputed' && now-(w.disputeAt||now)>=1*3600){ w.status='forfeit'; w.winner='forfeit'; changed=true; }
 }); return changed; }
 /* ---------- multi-person GROUP WAGERS ---------- */
 const GROUP_CAP=100, GROUP_SIDE_MAX=6, GROUP_LOCK_SEC=3600, GROUP_ACTIVE_SEC=86400, GROUP_DISPUTE_VOTES=5, GROUP_DISPUTE_SEC=3600;
@@ -4569,12 +4572,12 @@ function applyAction(a){
   else if(a.t==='wager_accept'){ const w=wagerById(a.id); if(!w||w.status!=='open')return; if(a.name===w.proposer)return; const m=memByName(a.name); if(!m||(m.points||0)<w.amount)return; adjPts(m,-w.amount); w.taker=a.name; w.status='matched'; w.matchedAt=now; }
   else if(a.t==='wager_cancel'){ const w=wagerById(a.id); if(!w||w.status!=='open')return; if(a.by!==w.proposer && !a.keeper)return; const p=memByName(w.proposer); if(p)adjPts(p,w.amount||0); MEM.wagers=(MEM.wagers||[]).filter(x=>x.id!==a.id); }
   else if(a.t==='wager_dispute'){ const w=wagerById(a.id); if(!w||w.status!=='matched')return; if(a.by!==w.proposer && a.by!==w.taker && !a.keeper)return; w.status='disputed'; w.disputeAt=now; }
-  else if(a.t==='wager_concede'){ const w=wagerById(a.id); if(!w||(w.status!=='matched'&&w.status!=='disputed'))return; if(a.name!==w.proposer && a.name!==w.taker)return; const winnerName=(a.name===w.proposer)?w.taker:w.proposer; const win=memByName(winnerName); if(win){ adjPts(win,2*(w.amount||0)); maybeEarnLog(win,w.amount||0); } w.status='settled'; w.winner=winnerName; }
-  else if(a.t==='wager_resolve'){ const w=wagerById(a.id); if(!w||(w.status!=='matched'&&w.status!=='disputed')||!a.keeper)return; if(a.winner!==w.proposer && a.winner!==w.taker)return; const win=memByName(a.winner); if(win){ adjPts(win,2*(w.amount||0)); maybeEarnLog(win,w.amount||0); } w.status='settled'; w.winner=a.winner; }
+  else if(a.t==='wager_concede'){ const w=wagerById(a.id); if(!w||(w.status!=='matched'&&w.status!=='disputed'))return; if(a.name!==w.proposer && a.name!==w.taker)return; const winnerName=(a.name===w.proposer)?w.taker:w.proposer; const win=memByName(winnerName); if(win){ const _wm=(win.winMult||1); if(_wm>1)delete win.winMult; adjPts(win,(w.amount||0)*(1+_wm)); maybeEarnLog(win,w.amount||0); } w.status='settled'; w.winner=winnerName; }
+  else if(a.t==='wager_resolve'){ const w=wagerById(a.id); if(!w||(w.status!=='matched'&&w.status!=='disputed')||!a.keeper)return; if(a.winner!==w.proposer && a.winner!==w.taker)return; const win=memByName(a.winner); if(win){ const _wm=(win.winMult||1); if(_wm>1)delete win.winMult; adjPts(win,(w.amount||0)*(1+_wm)); maybeEarnLog(win,w.amount||0); } w.status='settled'; w.winner=a.winner; }
   else if(a.t==='wager_void'){ const w=wagerById(a.id); if(!w||(w.status!=='matched'&&w.status!=='disputed')||!a.keeper)return; const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); MEM.wagers=(MEM.wagers||[]).filter(x=>x.id!==a.id); }
-  else if(a.t==='wager_vote'){ const w=wagerById(a.id); if(!w||w.status!=='disputed')return; if(a.side!=='proposer'&&a.side!=='taker')return; if(a.voter===w.proposer||a.voter===w.taker)return; /* parties can't vote in their own dispute (matches group_vote) */ w.votes=w.votes||{}; if(w.votes[a.voter])return; w.votes[a.voter]=a.side; let pv=0,tv=0; for(const k in w.votes){ if(w.votes[k]==='proposer')pv++; else if(w.votes[k]==='taker')tv++; } if(pv>=5||tv>=5){ const winnerName=(pv>=5)?w.proposer:w.taker; const win=memByName(winnerName); if(win){ adjPts(win,2*(w.amount||0)); maybeEarnLog(win,w.amount||0); } w.status='settled'; w.winner=winnerName; } }
+  else if(a.t==='wager_vote'){ const w=wagerById(a.id); if(!w||w.status!=='disputed')return; if(a.side!=='proposer'&&a.side!=='taker')return; if(a.voter===w.proposer||a.voter===w.taker)return; /* parties can't vote in their own dispute (matches group_vote) */ w.votes=w.votes||{}; if(w.votes[a.voter])return; w.votes[a.voter]=a.side; let pv=0,tv=0; for(const k in w.votes){ if(w.votes[k]==='proposer')pv++; else if(w.votes[k]==='taker')tv++; } if(pv>=5||tv>=5){ const winnerName=(pv>=5)?w.proposer:w.taker; const win=memByName(winnerName); if(win){ const _wm=(win.winMult||1); if(_wm>1)delete win.winMult; adjPts(win,(w.amount||0)*(1+_wm)); maybeEarnLog(win,w.amount||0); } w.status='settled'; w.winner=winnerName; } }
   else if(a.t==='wager_tie'){ const w=wagerById(a.id); if(!w||(w.status!=='matched'&&w.status!=='disputed'))return; if(a.keeper){ const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); w.status='settled'; w.winner='tie'; return; } if(a.name!==w.proposer&&a.name!==w.taker)return; w.tie=w.tie||[]; if(!w.tie.includes(a.name))w.tie.push(a.name); if(w.tie.includes(w.proposer)&&w.tie.includes(w.taker)){ const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); w.status='settled'; w.winner='tie'; } }
-  else if(a.t==='wheel_spin'){ const m=memByName(a.name); if(!m)return; if(now-(m.lastSpin||0)<2*3600)return; if((m.points||0)<15)return; const o=a.outcome||{}; adjPts(m,-15); m.lastSpin=now; if(o.special==='free'){ adjPts(m,15); m.lastSpin=0; } else if(o.special==='x2'){ m.winMult=2; } else if(o.special==='x3'){ m.winMult=3; } else if(o.special==='x2neg'){ m.lossMult=2; } else if(typeof o.pts==='number'){ adjPts(m,o.pts); if(o.pts>0)maybeEarnLog(m,o.pts); }
+  else if(a.t==='wheel_spin'){ const m=memByName(a.name); if(!m)return; if(now-(m.lastSpin||0)<2*3600)return; if((m.points||0)<15)return; const o=a.outcome||{}; adjPts(m,-15); m.lastSpin=now; if(o.special==='free'){ adjPts(m,15); m.lastSpin=0; } else if(o.special==='x2'){ m.winMult=2; } else if(o.special==='x3'){ m.winMult=3; } else if(o.special==='x2neg'){ m.lossMult=2; } else if(typeof o.pts==='number'){ let _p=o.pts; if(_p>0 && (m.winMult||1)>1){ _p=_p*m.winMult; delete m.winMult; } adjPts(m,_p); if(_p>0)maybeEarnLog(m,_p); }
     // the Eye's verdicts ride one running "Test of Devotion" deed line — each result adds to it (e.g. +100, −75, −75 → −50)
     m.devotion=m.devotion||{total:0,spins:0}; m.devotion.spins=(m.devotion.spins||0)+1; if(typeof o.pts==='number'&&o.pts!==0){ m.devotion.total=(m.devotion.total||0)+o.pts; } }
   else if(a.t==='group_new'){ const m=memByName(a.starter); if(!m)return; const amt=Math.max(1,Math.min(GROUP_CAP,a.stake|0)); if((m.points||0)<amt)return; if(a.side!=='A'&&a.side!=='B')return; adjPts(m,-amt); MEM.groups=MEM.groups||[]; const g={id:'g'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),starter:a.starter,title:a.title,stake:amt,sideA:[],sideB:[],status:'pending',created:now,lockedAt:null,claims:{},votes:{},winner:null}; (a.side==='A'?g.sideA:g.sideB).push(a.starter); MEM.groups.push(g); }
@@ -4806,7 +4809,7 @@ function wheelSectionHTML(me){
   let ctrl;
   if(!me){ ctrl=`<p class="hint">Pick your spirit to lay devotion before the Eye.</p>`; }
   else {
-    const buff = (me.winMult>1 ? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:#E8C45A;margin:2px 0 6px">✦ ×${me.winMult} blessing banked for your next deed or challenge ✦</div>`:'') + (me.lossMult>1 ? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:#C77B9A;margin:2px 0 6px">☠ ×${me.lossMult} curse on your next penalty ☠</div>`:'');
+    const buff = (me.winMult>1 ? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:#E8C45A;margin:2px 0 6px">✦ ×${me.winMult} blessing banked for your next win — deed, challenge, wager, spin or Chalice ✦</div>`:'') + (me.lossMult>1 ? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:#C77B9A;margin:2px 0 6px">☠ ×${me.lossMult} curse on your next penalty ☠</div>`:'');
     let btn;
     if(cd>0){ const tm=Math.ceil(cd/60), hh=Math.floor(tm/60), mm=tm%60; btn=`<button class="rapprove" disabled>The Eye looks away · ${hh>0?hh+'h ':''}${mm}m</button>`; }
     else if((me.points||0)<15){ btn=`<button class="rapprove" disabled>Need 15 ✦ to be tested</button>`; }
@@ -5264,7 +5267,7 @@ function wagerMatchedCard(w){
         <button class="rapprove ${mine==='taker'?'voted':''}" ${mine?'disabled':''} onclick="voteWager('${w.id}','taker')">${w.taker} (${tv}/5)</button>
       </div>`;
     } else if(VOTER && party){ voteRow=`<div style="text-align:center;font-size:11px;color:var(--sage);margin-top:4px">votes ${w.proposer} ${pv} · ${w.taker} ${tv} — others decide</div>`; }
-    rows = `<div style="text-align:center;font-size:11px;color:#E8A88F;margin-top:8px">⚖ Disputed — 5 votes settle it, or in <b>${lbl}</b> the pot is returned to both</div>${voteRow}${rows}`;
+    rows = `<div style="text-align:center;font-size:11px;color:#E8A88F;margin-top:8px">⚖ Disputed — 5 votes settle it, or in <b>${lbl}</b> both forfeit the pot</div>${voteRow}${rows}`;
   }
   const keeperExtra = keeperUnlocked? `<div style="margin-top:8px;text-align:center;font-size:11px">Keeper · <a onclick="resolveWager('${w.id}','${w.proposer.replace(/'/g,"\\'")}')" style="cursor:pointer;color:var(--sage)">${w.proposer} won</a> · <a onclick="resolveWager('${w.id}','${w.taker.replace(/'/g,"\\'")}')" style="cursor:pointer;color:var(--sage)">${w.taker} won</a> · <a onclick="voidWager('${w.id}')" style="cursor:pointer;color:#E8A88F">void</a></div>`:"";
   return `<div class="ritecard" style="flex-direction:column;align-items:stretch"><div class="rbody"><div class="rdesc"><b>${w.proposer}</b> vs <b>${w.taker}</b> &nbsp;<span style="color:var(--candle)">${w.amount} ✦</span> each — ${w.title}</div><div class="rmeta">${disputed?'disputed':'matched'} · pot ${2*w.amount} ✦</div></div>${rows}${keeperExtra}</div>`;
@@ -5310,7 +5313,7 @@ window.concedeWager=async function(id){ const w=wagerById(id); if(!w)return; con
 window.resolveWager=async function(id,winner){ if(!keeperUnlocked)return; if(!confirm(`Award the ${2*(wagerById(id)?.amount||0)} pot to ${winner}?`))return; applyAction({t:'wager_resolve',id,winner,keeper:true}); await saveData(); trialsRefresh(); toast(`${winner} takes the pot.`); };
 window.voidWager=async function(id){ if(!keeperUnlocked)return; if(!confirm("Void this wager and refund both stakes?"))return; applyAction({t:'wager_void',id,keeper:true}); await saveData(); trialsRefresh(); toast("Wager voided — stakes refunded."); };
 window.voteWager=async function(id,side){ if(!VOTER){ toast("Choose your spirit first."); return; } const w=wagerById(id); if(!w)return; const ok=await communityAction({t:'wager_vote',id,voter:VOTER,side}); if(!ok)return; trialsRefresh(); toast("Your vote is cast."); };
-window.disputeWager=async function(id){ if(!VOTER)return; if(!confirm("Raise a dispute? The grove will vote (5 settles it). If no verdict in 1 hour, the pot is returned to both."))return; const ok=await communityAction({t:'wager_dispute',id,by:VOTER}); if(!ok)return; trialsRefresh(); toast("Dispute raised — the grove decides."); };
+window.disputeWager=async function(id){ if(!VOTER)return; if(!confirm("Raise a dispute? The grove will vote (5 settles it). If no verdict in 1 hour, BOTH of you forfeit the pot."))return; const ok=await communityAction({t:'wager_dispute',id,by:VOTER}); if(!ok)return; trialsRefresh(); toast("Dispute raised — the grove decides."); };
 /* ---------- GROUP WAGER UI ---------- */
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 // Input sanitisers — names flow into dozens of innerHTML/attr/onclick sites, so strip anything

@@ -897,7 +897,7 @@ window.relinkPush=async function(){ try{
   try{ renderRules(); }catch(e){}
 }catch(e){ toast('Re-link failed: '+((e&&e.message)||'unknown')); } };
 
-const EXPECTED_DB='2026-07-01e';
+const EXPECTED_DB='2026-07-01g';
 function showDbBanner(msg){
   let b=document.getElementById('dbBanner');
   if(!b){ b=document.createElement('div'); b.id='dbBanner'; b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:300;background:#7A2E2E;color:#FFE8C8;font-family:Silkscreen,monospace;font-size:11px;line-height:1.4;text-align:center;padding:9px 14px;box-shadow:0 2px 12px rgba(0,0,0,.55)'; document.body.appendChild(b); }
@@ -1034,6 +1034,7 @@ function getImg(url){
 }
 
 function shade(hex,amt){ // amt -1..1
+  if(typeof hex!=='string' || !/^#[0-9a-fA-F]{6}$/.test(hex)) hex='#888888';   // never throw on a corrupt/missing chibi colour
   const n=parseInt(hex.slice(1),16);let r=n>>16,g=(n>>8)&255,b=n&255;
   const f=amt<0?(v=>v*(1+amt)):(v=>v+(255-v)*amt);
   r=Math.round(f(r));g=Math.round(f(g));b=Math.round(f(b));
@@ -1200,6 +1201,7 @@ function drawImgSprite(canvas,soul,scale,t,base,dpr){
   }
 }
 function drawChibi(ctx,f,px,ox,oy,ti,nT,expr){
+  if(!f || typeof f!=='object' || Array.isArray(f)) f={};   // a corrupt/non-object chibi renders as defaults, never crashes the grove
   const P=(x,y,c)=>{ctx.fillStyle=c;ctx.fillRect(ox+x*px,oy+y*px,px,px);};
   const row=(a,b,y,c)=>{for(let x=a;x<=b;x++)P(x,y,c);};
   const cult=(cx,cy,col,eye)=>{ P(cx-2,cy,col);P(cx,cy,col);P(cx+2,cy,col); for(let x=cx-2;x<=cx+2;x++){P(x,cy+1,col);P(x,cy+2,col);} P(cx-1,cy+3,col);P(cx,cy+3,col);P(cx+1,cy+3,col); P(cx,cy+4,col); P(cx,cy+2,eye); };
@@ -4516,7 +4518,7 @@ function spiritReact(name,type,label,done){
 }
 
 function memByName(n){ return (MEM.members||[]).find(x=>x.name===n); }
-function adjPts(m,d){ if(!m)return; m.points=Math.max(0,(m.points||0)+d); m.season=Math.max(0,(m.season||0)+d); }
+function adjPts(m,d){ if(!m)return; d=Number.isFinite(d)?d:0; m.points=Math.max(0,(m.points||0)+d); m.season=Math.max(0,(m.season||0)+d); }
 function consumeMult(m){ const x=(m&&m.winMult)||1; if(m&&m.winMult) delete m.winMult; return x; }
 function maybeEarnLog(m,gained){ if(!m||gained<=0)return false; if(Math.random()<Math.min(1,gained/100)){ m.logs=(m.logs||0)+1; return true; } return false; }
 function sweepFire(now){ const f=MEM.fire; if(!f)return false; if(f.lastDecay===undefined)f.lastDecay=now; const dec=Math.floor((now-f.lastDecay)/(3*3600)); if(dec>0){ f.level=Math.max(0,(f.level||0)-dec); f.lastDecay=f.lastDecay+dec*3*3600; if((f.level||0)===0)f.stokers=[]; return true; } return false; }
@@ -4570,7 +4572,7 @@ function applyAction(a){
   else if(a.t==='chal_approve'){ const c=chalById(a.id); if(!c||c.status!=='accepted')return; if(a.approver!==c.owner && !a.keeper)return; const w=memByName(c.accepter); if(w){ const mult=consumeMult(w); const base=(c.reward||0);
       // Gaming the cap: a ×2/×3 wheel buff stacked on a MAXED (150) trial. The Eye is not fooled —
       // instead of the inflated payout, the cheat costs the doer 100 Devotion.
-      if(mult>1 && base>=150){ adjPts(w,-100); w.history=w.history||[]; w.history.push({l:"Cheated the Eye — gamed a maxed trial with a wheel buff",d:-100,n:1,t:Date.now()/1000}); c.cheated=true; }
+      if(mult>1 && base>=145){ adjPts(w,-100); w.history=w.history||[]; w.history.push({l:"Cheated the Eye — gamed a maxed trial with a wheel buff",d:-100,n:1,t:Date.now()/1000}); c.cheated=true; }
       else { adjPts(w,base*mult); maybeEarnLog(w,base*mult); } } c.status='done'; }
   else if(a.t==='oath'){ const m=memByName(a.name); if(!m)return; m.oath=true; m.badges=m.badges||[]; if(!m.badges.includes('Initiated'))m.badges.push('Initiated'); grantRiteOfPassage(m); }
   else if(a.t==='thought'){ const m=memByName(a.name); if(!m)return; const txt=clampThought(a.text); if(txt){ m.thought={text:txt, at:Date.now()/1000}; } else { delete m.thought; } }

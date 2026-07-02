@@ -1,0 +1,5 @@
+-- 2026-07-02g — DROP FUNCTION public.grove_save(text,jsonb). Two overloads
+-- (2-arg + 3-arg-with-default) made every REST call with {p_pass,p_data}
+-- ambiguous (PGRST203), so ALL keeper full-state saves bounced — reset wheel
+-- cooldown, clear buffs, deed strikes reverted on the next poll. The 3-arg
+-- version (p_expected default null) serves both call shapes.

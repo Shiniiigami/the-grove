@@ -1,0 +1,7 @@
+-- 2026-07-02f — blessing redesign (user decision): a banked x2/x3 multiplies the
+-- NEXT GAIN anywhere positive — Keeper deed, challenge, WHEEL WIN, COMMUNITY-VOTED
+-- DEED, CHALICE result — never a wager. Blessings don't stack: landing x2 while
+-- blessed pays +100 flat (x3 +150); the banked one stays. grove_wheel annotates the
+-- outcome (ptsFinal/mult/convertedPts) for the client's verdict display and counts
+-- the ACTUAL landed amount in devotion.total. grove_action's wager payouts stop
+-- consuming the blessing (were paying amt*(1+mult)). Full bodies in ../schema.sql.

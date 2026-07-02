@@ -137,23 +137,8 @@ begin
   return true;
 end; $$;
 
--- legacy 2-arg keeper save (kept for older clients)
-create or replace function public.grove_save(p_pass text, p_data jsonb)
- returns boolean language plpgsql security definer set search_path to 'public'
-as $$
-begin
-  if not exists (
-    select 1 from public.grove_config
-    where k='keeper_pass'
-      and v = case when v like '$2%' then extensions.crypt(p_pass, v) else p_pass end
-  ) then
-    raise exception 'bad passphrase';
-  end if;
-  insert into public.grove_state (id, data, updated_at) values (1, p_data, now())
-  on conflict (id) do update set data = excluded.data, updated_at = now();
-  return true;
-end; $$;
-
+-- (the old 2-arg grove_save was DROPPED: PostgREST cannot disambiguate it from the
+--  3-arg-with-default version below, so keeper saves bounced with PGRST203)
 -- current keeper save: optimistic-concurrency guard on updated_at, returns new stamp
 create or replace function public.grove_save(p_pass text, p_data jsonb, p_expected text default null)
  returns text language plpgsql security definer set search_path to 'public'
@@ -451,7 +436,11 @@ begin
           -- reward the nominator only for recognising a GAIN, never for a penalty
           -- (matches client: r.points>0 ? nominatorDeedReward : 0)
           if pts <= 0 then rew := 0; end if;
-          -- a community-voted deed does NOT consume a banked ×2/×3 (Keeper deed / challenge only)
+          -- a banked x2/x3 blessing multiplies a community-voted deed gain (consumed on use)
+          if pts > 0 and coalesce((mem->>'winMult')::int,1) > 1 then
+            pts := pts * coalesce((mem->>'winMult')::int,1);
+            mem := mem - 'winMult';
+          end if;
           cur := greatest(0, coalesce((mem->>'points')::int, 0) + pts);
           sea := coalesce((mem->>'season')::int, 0) + pts;
           mem := jsonb_set(mem, '{points}', to_jsonb(cur));
@@ -710,7 +699,7 @@ create or replace function public.grove_wheel(p_name text)
 as $$
 declare
   d jsonb; members jsonb; midx int := -1; i int; nowe double precision := extract(epoch from now());
-  o jsonb; sp text; spv int;
+  o jsonb; sp text; spv int; curmult int; dev int;
 begin
   select data into d from public.grove_state where id = 1 for update;
   if d is null then raise exception 'grove not seeded'; end if;
@@ -732,30 +721,45 @@ begin
 
   o  := grove_wheel_pick();
   sp := o->>'special';
+  curmult := coalesce((members->midx->>'winMult')::int,1);
+  dev := -15;   -- the offering; each branch below adds what actually lands
   if sp = 'free' then
     members := jsonb_set(members, array[midx::text], grove_adj(members->midx, 15));
     members := jsonb_set(members, array[midx::text], jsonb_set(members->midx,'{lastSpin}', to_jsonb(0)));
-  elsif sp = 'x2' then
-    members := jsonb_set(members, array[midx::text], jsonb_set(members->midx,'{winMult}', to_jsonb(2)));
-  elsif sp = 'x3' then
-    members := jsonb_set(members, array[midx::text], jsonb_set(members->midx,'{winMult}', to_jsonb(3)));
+    dev := dev + 15;
+  elsif sp = 'x2' or sp = 'x3' then
+    if curmult > 1 then
+      -- blessings don't stack: the Eye pays tribute instead (+100 for x2, +150 for x3)
+      spv := case when sp = 'x2' then 100 else 150 end;
+      members := jsonb_set(members, array[midx::text], grove_adj(members->midx, spv));
+      if random() < least(1.0, spv::numeric/100.0) then
+        members := jsonb_set(members, array[midx::text], jsonb_set(members->midx,'{logs}', to_jsonb(coalesce((members->midx->>'logs')::int,0)+1)));
+      end if;
+      o := o || jsonb_build_object('convertedPts', spv);
+      dev := dev + spv;
+    else
+      members := jsonb_set(members, array[midx::text], jsonb_set(members->midx,'{winMult}', to_jsonb(case when sp='x2' then 2 else 3 end)));
+    end if;
   elsif sp = 'x2neg' then
     members := jsonb_set(members, array[midx::text], jsonb_set(members->midx,'{lossMult}', to_jsonb(2)));
   else
-    -- a banked ×2/×3 does NOT apply to wheel wins (Keeper deed / challenge only, per Rules)
     spv := coalesce((o->>'pts')::int,0);
+    -- a banked x2/x3 blessing multiplies a wheel win (consumed on use; annotated for the client)
+    if spv > 0 and curmult > 1 then
+      spv := spv * curmult;
+      members := jsonb_set(members, array[midx::text], (members->midx) - 'winMult');
+      o := o || jsonb_build_object('ptsFinal', spv, 'mult', curmult);
+    end if;
     members := jsonb_set(members, array[midx::text], grove_adj(members->midx, spv));
     if spv > 0 and random() < least(1.0, spv::numeric/100.0) then
       members := jsonb_set(members, array[midx::text], jsonb_set(members->midx,'{logs}', to_jsonb(coalesce((members->midx->>'logs')::int,0)+1)));
     end if;
+    dev := dev + spv;
   end if;
 
   members := jsonb_set(members, array[midx::text,'devotion'], jsonb_build_object(
       'spins', coalesce((members->midx#>>'{devotion,spins}')::int,0)+1,
-      'total', coalesce((members->midx#>>'{devotion,total}')::int,0)
-                 - 15
-                 + case when sp = 'free' then 15 else 0 end
-                 + case when o ? 'pts' then (o->>'pts')::int else 0 end), true);
+      'total', coalesce((members->midx#>>'{devotion,total}')::int,0) + dev), true);
   d := jsonb_set(d, '{members}', members);
   update public.grove_state set data = d, updated_at = now() where id = 1;
   return o;
@@ -1118,7 +1122,7 @@ begin
         if wagers->widx->>'proposer' = nm then win := wagers->widx->>'taker'; else win := wagers->widx->>'proposer'; end if;
         for midx in 0 .. jsonb_array_length(members)-1 loop
           if members->midx->>'name' = win then
-            members := jsonb_set(members, array[midx::text], grove_adj((members->midx) - 'winMult', amt * (1 + coalesce((members->midx->>'winMult')::int,1))));
+            members := jsonb_set(members, array[midx::text], grove_adj(members->midx, 2*amt));
             if random() < least(1.0, amt::numeric/100.0) then
               members := jsonb_set(members, array[midx::text], jsonb_set(members->midx,'{logs}', to_jsonb(coalesce((members->midx->>'logs')::int,0)+1)));
             end if;
@@ -1144,7 +1148,7 @@ begin
           if cnt >= 5 then win := wagers->widx->>'proposer'; else win := wagers->widx->>'taker'; end if;
           for midx in 0 .. jsonb_array_length(members)-1 loop
             if members->midx->>'name' = win then
-              members := jsonb_set(members, array[midx::text], grove_adj((members->midx) - 'winMult', amt * (1 + coalesce((members->midx->>'winMult')::int,1))));
+              members := jsonb_set(members, array[midx::text], grove_adj(members->midx, 2*amt));
             if random() < least(1.0, amt::numeric/100.0) then
               members := jsonb_set(members, array[midx::text], jsonb_set(members->midx,'{logs}', to_jsonb(coalesce((members->midx->>'logs')::int,0)+1)));
             end if;
@@ -1386,7 +1390,11 @@ begin
       for idx in 0 .. jsonb_array_length(members) - 1 loop
         if members->idx->>'name' = nm then
           m := members->idx;
-          -- a Chalice gain does NOT consume a banked ×2/×3 (Keeper deed / challenge only)
+          -- a banked x2/x3 blessing multiplies a Chalice gain (consumed on use)
+          if delta > 0 and coalesce((m->>'winMult')::int,1) > 1 then
+            delta := delta * coalesce((m->>'winMult')::int,1);
+            m := m - 'winMult';
+          end if;
           m := jsonb_set(m, '{points}', to_jsonb(greatest(0, coalesce((m->>'points')::int,0) + delta)));
           m := jsonb_set(m, '{season}', to_jsonb(coalesce((m->>'season')::int,0) + delta));
           ch := coalesce(m->'chalice', '{"total":0,"games":0,"drained":0}'::jsonb);
@@ -1500,7 +1508,7 @@ end; $$;
 -- ---------------------------------------------------------------------------
 create or replace function public.grove_ver()
  returns text language sql set search_path to 'public','pg_temp'
-as $$ select '2026-07-02e'::text; $$;
+as $$ select '2026-07-02g'::text; $$;
 
 -- ---------------------------------------------------------------------------
 --  Grants — the public PWA calls every RPC with the anon key
@@ -1514,7 +1522,6 @@ grant execute on function
   public.grove_seed(jsonb),
   public.grove_check(text),
   public.grove_setpass(text,text),
-  public.grove_save(text,jsonb),
   public.grove_save(text,jsonb,text),
   public.grove_set_chibi(text,jsonb),
   public.grove_push_save(text,jsonb),

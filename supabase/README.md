@@ -43,4 +43,4 @@ break the app.
 
 ## Current server version
 
-`grove_ver()` → `2026-07-02e`
+`grove_ver()` → `2026-07-02g`

@@ -564,7 +564,6 @@ const TIER_COLORS_V2 = {Initiate:"#7C8A82",Acolyte:"#8AA67E",Disciple:"#6FA3AB",
 const DEFAULT_DEEDS = [
   ["The Pilgrimage",100],
   ["Of the First Fire",200],
-  ["Rite of Passage",100],
   ["Kept the Flame",30],
   ["First Light",20],
   ["The Provider",40],
@@ -778,7 +777,9 @@ const OFFER_ROBE_SECS=3*3600;          // the offered wear the Offering Robe for
 const OFFER_SAME_COOL=24*3600;         // the same spirit can't be offered twice within 24 hours
 // nominations expire after 3h, except the offering, which sits for 30 minutes
 function riteTTL(r){ return (r&&r.kind==='offer')?OFFER_RITE_TTL:3*3600; }
-function lastOfferRaise(){ let t=0; (MEM.rites||[]).forEach(r=>{ if(r&&r.kind==='offer'&&r.created&&r.created>t) t=r.created; }); return t; }
+// the public 6h cooldown reflects communal offerings only — a Keeper's direct offer is an override
+// and shouldn't consume the grove's shared clock
+function lastOfferRaise(){ let t=0; (MEM.rites||[]).forEach(r=>{ if(r&&r.kind==='offer'&&!r.keeperSet&&r.created&&r.created>t) t=r.created; }); return t; }
 function publicOfferCool(){ const now=Date.now()/1000; const base=lastOfferRaise(); const cleared=(typeof MEM!=='undefined'&&MEM&&MEM.offerGateClearedAt)||0; if(cleared>=base) return 0; const cd=PUB_OFFER_COOL-(now-base); return cd>0?cd:0; }
 function initOfferSnap(){ OFFER_SNAP=offerIds(); APPLIED_OFFER_SNAP=appliedOfferIds(); }
 let APPLIED_OFFER_SNAP=null;
@@ -967,7 +968,8 @@ async function pollRemote(){
     MEM=d; ensureDefaults(); cacheRemote();
     const quiet = document.hidden || REACT_SUPPRESS; REACT_SUPPRESS=false;
     if(quiet){ rebaselineSnaps(); }
-    else { try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectBetEndings(); }catch(e){} }
+    else { try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectOfferPassed(); }catch(e){} try{ detectBetEndings(); }catch(e){} try{ detectSelfSworn(); }catch(e){} }
+    try{ reconcileRiteOfPassage(); }catch(e){}   // keeper device backfills +100 for server-side oaths, even while idle
     takeSnap(); layoutGrove(); renderLedger(); renderRites(); const tr=document.getElementById('trials'); if(tr && tr.style.display!=='none') renderTrials();
     if(!quiet) checkRankUps();
   } }catch(e){}
@@ -1848,19 +1850,29 @@ function memAccounted(m){
   let s=0;
   (m.history||[]).forEach(h=>{ s+=(h.d||0); });
   if(m.devotion) s+=(m.devotion.total||0);
-  (MEM.challenges||[]).forEach(c=>{ if(c && c.accepter===m.name && c.status==='done') s+=+(c.reward||0); });
+  // a "cheated" challenge paid −100 (already in history), NOT its reward — don't credit the reward
+  (MEM.challenges||[]).forEach(c=>{ if(c && c.accepter===m.name && c.status==='done' && !c.cheated) s+=+(c.reward||0); });
   (MEM.wagers||[]).forEach(w=>{ if(!w||(w.proposer!==m.name && w.taker!==m.name)) return; if(w.status==='forfeit') s-=(w.amount||0); else if(w.status==='settled'){ if(w.winner===m.name) s+=(w.amount||0); else if(w.winner!=='tie') s-=(w.amount||0); } });
-  (MEM.groups||[]).forEach(g=>{ if(!g||g.status!=='settled') return; const parts=[].concat(g.sideA||[],g.sideB||[]); if(parts.indexOf(m.name)<0) return; if(!g.winner||g.winner==='void'||g.winner==='tie') return; const won=((g.winner==='A'?g.sideA:g.sideB)||[]).indexOf(m.name)>=0; if(won){ const winners=(g.winner==='A'?g.sideA:g.sideB)||[]; const pot=(g.stake||0)*parts.length; s+=Math.floor(pot/Math.max(1,winners.length))-(g.stake||0); } else { s-=(g.stake||0); } });
+  (MEM.groups||[]).forEach(g=>{ if(!g||g.status!=='settled') return; const parts=[].concat(g.sideA||[],g.sideB||[]); if(parts.indexOf(m.name)<0) return; if(!g.winner||g.winner==='void'||g.winner==='tie') return; const winners=(g.winner==='A'?g.sideA:g.sideB)||[]; const idx=winners.indexOf(m.name); if(idx>=0){ const pot=(g.stake||0)*parts.length; const share=Math.floor(pot/Math.max(1,winners.length)); const rem=pot-share*winners.length; s+=share+(idx<rem?1:0)-(g.stake||0); } else { s-=(g.stake||0); } });
   return s;
 }
-function memReconcileGap(m){ return Math.round((m&&m.points||0) - memAccounted(m)); }
+// a spirit with an in-flight wager/group has points escrowed that memAccounted can't attribute yet;
+// reconciling them would mis-book the stake, so skip until those bets settle
+function memHasOpenStake(m){
+  if(!m) return false;
+  if((MEM.wagers||[]).some(w=>w&&(w.proposer===m.name||w.taker===m.name)&&(w.status==='open'||w.status==='matched'||w.status==='disputed'))) return true;
+  if((MEM.groups||[]).some(g=>g&&[].concat(g.sideA||[],g.sideB||[]).indexOf(m.name)>=0&&(g.status==='pending'||g.status==='active'||g.status==='disputed'))) return true;
+  return false;
+}
+function memReconcileGap(m){ if(!m||memHasOpenStake(m)) return 0; return Math.round((m.points||0) - memAccounted(m)); }
 window.keeperReconcileLedger=async function(){
   if(!keeperUnlocked){ toast("Only the Keeper may reconcile the ledger."); return; }
   const rows=[]; (MEM.members||[]).forEach(m=>{ const g=memReconcileGap(m); if(g) rows.push([m,g]); });
   const err=document.getElementById("kerr");
   if(!rows.length){ if(err) err.textContent="Every ledger already balances — nothing to reconcile."; return; }
   const prev=rows.slice(0,10).map(([m,g])=>`• ${m.name}: ${g>0?'+':''}${g}`).join("\n");
-  if(!confirm(`Reconcile ${rows.length} spirit${rows.length===1?'':'s'} whose points don't match their listed deeds?\n\nA labelled adjustment is booked to each so the ledger balances — this catches unrecorded trials (the Eye's wheel, stakes, buffs).\n\n${prev}${rows.length>10?`\n…and ${rows.length-10} more`:''}`)) return;
+  const _skipped=(MEM.members||[]).filter(m=>memHasOpenStake(m)).length;
+  if(!confirm(`Reconcile ${rows.length} spirit${rows.length===1?'':'s'} whose points don't match their listed deeds?\n\nA labelled adjustment is booked to each so the ledger balances — this catches unrecorded trials (the Eye's wheel, stakes, buffs).${_skipped?`\n\n(${_skipped} with open wagers/trials are left until those settle.)`:''}\n\n${prev}${rows.length>10?`\n…and ${rows.length-10} more`:''}`)) return;
   const t=Date.now()/1000;
   rows.forEach(([m,g])=>{ m.history=m.history||[]; m.history.push({l:"Unrecorded — the Eye's trials", d:g, n:1, t}); });
   await saveData(); layoutGrove(); renderLedger();
@@ -2005,7 +2017,7 @@ function openSoul(name){
   if(!cwItems.length) myCh=`<div class="h"><em>No challenges or wagers yet.</em></div>`;
   else if(cwItems.length>5) myCh=`<div class="ledscroll cw">${cwItems.map(r=>r.html).join("")}</div><div class="ledhint">↕ scroll · ${cwItems.length} total, greatest first</div>`;
   else myCh=cwItems.map(r=>r.html).join("");
-  const chSection = `<div class="hist"><h4>Challenges &amp; Wagers</h4>${myCh}</div>`;
+  const chSection = `<div class="hist"><h4>Challenges, Wagers &amp; Reckonings</h4>${myCh}</div>`;
   const mineSpirit = (typeof VOTER!=='undefined') && VOTER===m.name;
   const thoughtSection = mineSpirit ? thoughtComposerHTML(m)
     : (thoughtLive(m.thought) ? `<div class="hist"><h4>Thought${thoughtFadeLabel(m.thought)}</h4><div class="h"><em>${esc(m.thought.text)}</em></div></div>` : '');
@@ -3547,7 +3559,7 @@ function chronicleEvents(limit){
   const FIRE_DEEDS={'Tended the Sacred Fire':1,'Struck the Final Spark':1};
   // the offering gets its own Chronicle line (with the citation) from the rite, so keep the
   // plain "+150 Offered to the Eye" ledger rows out of the feed (they still show on the soul card)
-  const CHRON_SKIP=Object.assign({'Offered to the Eye':1,'Named the offering':1,'Named a deed':1,'Named a title':1,'Named a badge':1},FIRE_DEEDS);
+  const CHRON_SKIP=Object.assign({'Offered to the Eye':1,'Named the offering':1,'Named a deed':1,'Named a title':1,'Named a badge':1,"Unrecorded — the Eye's trials":1},FIRE_DEEDS);
   (MEM.rites||[]).forEach(r=>{ if(r&&r.kind==='offer'&&r.applied&&r.target){ const cit=(typeof clampText==='function')?clampText(r.label||'',60):(r.label||''); ev.push({t:r.created||0,ic:"🔮",tx:`<b>${esc(r.target)}</b> was offered to the Eye${(cit&&cit!=='The Offered')?` — <i>${esc(cit)}</i>`:''}`}); } });
   (MEM.members||[]).forEach(m=>{ (m.history||[]).forEach(h=>{ if(h&&h.t&&!CHRON_SKIP[deedBase(h.l)]){ const up=(h.d||0)>=0; ev.push({t:h.t,ic:up?"✶":"☄",tx:`<b>${esc(m.name)}</b> ${up?'earned':'lost'} ${up?'+':''}${h.d} ✦ — <i>${esc(deedBase(h.l)||h.l)}</i>`}); } }); });
   const since=MEM.seasonStart||0;
@@ -3825,7 +3837,7 @@ let VOTED_RITES = new Set();
 try{ VOTED_RITES = new Set(JSON.parse(localStorage.getItem('grove-voted-rites')||'[]')); }catch(e){}
 function markVotedHere(id){ VOTED_RITES.add(id); try{ localStorage.setItem('grove-voted-rites', JSON.stringify([...VOTED_RITES])); }catch(e){} }
 function hasVotedHere(id){ return VOTED_RITES.has(id); }
-window.setVoter=function(v){ VOTER=v; if(v)saveIdentity(v); renderIdentityBar(); renderRites(); };
+window.setVoter=function(v){ VOTER=v; if(v)saveIdentity(v); try{ OATH_CONFIRMED=new Set(); }catch(e){} renderIdentityBar(); renderRites(); };
 
 function renderRites(){
   const el=document.getElementById("rites"); if(!el) return;
@@ -3882,6 +3894,7 @@ function riteCard(r){
 }
 window.approveRite=function(id){
   if(!VOTER){ toast("Pick your name first."); return; }
+  if(!requireSworn())return;   // only the sworn may witness/approve a rite
   Snd.sfx('approve');
   voteRite(id, VOTER);
 };
@@ -3975,7 +3988,8 @@ function applyRiteEffect(r){
     m.points=Math.max(0,(m.points||0)+r.points);
     m.season=Math.max(0,(m.season||0)+r.points);
     m.history=m.history||[]; m.history.push({l:_lbl,d:r.points,t:Date.now()/1000});
-    rewardNominator(r,nominatorDeedReward(r.points),"Named a deed");
+    // reward the nominator only for recognising a GAIN — not for getting a spirit penalised
+    rewardNominator(r,(r.points>0?nominatorDeedReward(r.points):0),"Named a deed");
   }
   else if(r.kind==="offer"){
     const wasOffered=m.offered && m.offered>Date.now()/1000;
@@ -4000,9 +4014,13 @@ const TENETS=[
 ];
 const OATH_FINAL_VOW="I give myself to the Grove.";
 function isSworn(name){ const m=MEM.members.find(x=>x.name===name); return !m || m.oath!==false; }
+// gate the Trials at the action boundary too, not just the view — the unsworn may not stake, join, or witness
+function requireSworn(){ if(typeof VOTER!=='undefined' && VOTER && !isSworn(VOTER)){ toast('Only the sworn may enter the Trials — take your oath first.'); return false; } return true; }
 // +100 Rite of Passage, granted once, the moment a spirit is initiated (m.rop guards against a second grant)
 function grantRiteOfPassage(m){
   if(!m || m.rop) return false;
+  // if a Keeper already awarded a "Rite of Passage" deed by hand, don't grant a second one
+  if((m.history||[]).some(h=>h && /^\s*rite of passage\b/i.test(String(h.l||'')))){ m.rop=true; return false; }
   m.rop=true;
   m.points=Math.max(0,(m.points||0)+100);
   m.season=Math.max(0,(m.season||0)+100);
@@ -4089,7 +4107,8 @@ function oathSwornMoment(name){
   ov.innerHTML=`<div class="oc-card"><div class="oc-eye big">${eyeBright}</div><div class="oc-title">The Eye opens</div>`
     +`<div class="oc-vow">You are sworn, <b>${esc(name)}</b> — an Initiate of the Order.<br>The Rites and Trials lie open to you now.</div>`
     +`<button class="gold" onclick="closeOathSworn()">Enter the grove</button></div>`;
-  ov.onclick=null; document.body.appendChild(ov);
+  ov.onclick=function(e){ if(e.target===ov) closeOathSworn(); };   // tap the backdrop to dismiss (matches the pointer cursor)
+  document.body.appendChild(ov);
   try{ if(Snd&&Snd.isOn&&Snd.isOn()) Snd.sfx('gong'); }catch(e){}
 }
 window.closeOathSworn=function(){ const ov=document.getElementById('oathSworn'); if(ov) ov.remove(); try{ trialsRefresh(); }catch(e){} };
@@ -4267,7 +4286,7 @@ window.nominateOfferForm=function(){
   const _pend={}; (MEM.rites||[]).forEach(r=>{ if(r&&r.kind==='offer'&&!r.applied&&(_now2-(r.created||_now2)<OFFER_RITE_TTL)&&r.target) _pend[r.target]=1; });
   // a spirit offered within the last 24h can't be offered again
   const _recent={}; (MEM.rites||[]).forEach(r=>{ if(r&&r.kind==='offer'&&r.applied&&r.target&&(_now2-(r.created||0)<OFFER_SAME_COOL)) _recent[r.target]=1; });
-  const opts=sortedMembers().map(m=>{ const _o=m.offered&&m.offered>_now2; const _p=_pend[m.name]; const _r=_recent[m.name]; const _d=(_o||_p||_r); return `<option ${_d?'disabled':''}>${m.name}${_o?' \u00b7 offered':(_p?' \u00b7 pending':(_r?' \u00b7 offered today':''))}</option>`; }).join("");
+  const opts=sortedMembers().map(m=>{ const _o=m.offered&&m.offered>_now2; const _p=_pend[m.name]; const _r=_recent[m.name]; const _d=(_o||_p||_r); return `<option ${_d?'disabled':''}>${m.name}${_o?' \u00b7 offered':(_p?' \u00b7 pending':(_r?' \u00b7 offered recently':''))}</option>`; }).join("");
   const _meM=memByName(VOTER), _OC=12*3600, _nw=Date.now()/1000;
   const _cd=(_meM&&_meM.lastOffer&&(_meM.lastOffer+_OC)>_nw)?(_meM.lastOffer+_OC-_nw):0;
   const _hm=(x)=>{x=Math.max(0,x|0);const h=Math.floor(x/3600),m=Math.floor((x%3600)/60);return h?`${h}h ${m}m`:`${m}m`;};
@@ -4279,8 +4298,11 @@ window.nominateOfferForm=function(){
   if(_act.length>=3){ _grove=`The Eye is full \u2014 3/3 robed \u00b7 next slot frees in ${_hm(_act[0].offered-_nw)}.`; }
   else { _grove=`${_act.length}/3 robed \u00b7 ${3-_act.length} slot${(3-_act.length)===1?'':'s'} open${_act.length?` \u00b7 next frees in ${_hm(_act[0].offered-_nw)}`:''}.`; }
   const _timer=`<p style="text-align:center;margin:2px 0 10px;font-family:'Silkscreen',monospace;font-size:10px;line-height:1.75;letter-spacing:.04em;color:var(--sage)">\u27F3 ${_cdTxt}<br>\u25A3 ${_pubTxt}<br>\u25B2 ${_grove}</p>`;
-  const _blocked=(_cd>0||_pub>0);
-  const _blbl=_cd>0?'You are on cooldown':'Grove on cooldown';
+  const _pendCount=Object.keys(_pend).length;
+  const _ownPend=(MEM.rites||[]).some(r=>r&&r.kind==='offer'&&!r.applied&&(_now2-(r.created||_now2)<OFFER_RITE_TTL)&&r.nominator===VOTER);
+  const _full=_act.length>=3, _pendFull=_pendCount>=3;
+  const _blocked=(_cd>0||_pub>0||_full||_pendFull||_ownPend);
+  const _blbl=_cd>0?'You are on cooldown':(_pub>0?'Grove on cooldown':(_ownPend?'You already named an offering':(_full?'The Eye is full (3/3)':'Three offerings pending')));
   const _btn=_blocked?`<button class="gold" style="margin-top:6px;opacity:.45;cursor:not-allowed" disabled>⟳ ${_blbl}</button>`:`<button class="gold" style="margin-top:6px" onclick="submitNomOffer()">Raise the offering</button>`;
   sheet.innerHTML=`
     <div class="grip"></div>
@@ -4309,9 +4331,10 @@ window.submitNomOffer=function(){
   const pending=(MEM.rites||[]).filter(r=>r.kind==='offer' && !r.applied && (now-(r.created||now) < OFFER_RITE_TTL));
   if(pending.length>=3){ document.getElementById("kerr").textContent="Three offerings already stand before the Eye. Wait for one to be judged."; return; }
   if(pending.some(r=>r.nominator===VOTER)){ document.getElementById("kerr").textContent="You have already named an offering — one per supplicant. Wait for it to be judged."; return; }
-  if(publicOfferCool()>0){ document.getElementById("kerr").textContent=`The grove must wait — the next offering can be chosen in ${Math.ceil(publicOfferCool()/3600)}h.`; return; }
+  const _fmtCd=(x)=>{x=Math.max(0,x|0);const h=Math.floor(x/3600),m=Math.floor((x%3600)/60);return h?`${h}h ${m}m`:`${m}m`;};
+  if(publicOfferCool()>0){ document.getElementById("kerr").textContent=`The grove must wait — the next offering can be chosen in ${_fmtCd(publicOfferCool())}.`; return; }
   const _me=memByName(VOTER), OFFER_COOL=12*3600;
-  if(_me && _me.lastOffer && now-_me.lastOffer < OFFER_COOL){ const left=Math.ceil((OFFER_COOL-(now-_me.lastOffer))/3600); document.getElementById("kerr").textContent=`You raised an offering recently — wait about ${left}h before raising another.`; return; }
+  if(_me && _me.lastOffer && now-_me.lastOffer < OFFER_COOL){ document.getElementById("kerr").textContent=`You raised an offering recently — wait ${_fmtCd(OFFER_COOL-(now-_me.lastOffer))} before raising another.`; return; }
   const _reason=(typeof clampText==='function'?clampText(document.getElementById("ofReason").value,60):document.getElementById("ofReason").value.trim());
   if(!_reason){ document.getElementById("kerr").textContent="Name why they are worthy — an offering is an honour."; return; }
   { const pe=profanityError(_reason); if(pe){ document.getElementById("kerr").textContent=pe; return; } }
@@ -4334,7 +4357,7 @@ function renderRules(){
     <div class="ritehdr">Devotion</div>
     <p class="rtext"><b>Lifetime</b> Devotion drives your rank; <b>season</b> Devotion tracks the current trip. These days they move together — deeds, challenges, wagers, the fire and the Eye's Test all shift both at once, up or down, floored at zero. The Keeper can start a fresh season to reset the race without touching ranks.</p>
     <div class="ritehdr">Deeds</div>
-    <p class="rtext">Devotion is awarded for deeds at the fire. The Keeper can multiply them (×II, ×III…) — e.g. "Night swim ×III". ${deedCount} deeds sit on the ledger; the Keeper tends the list. The great milestones — <b>The Pilgrimage</b>, <b>Of the First Fire</b> and the <b>Rite of Passage</b> — are the <b>Keeper’s alone</b> to bestow.</p>
+    <p class="rtext">Devotion is awarded for deeds at the fire. The Keeper can multiply them (×II, ×III…) — e.g. "Night swim ×III". ${deedCount} deeds sit on the ledger; the Keeper tends the list. The great milestones — <b>The Pilgrimage</b> and <b>Of the First Fire</b> — are the <b>Keeper’s alone</b> to bestow, while the <b>Rite of Passage</b> (+100) comes automatically the moment a spirit is initiated.</p>
     <div class="ritehdr">Stoke the Fire</div>
     <p class="rtext">The Order feeds one shared fire. You <b>earn logs by doing</b> — every deed and finished challenge rolls for a log, and the bigger the reward the better the odds (a ~100-Devotion reward is all but certain). Add a log every <b>3 hours</b>; the flame <b>loses one every 2 hours</b> if neglected. When <b>6 logs</b> burn together, everyone who fed it is blessed — starting at <b>+50</b> and climbing <b>+25</b> with each blessing (no daily limit), resetting to +50 if a full day passes with no fire. Whoever lands the final log earns a <b>+20</b> spark, and the season's top tender wears <b>Keeper of the Flame</b>.</p>
     <div class="ritehdr">Challenges</div>
@@ -4344,7 +4367,7 @@ function renderRules(){
     <div class="ritehdr">The Reckoning · Group Wagers</div>
     <p class="rtext">Rally two sides — up to <b>6</b> a side, even lopsided (6 v 1). Everyone stakes the same; the starter <b>locks</b> the wager and the winning side <b>splits the whole pot</b>, so fewer winners each take a bigger share. All players must agree who won; if they can’t, the grove votes to settle it.</p>
     <div class="ritehdr">Test of Devotion</div>
-    <p class="rtext"><b>15 ✦</b> laid before the <b>Devotion Weirwood</b>, once every 2 hours. The Eye's verdict runs from a <b>+250</b> radiance down to <b>−100</b> wrath, with returned offerings and <b>×2 / ×3</b> blessings that boost your next <b>deed or challenge</b> (never a wager), plus a <b>×2 curse</b> on your next penalty. Roughly 56% of verdicts favor you, and the Eye can never drop you below zero. Every verdict rides one running <b>Test of Devotion</b> line in your ledger — each result adds to it (say +100, then −75, −75, leaving −50).</p>
+    <p class="rtext"><b>15 ✦</b> laid before the <b>Devotion Weirwood</b>, once every 2 hours. The Eye's verdict runs from a <b>+250</b> radiance down to <b>−100</b> wrath, with returned offerings and <b>×2 / ×3</b> blessings that boost your next <b>deed or challenge</b> (never a wager), plus a <b>×2 curse</b> on your next penalty. Roughly 56% of verdicts favor you, and the Eye can never drop you below zero. Every spin rides one running <b>Test of Devotion</b> line in your ledger — the 15 stake and the verdict both fold into it, so the line always matches the Devotion the Eye actually moved.</p>
     <div class="ritehdr">Trial of the Chalice</div>
     <p class="rtext">A 52-card King’s Cup for the circle — <b>4–20 spirits</b>, and one phone may hold several. The <b>host</b> opens the lobby and begins the trial; if they don’t, the right to begin passes down the join order so the circle never stalls. Each spirit’s <b>rank shows beneath their name</b>. On your turn you draw a card and the circle acts it out aloud — sending others to drink, binding a partner, decreeing a <b>law</b> (no two laws alike), or pouring into the Chalice. Devotion rides a <b>hidden tally</b> all game and commits as a single “Trial of the Chalice” line when it ends.</p>
     <p class="rtext">The <b>fourth King</b> is the reckoning — the <b>Eye itself opens</b> over the circle: that drawer either <b>drinks the Chalice</b> (gaining Devotion and the <i>Drained the Chalice</i> badge) or <b>braves a ritual</b> the circle sets aloud — 3 minutes, half must approve. Succeed for the badge and a communal cup (up to four sip, +10 each); fail or refuse and lose <b>40</b>. Break a law and a spirit can <b>report you by tapping your name</b> — reports lapse after 30 seconds, and if enough agree you’re judged (−5); you may even own up and vote on your own report. Spirits may step away (the host passes on), be <b>cast out by tapping a name</b> and a half-vote (the named may vote too), or rejoin — and a lobby that never begins dissolves after <b>3 minutes</b>.</p>
@@ -4356,9 +4379,9 @@ function renderRules(){
     <div class="rulerow"><span>Nominate a badge</span><span class="rmin">7 ✦</span></div>
     <div class="rulerow"><span>Nominate a title</span><span class="rmin">10 ✦</span></div>
     <div class="rulerow"><span>The Offering · robe + 3h mark</span><span class="rmin">7 ✦</span></div>
-    <p class="rtext" style="margin-top:8px">Points are capped at ±200 per nomination. Open rites expire after 3 hours if they do not pass.</p>
+    <p class="rtext" style="margin-top:8px">Points are capped at ±200 per nomination. Open rites expire after 3 hours if they do not pass (an Offering nomination sits for just 30 minutes).</p>
     <div class="ritehdr">The Offering</div>
-    <p class="rtext">The grove’s highest rite (7 ✦ to raise). A nomination sits before the grove for <b>30 minutes</b>. When it passes the spirit is robed in the <b>Offering Robe</b> for <b>3 hours</b>, gains <b>+150</b> Devotion and the <b>Of the Eye</b> badge, while the whole grove’s sky turns — a blood moon and the open Eye — in their honour. The one who raised it earns <b>+50</b>. Up to <b>three</b> may stand offered at once; only <b>one</b> offering can be raised every <b>6 hours</b>, and the same spirit can’t be offered twice within <b>24 hours</b>.</p>
+    <p class="rtext">The grove’s highest rite (7 ✦ to raise). A nomination sits before the grove for <b>30 minutes</b>. When it passes the spirit is robed in the <b>Offering Robe</b> for <b>3 hours</b>, gains <b>+150</b> Devotion and the <b>Of the Eye</b> badge, while the whole grove’s sky turns — a blood moon and the open Eye — in their honour. The one who raised it earns <b>+50</b>. Up to <b>three</b> may stand offered at once; the grove may raise only <b>one</b> offering every <b>6 hours</b>, each supplicant only once every <b>12 hours</b> (and only one of yours open at a time), and the same spirit can’t be offered twice within <b>24 hours</b>.</p>
     <div class="ritehdr">Titles & Badges</div>
     <p class="rtext">A <b>title</b> is your single epithet beneath your rank — a new one replaces the old. <b>Badges</b> are collectible ✦ marks; hold as many as you earn. A spirit can’t be nominated for a title or badge they already hold, and you can’t raise the same nomination on them twice.</p>
     <div class="ritehdr">The Oath &amp; Initiation</div>
@@ -4368,7 +4391,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bm · Group wagers now show on your soul card alongside challenges and duels, and the Keeper can "Reconcile ledgers" to book any gap between a spirit's points and their listed deeds (the phantom points from the Eye's wheel) as a labelled line.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bn · A deep audit hardened the new systems — Reconcile no longer mis-books cheated challenges, group pots or open bets; the Test of Devotion line now includes its stake so it always adds up; the unsworn are locked out of every Trial at the source; and the Rite of Passage can't be granted twice.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4567,8 +4590,10 @@ function applyAction(a){
   else if(a.t==='wager_vote'){ const w=wagerById(a.id); if(!w||w.status!=='disputed')return; if(a.side!=='proposer'&&a.side!=='taker')return; if(a.voter===w.proposer||a.voter===w.taker)return; /* parties can't vote in their own dispute (matches group_vote) */ w.votes=w.votes||{}; if(w.votes[a.voter])return; w.votes[a.voter]=a.side; let pv=0,tv=0; for(const k in w.votes){ if(w.votes[k]==='proposer')pv++; else if(w.votes[k]==='taker')tv++; } if(pv>=5||tv>=5){ const winnerName=(pv>=5)?w.proposer:w.taker; const win=memByName(winnerName); if(win){ adjPts(win,2*(w.amount||0)); maybeEarnLog(win,w.amount||0); } w.status='settled'; w.winner=winnerName; } }
   else if(a.t==='wager_tie'){ const w=wagerById(a.id); if(!w||(w.status!=='matched'&&w.status!=='disputed'))return; if(a.keeper){ const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); w.status='settled'; w.winner='tie'; return; } if(a.name!==w.proposer&&a.name!==w.taker)return; w.tie=w.tie||[]; if(!w.tie.includes(a.name))w.tie.push(a.name); if(w.tie.includes(w.proposer)&&w.tie.includes(w.taker)){ const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); w.status='settled'; w.winner='tie'; } }
   else if(a.t==='wheel_spin'){ const m=memByName(a.name); if(!m)return; if(now-(m.lastSpin||0)<2*3600)return; if((m.points||0)<15)return; const o=a.outcome||{}; adjPts(m,-15); m.lastSpin=now; if(o.special==='free'){ adjPts(m,15); m.lastSpin=0; } else if(o.special==='x2'){ m.winMult=2; } else if(o.special==='x3'){ m.winMult=3; } else if(o.special==='x2neg'){ m.lossMult=2; } else if(typeof o.pts==='number'){ adjPts(m,o.pts); if(o.pts>0)maybeEarnLog(m,o.pts); }
-    // the Eye's verdicts ride one running "Test of Devotion" deed line — each result adds to it (e.g. +100, −75, −75 → −50)
-    m.devotion=m.devotion||{total:0,spins:0}; m.devotion.spins=(m.devotion.spins||0)+1; if(typeof o.pts==='number'&&o.pts!==0){ m.devotion.total=(m.devotion.total||0)+o.pts; } }
+    // the Eye's verdicts ride one running "Test of Devotion" deed line — track the TRUE net per spin
+    // (the 15 stake plus the verdict) so the line always sums to the points actually moved
+    { let _net=-15; if(o.special==='free') _net+=15; else if(typeof o.pts==='number') _net+=o.pts;
+      m.devotion=m.devotion||{total:0,spins:0}; m.devotion.spins=(m.devotion.spins||0)+1; m.devotion.total=(m.devotion.total||0)+_net; } }
   else if(a.t==='group_new'){ const m=memByName(a.starter); if(!m)return; const amt=Math.max(1,Math.min(GROUP_CAP,a.stake|0)); if((m.points||0)<amt)return; if(a.side!=='A'&&a.side!=='B')return; adjPts(m,-amt); MEM.groups=MEM.groups||[]; const g={id:'g'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),starter:a.starter,title:a.title,stake:amt,sideA:[],sideB:[],status:'pending',created:now,lockedAt:null,claims:{},votes:{},winner:null}; (a.side==='A'?g.sideA:g.sideB).push(a.starter); MEM.groups.push(g); }
   else if(a.t==='group_join'){ const g=groupById(a.id); if(!g||g.status!=='pending')return; if(a.side!=='A'&&a.side!=='B')return; if(groupParts(g).includes(a.name))return; const sd=(a.side==='A')?g.sideA:g.sideB; if(sd.length>=GROUP_SIDE_MAX)return; const m=memByName(a.name); if(!m||(m.points||0)<(g.stake||0))return; adjPts(m,-(g.stake||0)); sd.push(a.name); }
   else if(a.t==='group_leave'){ const g=groupById(a.id); if(!g||g.status!=='pending')return; if(a.name===g.starter)return; if(!groupParts(g).includes(a.name))return; const m=memByName(a.name); if(m)adjPts(m,g.stake||0); g.sideA=(g.sideA||[]).filter(n=>n!==a.name); g.sideB=(g.sideB||[]).filter(n=>n!==a.name); }
@@ -4802,7 +4827,7 @@ function wheelSectionHTML(me){
     ctrl=`${buff}<div id="wheelResult" style="text-align:center;min-height:18px;font-family:'Silkscreen',monospace;font-size:13px;color:var(--candle);margin:2px 0 8px"></div><div style="text-align:center">${btn}</div>`;
   }
   return `<div class="ritehdr" style="margin-top:22px">Test of Devotion</div>
-    <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Lay <b style="color:var(--candle)">15 ✦</b> before the <b>Eye Totem</b> — once every <b>2 hours</b> — its verdict, radiance to wrath, lands on top of the cost.</p>
+    <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Lay <b style="color:var(--candle)">15 ✦</b> before the <b>Devotion Weirwood</b> — once every <b>2 hours</b> — its verdict, radiance to wrath, lands on top of the cost.</p>
     <div style="text-align:center;margin:6px 0"><div style="display:inline-block;width:min(64vw,240px)">${buildTotemSVG({anim:true, closed: cd>0})}</div></div>
     ${ctrl}`;
 }
@@ -5281,6 +5306,7 @@ window.newWagerForm=function(){
   scrim.classList.add("show");
 };
 window.commitWager=async function(){
+  if(!requireSworn())return;
   const title=clampText(document.getElementById("wgTitle").value,60);
   const amt=parseInt(document.getElementById("wgAmt").value,10)||0;
   const me=memByName(VOTER); const have=me?(me.points||0):0;
@@ -5292,7 +5318,7 @@ window.commitWager=async function(){
   const ok=await communityAction({t:'wager_new',proposer:VOTER,amount:amt,title}); if(!ok)return;
   closeSheet(); trialsRefresh(); toast("The wager stands.");
 };
-window.takeWager=async function(id){ if(!VOTER)return; const w=wagerById(id); if(!w)return; const me=memByName(VOTER); if(!me||(me.points||0)<w.amount){ toast(`You need ${w.amount} points to match this.`); return; } if(!confirm(`Match ${w.proposer}'s wager — stake ${w.amount} of your points?`))return; const ok=await communityAction({t:'wager_accept',id,name:VOTER}); if(!ok)return; trialsRefresh(); toast("Wager matched — may the Eye favour you."); };
+window.takeWager=async function(id){ if(!VOTER)return; if(!requireSworn())return; const w=wagerById(id); if(!w)return; const me=memByName(VOTER); if(!me||(me.points||0)<w.amount){ toast(`You need ${w.amount} points to match this.`); return; } if(!confirm(`Match ${w.proposer}'s wager — stake ${w.amount} of your points?`))return; const ok=await communityAction({t:'wager_accept',id,name:VOTER}); if(!ok)return; trialsRefresh(); toast("Wager matched — may the Eye favour you."); };
 window.cancelWager=async function(id){ const w=wagerById(id); if(!w)return; if(!confirm(`Withdraw your wager? Your ${w.amount} points return.`))return; const ok=await communityAction({t:'wager_cancel',id,by:VOTER}); if(!ok)return; trialsRefresh(); toast("Wager withdrawn."); };
 window.concedeWager=async function(id){ const w=wagerById(id); if(!w)return; const other=(VOTER===w.proposer)?w.taker:w.proposer; if(!confirm(`Concede to ${other}? They take the ${2*w.amount} pot.`))return; const ok=await communityAction({t:'wager_concede',id,name:VOTER}); if(!ok)return; trialsRefresh(); toast(`You concede — ${other} takes the pot.`); };
 window.resolveWager=async function(id,winner){ if(!keeperUnlocked)return; if(!confirm(`Award the ${2*(wagerById(id)?.amount||0)} pot to ${winner}?`))return; applyAction({t:'wager_resolve',id,winner,keeper:true}); await saveData(); trialsRefresh(); toast(`${winner} takes the pot.`); };
@@ -5380,7 +5406,7 @@ window.newGroupForm=function(){
 };
 window.gPick=function(s){ window.__gside=s; const a=document.getElementById('gsA'),b=document.getElementById('gsB'); if(!a||!b)return; a.className=s==='A'?'rapprove':'ghostbtn'; b.className=s==='B'?'rapprove':'ghostbtn'; a.style.padding=s==='A'?'':'9px'; b.style.padding=s==='B'?'':'9px'; };
 window.commitGroup=async function(){
-  if(!VOTER)return; const me=memByName(VOTER); const have=me?(me.points||0):0;
+  if(!VOTER)return; if(!requireSworn())return; const me=memByName(VOTER); const have=me?(me.points||0):0;
   const title=(document.getElementById("gtitle").value||"").trim();
   const stake=parseInt(document.getElementById("gstake").value,10);
   const side=window.__gside||'A'; const err=document.getElementById("gerr");
@@ -5391,7 +5417,7 @@ window.commitGroup=async function(){
   const ok=await communityAction({t:'group_new',starter:VOTER,stake,title,side}); if(!ok)return;
   closeSheet(); trialsRefresh(); toast("Group wager opened — rally your side.");
 };
-window.joinGroup=async function(id,side){ if(!VOTER){ toast("Choose your spirit first."); return; } const g=groupById(id); if(!g)return; const me=memByName(VOTER); if(!me||(me.points||0)<g.stake){ toast(`You need ${g.stake} ✦ to join.`); return; } if(!confirm(`Join Side ${side} — stake ${g.stake} of your points?`))return; const ok=await communityAction({t:'group_join',id,name:VOTER,side}); if(!ok)return; trialsRefresh(); toast(`You're in on Side ${side}.`); };
+window.joinGroup=async function(id,side){ if(!VOTER){ toast("Choose your spirit first."); return; } if(!requireSworn())return; const g=groupById(id); if(!g)return; const me=memByName(VOTER); if(!me||(me.points||0)<g.stake){ toast(`You need ${g.stake} ✦ to join.`); return; } if(!confirm(`Join Side ${side} — stake ${g.stake} of your points?`))return; const ok=await communityAction({t:'group_join',id,name:VOTER,side}); if(!ok)return; trialsRefresh(); toast(`You're in on Side ${side}.`); };
 window.leaveGroup=async function(id){ const g=groupById(id); if(!g)return; if(!confirm(`Leave this wager? Your ${g.stake} ✦ return.`))return; const ok=await communityAction({t:'group_leave',id,name:VOTER}); if(!ok)return; trialsRefresh(); toast("You stepped out — stake refunded."); };
 window.lockGroup=async function(id){ if(!confirm("Lock it in? No one can join or leave after this — the wager goes live."))return; const ok=await communityAction({t:'group_lock',id,by:VOTER}); if(!ok)return; trialsRefresh(); toast("Locked — may the worthy side prevail."); };
 window.revokeGroup=async function(id){ if(!confirm("Revoke and refund everyone?"))return; const ok=await communityAction({t:'group_revoke',id,by:VOTER}); if(!ok)return; trialsRefresh(); toast("Wager called off — all stakes refunded."); };
@@ -5571,6 +5597,7 @@ window.newChallengeForm=function(){
   scrim.classList.add("show");
 };
 window.submitChallenge=async function(){
+  if(!requireSworn())return;
   const title=clampText(document.getElementById("chTitle").value,60);
   const rew=parseInt(document.getElementById("chRew").value,10);
   const me=memByName(VOTER); const bud=me?Math.max(0,Math.min(150, me.chalBudget!==undefined?me.chalBudget:150)):0;
@@ -5581,6 +5608,7 @@ window.submitChallenge=async function(){
 };
 window.acceptChallenge=async function(id){
   if(!VOTER){ toast("Pick your name first."); return; }
+  if(!requireSworn())return;
   const c=chalById(id); if(!c)return;
   if(c.owner===VOTER){ toast("You can't accept your own challenge."); return; }
   if(activeCommitments(VOTER)>=3){ toast("You're committed to 3 trials already — finish one first."); return; }
@@ -5616,11 +5644,6 @@ window.approveChallenge=async function(id){
   if(keeperUnlocked && !(VOTER&&VOTER===c.owner)){ applyAction({t:'chal_approve',id,approver:c.owner,keeper:true}); await saveData(); trialsRefresh(); toast(_chalToast()); return; }
   if(VOTER && VOTER===c.owner){ const ok=await communityAction({t:'chal_approve',id,approver:VOTER}); if(!ok)return; trialsRefresh(); toast(_chalToast()); return; }
   toast("Only the owner or the Keeper can approve.");
-};
-window.takeOath=async function(name){
-  const steps=["I will carry my own pack and my share of the load.","I will keep the fire and respect the Eye.","I will answer the Order when it calls.","I give myself to the Grove."];
-  for(let i=0;i<steps.length;i++){ if(!confirm(`Oath ${i+1} of ${steps.length}:\n\n"${steps[i]}"\n\nDo you swear?`)){ toast("The oath is unfinished."); return; } }
-  const ok=await communityAction({t:'oath',name}); if(!ok)return; closeSheet(); layoutGrove(); renderLedger(); toast(`${name} is sworn to the Order.`);
 };
 document.querySelectorAll(".tab").forEach(t=>{
   t.onclick=()=>{

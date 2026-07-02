@@ -1,0 +1,35 @@
+-- 2026-07-02a — bring the live grove's server RPCs in line with the merged
+-- client logic. These two server-side edits were deferred across earlier
+-- sessions (PRs #56–#64) because the Supabase connector was unauthenticated
+-- then; the client-side halves already shipped. Applied to project
+-- drthfetglhqfgqxcrngr via mcp Supabase apply_migration.
+--
+-- Fix 1 (grove_wheel): the "Test of Devotion" ledger line must sum to the points
+--   the Eye actually moved. The client tracks the TRUE net per spin
+--     _net = -15 stake  (+15 refunded on a free spin)  + verdict
+--   The server was recording only the raw verdict into devotion.total,
+--   understating every spin by the 15 offering (the systematic "phantom points"
+--   gap the Keeper's Reconcile button was mopping up).
+--
+-- Fix 2 (grove_vote): a deed nominator is rewarded only for recognising a GAIN,
+--   never for getting a spirit penalised. The client stopped paying on negative
+--   deeds (r.points>0 ? nominatorDeedReward : 0); the server still paid off
+--   abs(points) regardless of sign.
+--
+-- grove_ver() bumped 2026-07-01g -> 2026-07-02a.
+--
+-- Full function bodies live in ../schema.sql (the canonical source of truth);
+-- only the two changed lines are highlighted here for the record:
+--
+--   grove_wheel  devotion.total increment:
+--     BEFORE:  + case when o ? 'pts' then (o->>'pts')::int else 0 end
+--     AFTER :  - 15
+--              + case when sp = 'free' then 15 else 0 end
+--              + case when o ? 'pts' then (o->>'pts')::int else 0 end
+--
+--   grove_vote  deed branch, after computing rew from abs(pts):
+--     ADDED :  if pts <= 0 then rew := 0; end if;
+--
+-- To (re)apply, run the two CREATE OR REPLACE FUNCTION statements for
+-- public.grove_wheel(text) and public.grove_vote(text,text) from ../schema.sql,
+-- then:  create or replace function public.grove_ver() ... select '2026-07-02a';

@@ -2685,6 +2685,22 @@ window.removeDeedAll=async function(name,i){
   idxs.sort((a,b)=>b-a).forEach(j=>m.history.splice(j,1));   // splice high→low so indices stay valid
   await saveData(); layoutGrove(); renderLedger(); openSoul(name); toast(`Struck all ${tally}× "${base}" from ${name}.`);
 };
+// Keeper: let a spirit spin the Eye again now (clears the 2h Test-of-Devotion cooldown)
+window.keeperResetSpin=async function(name){
+  if(!keeperUnlocked){ toast("Only the Keeper may reset the Eye's cooldown."); return; }
+  const m=memByName(name); if(!m) return;
+  m.lastSpin=0;
+  await saveData(); try{ trialsRefresh(); }catch(e){} toast(`The Eye may weigh ${name} again.`);
+};
+// Keeper: strip a banked wheel blessing (×2/×3) and/or curse from a spirit
+window.keeperClearBuffs=async function(name){
+  if(!keeperUnlocked){ toast("Only the Keeper may clear buffs."); return; }
+  const m=memByName(name); if(!m) return;
+  const parts=[]; if(m.winMult>1) parts.push(`×${m.winMult} blessing`); if(m.lossMult>1) parts.push(`×${m.lossMult} curse`);
+  if(!parts.length){ toast(`${name} has no buffs to clear.`); return; }
+  delete m.winMult; delete m.lossMult;
+  await saveData(); try{ trialsRefresh(); }catch(e){} toast(`Cleared ${name}'s ${parts.join(' & ')}.`);
+};
 window.addMemberForm=function(){
   sheet.innerHTML=`
     <div class="grip"></div>
@@ -4426,11 +4442,11 @@ function renderRules(){
     <p class="rtext">Tap any spirit → <b>Edit this spirit</b> to shape your form (once sworn). New gear — held items and the Offering Robe — unlocks as you rise in rank.</p>
     ${keeperUnlocked ? `
     <div class="ritehdr">Keeper’s Tools</div>
-    <p class="rtext">You hold the 🔥. Award or deduct Devotion, grant titles &amp; badges, tend the deed list, and run seasons. In a spirit’s <b>ledger</b>, tap <b>✕</b> beside a deed to strike one, or <b>✕all</b> to strike a whole stack — the Devotion is unwound automatically. <b>Reconcile ledgers</b> books any unrecorded trials so points match the listed deeds, and you can back up or roll the grove back.</p>` : `
+    <p class="rtext">You hold the 🔥. Award or deduct Devotion, grant titles &amp; badges, tend the deed list, and run seasons. In a spirit’s <b>ledger</b>, tap <b>✕</b> beside a deed to strike one, or <b>✕all</b> to strike a whole stack — the Devotion is unwound automatically. <b>Reconcile ledgers</b> books any unrecorded trials so points match the listed deeds, and you can back up or roll the grove back. Under the <b>Test of Devotion</b> you can reset a spirit’s spin cooldown or clear a banked blessing/curse.</p>` : `
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">A Keeper (🔥, passphrase-held) tends the grove — awarding Devotion, titles and badges, and running the seasons.</p>`}
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bz · Tidied the Rules: Keeper tools (including the ledger ✕ / ✕all deed strikes) now show only when the Keeper is unlocked, and the “never below zero” rule is stated once instead of three times.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ca · Keeper controls under the Test of Devotion: reset a spirit’s spin cooldown and clear a banked blessing/curse (shown only when the Keeper is unlocked).</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4889,7 +4905,15 @@ function wheelSectionHTML(me){
     if(cd>0){ const tm=Math.ceil(cd/60), hh=Math.floor(tm/60), mm=tm%60; btn=`<button class="rapprove" disabled>The Eye looks away · ${hh>0?hh+'h ':''}${mm}m</button>`; }
     else if((me.points||0)<15){ btn=`<button class="rapprove" disabled>Need 15 ✦ to be tested</button>`; }
     else { btn=`<button class="gold" id="spinBtn" onclick="spinTheWheel()">Lay 15 ✦ before the Eye</button>`; }
-    ctrl=`${buff}<div id="wheelResult" style="text-align:center;min-height:18px;font-family:'Silkscreen',monospace;font-size:13px;color:var(--candle);margin:2px 0 8px"></div><div style="text-align:center">${btn}</div>`;
+    // Keeper controls under the wheel: reset this spirit's 2h cooldown, and clear a banked buff/curse
+    const _kv = (typeof VOTER==='string') ? VOTER.replace(/'/g,"\\'") : '';
+    const _hasBuff = (me.winMult>1 || me.lossMult>1);
+    const kctl = (keeperUnlocked && (cd>0 || _hasBuff)) ? `<div style="text-align:center;margin-top:9px">
+        <span style="font-family:'Silkscreen',monospace;font-size:10px;color:var(--sage);opacity:.75;letter-spacing:.06em">Keeper · </span>
+        ${cd>0?`<button class="ghostbtn" style="width:auto;padding:5px 11px;font-size:11px;border-color:rgba(242,196,90,.5);color:var(--candle)" onclick="keeperResetSpin('${_kv}')">↺ Reset cooldown</button>`:''}
+        ${_hasBuff?`<button class="ghostbtn" style="width:auto;padding:5px 11px;font-size:11px;margin-left:6px;border-color:rgba(232,168,143,.55);color:#E8A88F" onclick="keeperClearBuffs('${_kv}')">✕ Clear buffs</button>`:''}
+      </div>` : '';
+    ctrl=`${buff}<div id="wheelResult" style="text-align:center;min-height:18px;font-family:'Silkscreen',monospace;font-size:13px;color:var(--candle);margin:2px 0 8px"></div><div style="text-align:center">${btn}</div>${kctl}`;
   }
   return `<div class="ritehdr" style="margin-top:22px">Test of Devotion</div>
     <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Lay <b style="color:var(--candle)">15 ✦</b> before the <b>Devotion Weirwood</b> — once every <b>2 hours</b> — its verdict, radiance to wrath, lands on top of the offering.</p>

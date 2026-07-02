@@ -893,11 +893,18 @@ window.relinkPush=async function(){ try{
 }catch(e){ toast('Re-link failed: '+((e&&e.message)||'unknown')); } };
 
 const EXPECTED_DB='2026-06-27h';
+let DB_WARN='';
 function showDbBanner(msg){
+  // remember the technical detail, but only the Keeper should see Supabase/SQL jargon —
+  // a normal player gets a soft, non-alarming line instead of "re-run grove_trials.sql".
+  DB_WARN=msg||'';
   let b=document.getElementById('dbBanner');
+  if(!DB_WARN){ if(b) b.remove(); return; }
   if(!b){ b=document.createElement('div'); b.id='dbBanner'; b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:300;background:#7A2E2E;color:#FFE8C8;font-family:Silkscreen,monospace;font-size:11px;line-height:1.4;text-align:center;padding:9px 14px;box-shadow:0 2px 12px rgba(0,0,0,.55)'; document.body.appendChild(b); }
-  b.textContent='⚠ '+msg;
+  b.textContent='⚠ '+((typeof keeperUnlocked!=='undefined'&&keeperUnlocked) ? DB_WARN : 'The grove is resting — some rites will return once the Keeper refreshes it.');
 }
+// when the Keeper unlocks, upgrade any resting-grove banner to the actionable detail
+function refreshDbBanner(){ if(DB_WARN) showDbBanner(DB_WARN); }
 async function checkDbVersion(){
   try{
     const v=await sbRpc('grove_ver',{});
@@ -1912,10 +1919,13 @@ function animate(){ /* no-op: kept for compatibility */ }
 
 /* ====================== BADGE COLORS ====================== */
 const BADGE_PAL=["#E8C45A","#C9A24B","#7FB069","#5BA3C9","#B07FC9","#E08A6B","#D96B8A","#6BC9B0","#C9C06B","#9A8FE0","#E0A86B","#7FC97F"];
+// only ever let a validated hex literal reach a style="color:…" sink — a rite/badge colour
+// is otherwise attacker-controllable (crafted proposeRite) and lands raw in innerHTML. Returns '' if unsafe.
+function clampHex(c){ c=String(c||'').trim(); return /^#[0-9a-fA-F]{3}([0-9a-fA-F]{3}([0-9a-fA-F]{2})?)?$/.test(c) ? c : ''; }
 function _bhash(s){ s=String(s||''); let h=0; for(let i=0;i<s.length;i++){ h=(h*31 + s.charCodeAt(i))>>>0; } return h; }
 function localBadgeColors(){ try{ return JSON.parse(localStorage.getItem('grove-badgecolors')||'{}'); }catch(e){ return {}; } }
 function setLocalBadgeColor(name,hex){ const lc=localBadgeColors(); lc[name]=hex; try{ localStorage.setItem('grove-badgecolors',JSON.stringify(lc)); }catch(e){} }
-function badgeColor(name){ const mc=(typeof MEM!=='undefined'&&MEM&&MEM.badgeColors)||{}; if(mc[name]) return mc[name]; const lc=localBadgeColors(); if(lc[name]) return lc[name]; return BADGE_PAL[_bhash(name)%BADGE_PAL.length]; }
+function badgeColor(name){ const mc=(typeof MEM!=='undefined'&&MEM&&MEM.badgeColors)||{}; const h=clampHex(mc[name]); if(h) return h; const lc=localBadgeColors(); const lh=clampHex(lc[name]); if(lh) return lh; return BADGE_PAL[_bhash(name)%BADGE_PAL.length]; }
 function badgeStyle(name){ const c=badgeColor(name); return `background:${hexA(c,.13)};border:1px solid ${hexA(c,.55)};color:${c};`; }
 const BADGE_SWATCHES=["#E8C45A","#E0902F","#D9544E","#C2457A","#9B5DE5","#5E6CE0","#3DA5D9","#39C0B0","#4FB477","#A7C957","#E07B53","#B0763C","#C9CDD2","#8A8F98"];
 let NEW_BADGE_COL="#E8C45A", NOM_BADGE_COL="#39C0B0";
@@ -2105,11 +2115,11 @@ window.tryUnlock=async function(){
   if(MODE==="remote"){
     try{
       const ok=await sbRpc("grove_check",{p_pass:v});
-      if(ok){ SESSION_PASS=v; keeperUnlocked=true; Snd.sfx('gong'); keeperPanel(); }
+      if(ok){ SESSION_PASS=v; keeperUnlocked=true; refreshDbBanner(); Snd.sfx('gong'); keeperPanel(); }
       else err.textContent="The seal holds. Wrong passphrase.";
     }catch(e){ err.textContent="Could not reach the Eye. Check connection."; }
   }else{
-    if(v===MEM.pass){ keeperUnlocked=true; Snd.sfx('gong'); keeperPanel(); }
+    if(v===MEM.pass){ keeperUnlocked=true; refreshDbBanner(); Snd.sfx('gong'); keeperPanel(); }
     else err.textContent="The seal holds. Wrong passphrase.";
   }
 };
@@ -2342,7 +2352,7 @@ window.bulkApply=async function(){ bulkSyncInputs(); const names=Object.keys(BUL
     let _net=net;
     if(_net>0 && (m.winMult||1)>1){ const _wm=consumeMult(m); _net=_net*_wm; }
     else if(_net<0 && (m.lossMult||1)>1){ const _lm=consumeLoss(m); _net=_net*_lm; }
-    m.points=Math.max(0,m.points+_net); m.season=(m.season||0)+_net; m.history=m.history||[]; m.history.push({l:reason,d:_net,n:1,t:tnow}); if(_net>0 && BULK_LOG) maybeEarnLog(m,_net);
+    const _pB=m.points; m.points=Math.max(0,m.points+_net); m.season=(m.season||0)+_net; m.history=m.history||[]; m.history.push({l:reason,d:_net,a:m.points-_pB,n:1,t:tnow}); if(_net>0 && BULK_LOG) maybeEarnLog(m,_net);
     const _a=tierIndex(m.points); if(_a>_b) roseUp.push({name:m.name,rank:tiers()[_a].name,idx:_a}); });
   // advance rank snapshots so a later poll doesn't re-celebrate, and announce any rank-ups
   try{ if(roseUp.length){ const s=loadRankSnap(); roseUp.forEach(r=>{ s[r.name]=r.idx; }); saveRankSnap(s); } }catch(e){}
@@ -2411,6 +2421,7 @@ window.saveSeasonLabel=async function(){
   MEM.season=v; await saveData(); renderLedger(); closeSheet(); toast("Season named.");
 };
 window.newSeason=async function(){
+  if(!keeperUnlocked){ toast("Only the Keeper may start a new season."); return; }
   const label=clampText(document.getElementById("seasLabel").value,60);
   if(!confirm("Start a new season? Everyone's season score resets to 0. Lifetime points, ranks and chibis are kept. Any open wagers are refunded."))return;
   const now=Date.now()/1000;
@@ -2433,8 +2444,17 @@ window.newSeason=async function(){
 };
 window.resetSeasonScores=async function(){
   if(!keeperUnlocked){ toast("Only the Keeper may rewind the season."); return; }
-  if(!confirm("Reset every spirit's season score back to the start of the season (0)?\n\nLifetime Devotion Points, ranks, titles, badges and the season's name are all kept — this only rewinds the seasonal race to its opening line. Open wagers and draws are left untouched.")) return;
+  if(!confirm("Reset every spirit's season score back to the start of the season (0)?\n\nLifetime Devotion Points, ranks, titles, badges and the season's name are all kept — this only rewinds the seasonal race to its opening line. Any open wagers or group draws are refunded and cleared first (their escrowed stakes would otherwise be mis-credited once the race is rewound).")) return;
   const now=Date.now()/1000;
+  // refund escrow BEFORE rewinding: placing a stake debited it from season too, so zeroing season
+  // would erase that debit while a later payout still credits it — conjuring seasonal points from
+  // nothing. Mirror newSeason: return every live stake, then clear the wagers/groups.
+  (MEM.wagers||[]).forEach(w=>{ if(!w) return;
+    if(w.status==='open'){ const p=memByName(w.proposer); if(p) adjPts(p, w.amount||0); }
+    else if(w.status==='matched'||w.status==='disputed'){ const p=memByName(w.proposer), t=memByName(w.taker); if(p) adjPts(p, w.amount||0); if(t) adjPts(t, w.amount||0); } });
+  (MEM.groups||[]).forEach(g=>{ if(!g) return;
+    if(g.status==='pending'||g.status==='active'||g.status==='disputed'){ groupParts(g).forEach(nm=>{ const m=memByName(nm); if(m) adjPts(m, g.stake||0); }); } });
+  MEM.wagers=[]; MEM.groups=[];
   // signed-season model: season holds true net (can be negative); zero it for everyone.
   // Move the season window to now so deeds done earlier this season fall outside it —
   // otherwise removing an old deed later would subtract from a score that's already been rewound.
@@ -2652,17 +2672,22 @@ window.awardPoints=async function(){
   const mult=Math.max(1,Math.min(1000,parseInt(document.getElementById("kmult").value,10)||1));
   const pts=mag*mult*KSIGN;
   const m=MEM.members.find(x=>x.name===name);
+  if(!m){ document.getElementById("kerr").textContent="Add a spirit to the grove first."; return; }
   const before=tierIndex(m.points);
   // snapshot for a one-tap Undo
   const _undo={name:m.name, pts:m.points, season:(m.season||0), histLen:(m.history||[]).length, winMult:m.winMult, lossMult:m.lossMult, logs:m.logs};
   let netPts=pts;
   if(netPts>0){ if(KBUFF){ const wm=consumeMult(m); if(wm>1){ netPts=netPts*wm; reason+=` (×${wm} wheel)`; } } if(KLOG)maybeEarnLog(m,netPts); }
   else if(netPts<0 && m.lossMult>1){ const lm=m.lossMult; delete m.lossMult; netPts=netPts*lm; reason+=` (×${lm} curse)`; }
+  const _pBefore=m.points;
   m.points=Math.max(0,m.points+netPts);
   m.season=(m.season||0)+netPts;
+  // record the ACTUAL points delta (a), which differs from the intended one (d) when a penalty
+  // floored points at 0 — so striking this deed later reverses exactly what was deducted, never more.
+  const _applied=m.points-_pBefore;
   // the wheel/curse multiplier is folded into the points + noted in the label; the Keeper's
   // manual multiplier (the ledger's × field) is the deed's tally, so it shows as ×roman on the soul card
-  m.history=m.history||[];m.history.push({l:reason,d:netPts,n:Math.max(1,mult),t:Date.now()/1000});
+  m.history=m.history||[];m.history.push({l:reason,d:netPts,a:_applied,n:Math.max(1,mult),t:Date.now()/1000});
   const after=tierIndex(m.points);
   // advance this member's rank snapshot now, so a later poll doesn't re-celebrate the same rank-up
   try{ if(after!==before){ const s=loadRankSnap(); s[m.name]=after; saveRankSnap(s); } }catch(e){}
@@ -2688,7 +2713,10 @@ window.removeDeed=async function(name,i){
   const h=m.history[i];
   const _tal=deedTally(h);
   if(!confirm(`Strike this deed from ${name}'s ledger?\n\n"${h.l}" (${h.d>0?'+':''}${h.d})${_tal>1?`\n\nThis single entry carries ×${_tal} — striking it removes all ${_tal} at once.`:''}\n\nTheir Devotion will be adjusted by ${-h.d}.`)) return;
-  m.points=Math.max(0,(m.points||0)-(h.d||0));
+  // reverse the ACTUAL points delta (a) so a floored penalty isn't over-refunded into thin air;
+  // fall back to the intended delta (d) for legacy entries recorded before applied-delta tracking.
+  const _rev=(typeof h.a==='number')?h.a:(h.d||0);
+  m.points=Math.max(0,(m.points||0)-_rev);
   // only unwind the SEASON score if this deed was earned in the current season — a deed from a
   // past season no longer contributes to m.season (newSeason reset it), so don't subtract it twice.
   if((h.t||0) >= (MEM.seasonStart||0)) m.season=(m.season||0)-(h.d||0);
@@ -2702,12 +2730,13 @@ window.removeDeedAll=async function(name,i){
   const m=MEM.members.find(x=>x.name===name); if(!m||!m.history||!m.history[i]) return;
   const base=deedBase(m.history[i].l)||String(m.history[i].l||'');
   const key=base.toLowerCase().replace(/\s+/g,' ').trim();
-  const idxs=[]; let ptsTot=0, seaTot=0, tally=0;
+  const idxs=[]; let ptsTot=0, appTot=0, seaTot=0, tally=0;
   m.history.forEach((h,j)=>{ const b=(deedBase(h.l)||String(h.l||'')).toLowerCase().replace(/\s+/g,' ').trim();
-    if(b===key){ idxs.push(j); ptsTot+=(h.d||0); tally+=deedTally(h); if((h.t||0)>=(MEM.seasonStart||0)) seaTot+=(h.d||0); } });
+    if(b===key){ idxs.push(j); ptsTot+=(h.d||0); appTot+=((typeof h.a==='number')?h.a:(h.d||0)); tally+=deedTally(h); if((h.t||0)>=(MEM.seasonStart||0)) seaTot+=(h.d||0); } });
   if(!idxs.length) return;
   if(!confirm(`Strike ALL ${tally}× "${base}" from ${name}'s ledger?\n\nTheir Devotion will be adjusted by ${ptsTot>=0?'−':'+'}${Math.abs(ptsTot)}.`)) return;
-  m.points=Math.max(0,(m.points||0)-ptsTot);
+  // reverse the ACTUAL applied points (appTot), not the intended magnitude, so floored penalties don't inflate
+  m.points=Math.max(0,(m.points||0)-appTot);
   // unwind only the current-season share (a past-season deed no longer contributes to m.season)
   if(seaTot) m.season=(m.season||0)-seaTot;
   idxs.sort((a,b)=>b-a).forEach(j=>m.history.splice(j,1));   // splice high→low so indices stay valid
@@ -3954,7 +3983,7 @@ function riteCard(r){
   if(r.kind==="deed") desc=`<b>${_t}</b> &nbsp;<span style="color:${r.points<0?'#E8A88F':'var(--candle)'}">${r.points>=0?'+':''}${r.points}</span> — ${_l}`;
   else if(r.kind==="newdeed") desc=`New deed · <b>${_l}</b> <span style="color:${r.points<0?'#E8A88F':'var(--candle)'}">${r.points>=0?'+':''}${r.points}</span>`;
   else if(r.kind==="title") desc=`<b>${_t}</b> → <span style="font-style:italic;color:var(--sage)">"${_l}"</span>`;
-  else if(r.kind==="badge") desc=`<b>${_t}</b> earns badge &nbsp;<span style="color:${r.color||badgeColor(r.label)}">✦ ${_l}</span>`;
+  else if(r.kind==="badge") desc=`<b>${_t}</b> earns badge &nbsp;<span style="color:${clampHex(r.color)||badgeColor(r.label)}">✦ ${_l}</span>`;
   else if(r.kind==="offer") desc=`<b>${_t}</b> is offered to the Eye &nbsp;<span style="color:#E8A88F">▲ Offering Robe</span>${(_l&&_l!=='The Offered')?`<div style="font-style:italic;color:var(--sage);font-size:12px;margin-top:2px">"${_l}"</div>`:''}`;
   else if(r.kind==="oath") desc=`<b>${_t}</b> seeks to be sworn &nbsp;<span style="color:var(--sage)">— Rite of Passage</span>`;
   const isOath=r.kind==="oath";
@@ -4064,7 +4093,7 @@ function applyRiteEffect(r){
   }
   const m=MEM.members.find(x=>x.name===r.target); if(!m) return;
   if(r.kind==="title"){ m.epithet=_lbl; rewardNominator(r,25,"Named a title"); }
-  else if(r.kind==="badge"){ m.badges=m.badges||[]; if(!m.badges.includes(_lbl)) m.badges.push(_lbl); if(r.color){ MEM.badgeColors=MEM.badgeColors||{}; if(!MEM.badgeColors[_lbl]) MEM.badgeColors[_lbl]=r.color; } rewardNominator(r,20,"Named a badge"); }
+  else if(r.kind==="badge"){ m.badges=m.badges||[]; if(!m.badges.includes(_lbl)) m.badges.push(_lbl); const _hc=clampHex(r.color); if(_hc){ MEM.badgeColors=MEM.badgeColors||{}; if(!MEM.badgeColors[_lbl]) MEM.badgeColors[_lbl]=_hc; } rewardNominator(r,20,"Named a badge"); }
   else if(r.kind==="deed"){
     // a banked ×2/×3 blessing multiplies a community-voted deed gain; a curse deepens a penalty (consumed on use)
     let _pv=r.points;
@@ -4483,7 +4512,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">A Keeper (🔥, passphrase-held) tends the grove — awarding Devotion, titles and badges, and running the seasons.</p>`}
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30cg · Keeper can now rewind the current season — every spirit's season score drops back to the opening line (0) without ending the season or touching lifetime Devotion. Find it under Manage season. (Trimmed ~50MB of duplicate audio so the deploy publishes cleanly.)</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ch · Audit-pass fixes: sealed a badge-colour XSS hole, stopped a struck penalty from refunding Devotion it never took, kept season rewinds from mis-crediting open wagers, tidied dev-only warnings out of players' view, and hardened the Chalice timeout against a rare data-loss race.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4643,7 +4672,10 @@ const WHEEL=[
   {key:'m50',label:'−50',pts:-50,w:9},
   {key:'m100',label:'−100',pts:-100,w:5},
 ];
-function spinWheel(){ const tot=WHEEL.reduce((s,o)=>s+o.w,0); let r=Math.random()*tot; for(const o of WHEEL){ if(r<o.w)return o; r-=o.w; } return WHEEL[0]; }
+// return a fresh copy of the landed wedge — applyAction stamps transient verdict fields
+// (convertedPts/ptsFinal/mult/lossMult) onto the outcome, and mutating the shared WHEEL constant
+// would leak a prior spin's verdict into every later spin that lands the same slice (local mode).
+function spinWheel(){ const tot=WHEEL.reduce((s,o)=>s+o.w,0); let r=Math.random()*tot; for(const o of WHEEL){ if(r<o.w)return {...o}; r-=o.w; } return {...WHEEL[0]}; }
 function chalById(id){ return (MEM.challenges||[]).find(c=>c.id===id); }
 function activeCommitments(name){ return (MEM.challenges||[]).filter(c=>c.status==='accepted'&&c.accepter===name).length; }
 function refundBudget(o,amt){ if(!o)return; o.chalBudget=Math.max(0,Math.min(150,(o.chalBudget||0)+(amt||0))); }
@@ -4961,7 +4993,7 @@ function wheelSectionHTML(me){
   let ctrl;
   if(!me){ ctrl=`<p class="hint">Pick your spirit to lay devotion before the Eye.</p>`; }
   else {
-    const buff = (me.winMult>1 ? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:#E8C45A;margin:2px 0 6px">✦ ×${me.winMult} blessing banked for your next gain ✦</div>`:'') + (me.lossMult>1 ? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:#C77B9A;margin:2px 0 6px">☠ ×${me.lossMult} curse deepens your next loss ☠</div>`:'');
+    const buff = (me.winMult>1 ? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:#E8C45A;margin:2px 0 6px">✦ ×${me.winMult} blessing banked for your next gain ✦<div style="font-size:9px;opacity:.7;margin-top:1px">deeds · fire · wheel · Chalice — not wagers</div></div>`:'') + (me.lossMult>1 ? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:#C77B9A;margin:2px 0 6px">☠ ×${me.lossMult} curse deepens your next loss ☠<div style="font-size:9px;opacity:.7;margin-top:1px">penalty · wheel · Chalice — not wagers</div></div>`:'');
     let btn;
     if(cd>0){ const tm=Math.ceil(cd/60), hh=Math.floor(tm/60), mm=tm%60; btn=`<button class="rapprove" disabled>The Eye looks away · ${hh>0?hh+'h ':''}${mm}m</button>`; }
     else if((me.points||0)<15){ btn=`<button class="rapprove" disabled>Need 15 ✦ to be tested</button>`; }

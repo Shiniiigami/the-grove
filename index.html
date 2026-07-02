@@ -4398,7 +4398,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30br · The Rules page now carries a "Share the Grove" QR at the top — hold up your screen and a newcomer can scan straight in, even if you've already installed the app.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bs · The Eye's verdict now shows the TRUE net — a −25 reads −40 (the verdict plus your 15 offering), a +50 reads +35 — so the number you see always matches your points. No more "rolled −25 but lost 40".</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4846,7 +4846,7 @@ function wheelSectionHTML(me){
     ctrl=`${buff}<div id="wheelResult" style="text-align:center;min-height:18px;font-family:'Silkscreen',monospace;font-size:13px;color:var(--candle);margin:2px 0 8px"></div><div style="text-align:center">${btn}</div>`;
   }
   return `<div class="ritehdr" style="margin-top:22px">Test of Devotion</div>
-    <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Lay <b style="color:var(--candle)">15 ✦</b> before the <b>Devotion Weirwood</b> — once every <b>2 hours</b> — its verdict, radiance to wrath, lands on top of the cost.</p>
+    <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:38ch">Lay <b style="color:var(--candle)">15 ✦</b> before the <b>Devotion Weirwood</b> — once every <b>2 hours</b> — its verdict lands on top of that offering, so a <b>+50</b> is <b>+35</b> in all and a <b>−25</b> is <b>−40</b>.</p>
     <div style="text-align:center;margin:6px 0"><div style="display:inline-block;width:min(64vw,240px)">${buildTotemSVG({anim:true, closed: cd>0})}</div></div>
     ${ctrl}`;
 }
@@ -5190,16 +5190,21 @@ function wwApplyReaction(scope,type){ if(!scope)return; const fx=scope.querySele
   fx.innerHTML=html;
 }
 
+// Every spin costs a 15 ✦ offering, and the Eye's verdict lands on top. The reward shown is the
+// TRUE net change to your points (verdict − 15) so the number always matches your ledger — a −25
+// verdict is −40 in all, a +50 is +35. (The 15 is charged in both local and server-scored spins.)
+const WHEEL_STAKE=15;
 function verdictOf(o){
-  if(o.special==='free')   return {line:'The Eye is unmoved — your devotion is returned to you.',reward:'stake returned',tone:'neutral'};
-  if(o.special==='x2')     return {line:'A blessing settles upon you.',reward:'×2 your next deed or challenge',tone:'buff'};
-  if(o.special==='x3')     return {line:'Twice-blessed — the Eye burns bright.',reward:'×3 your next deed or challenge',tone:'buff'};
-  if(o.special==='x2neg')  return {line:'The Eye marks you — a shadow waits on your next fall.',reward:'×2 your next penalty',tone:'bad'};
-  if(o.key==='jackpot')    return {line:'The Eye blazes — you are seen.',reward:'+250 ✦',tone:'great'};
-  if(o.key==='zero')       return {line:'The Eye keeps what you gave, and gives nothing.',reward:'no boon — only the toll is kept',tone:'bad'};
-  if(typeof o.pts==='number' && o.pts>0) return {line:'The Eye acknowledges your devotion.',reward:`+${o.pts} ✦`,tone:'good'};
-  if(typeof o.pts==='number' && o.pts<0) return {line:(o.pts<=-100?'You have displeased the Eye.':'The Eye turns from you.'),reward:`${o.pts} ✦`,tone:'bad'};
-  return {line:'The Eye considers you.',reward:'',tone:'neutral'};
+  const S=WHEEL_STAKE, net=(typeof o.pts==='number')?(o.pts-S):-S, sgn=n=>(n>=0?'+'+n:'−'+Math.abs(n));
+  if(o.special==='free')   return {line:'The Eye is unmoved — your offering of 15 is returned to you.',reward:'±0 ✦',tone:'neutral'};
+  if(o.special==='x2')     return {line:'A blessing settles upon you — your 15 offering is spent.',reward:'×2 next deed/challenge · −15 ✦',tone:'buff'};
+  if(o.special==='x3')     return {line:'Twice-blessed — the Eye burns bright. Your 15 offering is spent.',reward:'×3 next deed/challenge · −15 ✦',tone:'buff'};
+  if(o.special==='x2neg')  return {line:'The Eye marks you — a shadow waits on your next fall. Your 15 offering is spent.',reward:'×2 next penalty · −15 ✦',tone:'bad'};
+  if(o.key==='jackpot')    return {line:`The Eye blazes — you are seen. (+250, less your 15 offering)`,reward:`+${250-S} ✦`,tone:'great'};
+  if(o.key==='zero')       return {line:'The Eye keeps your offering, and gives nothing.',reward:`−${S} ✦`,tone:'bad'};
+  if(typeof o.pts==='number' && o.pts>0) return {line:`The Eye acknowledges your devotion. (+${o.pts}, less your 15 offering)`,reward:`${sgn(net)} ✦`,tone: net>0?'good':'neutral'};
+  if(typeof o.pts==='number' && o.pts<0) return {line:(o.pts<=-100?'You have displeased the Eye.':'The Eye turns from you.')+` (${o.pts}, and your 15 offering)`,reward:`${sgn(net)} ✦`,tone:'bad'};
+  return {line:'The Eye considers you.',reward:`−${S} ✦`,tone:'neutral'};
 }
 function devotionVerdict(o){
   return new Promise((resolve)=>{

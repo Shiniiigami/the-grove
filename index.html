@@ -599,7 +599,7 @@ function ensureDefaults(){ if(!MEM)return;
   if(MEM.fire && typeof MEM.fire==='object'){ const F=MEM.fire; ['level','streak','lastDecay','lastBlessed','lastBless'].forEach(k=>{ if(!Number.isFinite(F[k])) F[k]=0; }); if(!Number.isFinite(F.goal)||F.goal<1) F.goal=6; if(F.level<0)F.level=0; if(!Array.isArray(F.stokers))F.stokers=[]; }
   if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); if(MEM._tierMig!==1){ if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); MEM._tierMig=1; } if(MEM._tierColorMig!==3){ (MEM.tiers||[]).forEach(t=>{ if(!t.hex && TIER_COLORS_V2[t.name]) t.hex=TIER_COLORS_V2[t.name]; }); MEM._tierColorMig=3; } if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); if(MEM._deedMig!==3){ if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); MEM._deedMig=3; } if(!MEM.rites)MEM.rites=[]; if(!MEM.challenges)MEM.challenges=[]; if(!MEM.seasonHistory)MEM.seasonHistory=[]; if(!MEM.wagers)MEM.wagers=[]; if(!MEM.itemLocks)MEM.itemLocks={}; normAura(); if(!MEM.badgeColors)MEM.badgeColors={}; if(!MEM.badgeColors["Of the Eye"])MEM.badgeColors["Of the Eye"]="#E0B466"; if(!MEM.badgeColors["Drained the Chalice"])MEM.badgeColors["Drained the Chalice"]="#E0743A"; if(MEM.seasonStart===undefined)MEM.seasonStart=0;
   if(MEM._hatMig!==3){ const _hm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && ['crown','laurel','halo'].includes(c.hat)){ c.hat='none'; _hm.push(m); } }); MEM._hatMig=3; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _hm.length && !localStorage.getItem('grove-crownpurge3')){ _hm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-crownpurge3','1'); } }catch(e){} }
-  if(MEM._fadeMig!==1){ const _fm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && c.hair_style==='fade'){ c.hair_style='short'; _fm.push(m); } }); MEM._fadeMig=1; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _fm.length && !localStorage.getItem('grove-fademig1')){ _fm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-fademig1','1'); } }catch(e){} } if(!MEM.fire)MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[]}; if(!MEM.fire.stokers)MEM.fire.stokers=[]; if(MEM.fire.lastDecay===undefined)MEM.fire.lastDecay=Date.now()/1000; if(MEM.fire.streak===undefined)MEM.fire.streak=0; if(MEM._fireTune!==2){ MEM.fire.goal=6; MEM._fireTune=2; } (MEM.members||[]).forEach(m=>{ if(m.season===undefined) m.season=0; if(m.chalBudget===undefined) m.chalBudget=150; else { const cb=m.chalBudget|0; m.chalBudget = cb>150?150 : (cb<0?0:cb); } if(m.oath===undefined) m.oath=true; if(m.lastStoke===undefined) m.lastStoke=0; if(m.logs===undefined) m.logs=0; if(m.fireLogs===undefined) m.fireLogs=0; if(!(m.points>0)) m.points=Math.max(0,m.points||0); if(!(m.season>0)) m.season=Math.max(0,m.season||0); if(m._preTop!==undefined && !(m.offered&&m.offered>Date.now()/1000)){ const c=m.sprite&&m.sprite.chibi; if(c&&c.top_style==='robes'){ const cc=structuredClone(c); cc.top_style=m._preTop||(cc.sleeves===false?'tank':'tee'); m.sprite={chibi:cc}; } delete m._preTop; if(Array.isArray(m.unlocks)) m.unlocks=m.unlocks.filter(u=>u!=='robes'); } }); }
+  if(MEM._fadeMig!==1){ const _fm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && c.hair_style==='fade'){ c.hair_style='short'; _fm.push(m); } }); MEM._fadeMig=1; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _fm.length && !localStorage.getItem('grove-fademig1')){ _fm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-fademig1','1'); } }catch(e){} } if(!MEM.fire)MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[]}; if(!MEM.fire.stokers)MEM.fire.stokers=[]; if(MEM.fire.lastDecay===undefined)MEM.fire.lastDecay=Date.now()/1000; if(MEM.fire.streak===undefined)MEM.fire.streak=0; if(MEM._fireTune!==2){ MEM.fire.goal=6; MEM._fireTune=2; } (MEM.members||[]).forEach(m=>{ if(m.season===undefined) m.season=0; if(m.chalBudget===undefined) m.chalBudget=150; else { const cb=m.chalBudget|0; m.chalBudget = cb>150?150 : (cb<0?0:cb); } if(m.oath===undefined) m.oath=true; if(m.lastStoke===undefined) m.lastStoke=0; if(m.logs===undefined) m.logs=0; if(m.fireLogs===undefined) m.fireLogs=0; if(!(m.points>0)) m.points=Math.max(0,m.points||0); if(!Number.isFinite(m.season)) m.season=0; if(m._preTop!==undefined && !(m.offered&&m.offered>Date.now()/1000)){ const c=m.sprite&&m.sprite.chibi; if(c&&c.top_style==='robes'){ const cc=structuredClone(c); cc.top_style=m._preTop||(cc.sleeves===false?'tank':'tee'); m.sprite={chibi:cc}; } delete m._preTop; if(Array.isArray(m.unlocks)) m.unlocks=m.unlocks.filter(u=>u!=='robes'); } }); }
 function tierOf(p){const T=tiers();let t=T[0];for(const x of T)if(p>=x.min)t=x;return t;}
 function tierIndex(p){const T=tiers();let i=0;T.forEach((x,k)=>{if(p>=x.min)i=k;});return i;}
 function rankProgress(p){
@@ -814,13 +814,17 @@ function robeGroveAfterOffering(offerId){
 }
 function detectOfferPassed(){ try{
   if(!APPLIED_OFFER_SNAP){ APPLIED_OFFER_SNAP=appliedOfferIds(); return; }
-  const fresh=(MEM.rites||[]).filter(r=>r&&r.kind==='offer'&&r.applied&&r.id&&!APPLIED_OFFER_SNAP[r.id]);
+  // only celebrate an offering that passed recently — never replay an ancient/expired one
+  const _nowS=Date.now()/1000;
+  const fresh=(MEM.rites||[]).filter(r=>r&&r.kind==='offer'&&r.applied&&r.id&&!APPLIED_OFFER_SNAP[r.id] && (_nowS-(+r.created||0))<OFFER_ROBE_SECS);
   APPLIED_OFFER_SNAP=appliedOfferIds();
   if(fresh.length){ OFFER_CEREMONY_AT=Date.now()/1000; try{ offeringCeremony(fresh[0].target); }catch(e){} try{ applyOfferSky(); }catch(e){} try{ robeGroveAfterOffering(fresh[0].id); }catch(e){} }
 }catch(e){} }
 function detectNewOffers(){ try{
   if(!OFFER_SNAP){ OFFER_SNAP=offerIds(); return; }
-  const fresh=(MEM.rites||[]).filter(r=>r&&r.kind==='offer'&&!r.applied&&r.id&&!OFFER_SNAP[r.id]);
+  // only pop offerings still inside their nomination window — never a long-expired one
+  const _nowS=Date.now()/1000;
+  const fresh=(MEM.rites||[]).filter(r=>r&&r.kind==='offer'&&!r.applied&&r.id&&!OFFER_SNAP[r.id] && (_nowS-(+r.created||0))<OFFER_RITE_TTL);
   OFFER_SNAP=offerIds();
   const me=(typeof VOTER!=='undefined')?VOTER:null;
   fresh.slice(0,3).forEach(r=>{ if(r.nominator && r.nominator===me) return; offerPop(r.target, r.nominator, r.label); });
@@ -1700,7 +1704,7 @@ function renderLedger(){
   }
   document.getElementById("seasonLine").textContent="◈ "+MEM.season+" ◈";
   const bySeason = LEDGER_SORT==="season";
-  const list=[...MEM.members].sort((a,b)=> (bySeason?((b.season||0)-(a.season||0)):0) || (b.points-a.points));
+  const list=[...MEM.members].sort((a,b)=> (bySeason?(seasonView(b)-seasonView(a)):0) || (b.points-a.points));
   rowsEl.innerHTML="";
   if(histSel){ const hw=document.createElement("div"); hw.innerHTML=histSel; rowsEl.appendChild(hw); }
   const tog=document.createElement("div");
@@ -1741,8 +1745,8 @@ function renderLedger(){
     const prog = rp.atMax ? `<div class="nrp-lbl" style="color:var(--candle)">✦ highest order reached</div>`
       : `<div class="nrp"><i style="width:${rp.pct}%"></i></div><div class="nrp-lbl">${rp.toNext} ✦ Devotion Points to ${rp.nextName}</div>`;
     info.innerHTML=`<div class="rn">${m.name}${epi}</div><div class="tt" style="color:${tier.hex}">${tier.name}</div>${prog}`;
-    const big = bySeason ? (m.season||0) : m.points;
-    const small = bySeason ? `${m.points} lifetime` : `${m.season||0} this season`;
+    const big = bySeason ? seasonView(m) : m.points;
+    const small = bySeason ? `${m.points} lifetime` : `${seasonView(m)} this season`;
     const pp=document.createElement("div");
     pp.innerHTML=`<div class="pp" style="color:${tier.hex}">${big}</div><div class="pl">${small}</div>`;
     row.append(no,cv,info,pp);
@@ -2044,7 +2048,7 @@ function openSoul(name){
     <div class="meterlbl"><span>member since ${m.since||2026}</span><span>${txt}</span></div>
     <div style="display:flex;justify-content:space-between;margin-top:8px;gap:8px">
       <div style="flex:1;text-align:center;background:rgba(242,196,90,.08);border:1px solid rgba(242,196,90,.25);border-radius:9px;padding:7px">
-        <div style="font-family:'Silkscreen',monospace;font-size:16px;color:var(--candle)">${m.season||0}</div>
+        <div style="font-family:'Silkscreen',monospace;font-size:16px;color:var(--candle)">${seasonView(m)}</div>
         <div style="font-family:'Silkscreen',monospace;font-size:7px;color:var(--candle);opacity:.85;letter-spacing:.03em;margin-top:2px">✦ Devotion Points</div>
         <div style="font-family:'Silkscreen',monospace;font-size:8px;color:var(--sage);letter-spacing:.1em">THIS SEASON</div>
       </div>
@@ -2329,7 +2333,7 @@ window.bulkApply=async function(){ bulkSyncInputs(); const names=Object.keys(BUL
   const undo=[]; const roseUp=[];
   names.forEach(n=>{ const m=memByName(n); if(!m)return; undo.push({name:n,pts:m.points,season:(m.season||0),histLen:(m.history||[]).length,logs:m.logs});
     const _b=tierIndex(m.points);
-    m.points=Math.max(0,m.points+net); m.season=Math.max(0,(m.season||0)+net); m.history=m.history||[]; m.history.push({l:reason,d:net,n:1,t:tnow}); if(net>0 && BULK_LOG) maybeEarnLog(m,net);
+    m.points=Math.max(0,m.points+net); m.season=(m.season||0)+net; m.history=m.history||[]; m.history.push({l:reason,d:net,n:1,t:tnow}); if(net>0 && BULK_LOG) maybeEarnLog(m,net);
     const _a=tierIndex(m.points); if(_a>_b) roseUp.push({name:m.name,rank:tiers()[_a].name,idx:_a}); });
   // advance rank snapshots so a later poll doesn't re-celebrate, and announce any rank-ups
   try{ if(roseUp.length){ const s=loadRankSnap(); roseUp.forEach(r=>{ s[r.name]=r.idx; }); saveRankSnap(s); } }catch(e){}
@@ -2400,7 +2404,7 @@ window.newSeason=async function(){
   if(!confirm("Start a new season? Everyone's season score resets to 0. Lifetime points, ranks and chibis are kept."))return;
   const now=Date.now()/1000;
   MEM.seasonHistory=MEM.seasonHistory||[];
-  MEM.seasonHistory.unshift({ label: MEM.season, ended: now, standings: [...MEM.members].sort((a,b)=>(b.season||0)-(a.season||0)).map(m=>({name:m.name, score:m.season||0, points:m.points})) });
+  MEM.seasonHistory.unshift({ label: MEM.season, ended: now, standings: [...MEM.members].sort((a,b)=>(seasonView(b)-seasonView(a))).map(m=>({name:m.name, score:seasonView(m), points:m.points})) });
   if(MEM.seasonHistory.length>24) MEM.seasonHistory.length=24;
   MEM.members.forEach(m=>{m.season=0; m.chalBudget=150;});
   MEM.challenges=[]; MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[]};
@@ -2541,7 +2545,7 @@ function buildSummary(){
   L.push("");
   [...MEM.members].sort((a,b)=>b.points-a.points).forEach((m,i)=>{
     L.push(`${i+1}. ${m.name}${m.epithet?" — "+m.epithet:""}`);
-    L.push(`   Season ${m.season||0} · Lifetime ${m.points} · ${tierOf(m.points).name}`);
+    L.push(`   Season ${seasonView(m)} · Lifetime ${m.points} · ${tierOf(m.points).name}`);
     if((m.badges||[]).length) L.push("   Badges: "+m.badges.join(", "));
   });
   L.push(""); L.push("(Full restorable backup is the downloaded .json file.)");
@@ -2625,7 +2629,7 @@ window.awardPoints=async function(){
   if(netPts>0){ if(KBUFF){ const wm=consumeMult(m); if(wm>1){ netPts=netPts*wm; reason+=` (×${wm} wheel)`; } } if(KLOG)maybeEarnLog(m,netPts); }
   else if(netPts<0 && m.lossMult>1){ const lm=m.lossMult; delete m.lossMult; netPts=netPts*lm; reason+=` (×${lm} curse)`; }
   m.points=Math.max(0,m.points+netPts);
-  m.season=Math.max(0,(m.season||0)+netPts);
+  m.season=(m.season||0)+netPts;
   // the wheel/curse multiplier is folded into the points + noted in the label; the Keeper's
   // manual multiplier (the ledger's × field) is the deed's tally, so it shows as ×roman on the soul card
   m.history=m.history||[];m.history.push({l:reason,d:netPts,n:Math.max(1,mult),t:Date.now()/1000});
@@ -2656,7 +2660,7 @@ window.removeDeed=async function(name,i){
   m.points=Math.max(0,(m.points||0)-(h.d||0));
   // only unwind the SEASON score if this deed was earned in the current season — a deed from a
   // past season no longer contributes to m.season (newSeason reset it), so don't subtract it twice.
-  if((h.t||0) >= (MEM.seasonStart||0)) m.season=Math.max(0,(m.season||0)-(h.d||0));
+  if((h.t||0) >= (MEM.seasonStart||0)) m.season=(m.season||0)-(h.d||0);
   m.history.splice(i,1);
   await saveData(); layoutGrove(); renderLedger(); openSoul(name); toast(`Struck "${h.l}" from ${name}'s ledger.`);
 };
@@ -2970,7 +2974,7 @@ window.ledgerSave=async function(){ syncLedger(); const m=MEM.members.find(x=>x.
   const clean=LEDGER_EDIT.filter(h=>String(h.l).trim());
   const newSum=clean.reduce((s,h)=>s+(h.d||0),0);
   const delta=newSum-LEDGER_OLDSUM;
-  m.points=Math.max(0,(m.points||0)+delta); m.season=Math.max(0,(m.season||0)+delta);
+  m.points=Math.max(0,(m.points||0)+delta); m.season=(m.season||0)+delta;
   const tnow=Date.now()/1000;
   m.history=clean.map(h=>({l:String(h.l).trim(), d:h.d||0, n:Math.max(1,h.n||1), t:(h.t||tnow)}));
   await saveData(); layoutGrove(); renderLedger(); toast(`${m.name}'s ledger updated.`); deedsForm();
@@ -3609,7 +3613,7 @@ window.setCardTheme=function(t){ try{ if(CARD_THEMES[t]) localStorage.setItem('g
 window.shareStandings=async function(){
   try{
     const bySeason = LEDGER_SORT==="season";
-    const list=[...MEM.members].sort((a,b)=> (bySeason?((b.season||0)-(a.season||0)):0) || (b.points-a.points)).slice(0,24);
+    const list=[...MEM.members].sort((a,b)=> (bySeason?(seasonView(b)-seasonView(a)):0) || (b.points-a.points)).slice(0,24);
     // The shared image lays out in TWO columns past ~7 spirits so it stays a readable
     // shape instead of a tall thin ribbon (the on-screen ledger is unchanged — still one scroll).
     const cols = list.length>7 ? 2 : 1;
@@ -3636,7 +3640,7 @@ window.shareStandings=async function(){
       const col=Math.floor(i/rowsPerCol), rowInCol=i%rowsPerCol;
       const colX=margin + col*(colW+gap);
       const y=padTop+rowInCol*rowH; const tier=tierOf(m.points);
-      const big=bySeason?(m.season||0):m.points;
+      const big=bySeason?seasonView(m):m.points;
       x.fillStyle = i%2? "rgba(22,34,27,.5)":"rgba(22,34,27,.25)"; x.fillRect(colX,y-26,colW,rowH-10);
       x.textAlign="left"; x.fillStyle="#9DB0A4"; x.font="700 22px Silkscreen, monospace";
       x.fillText(String(i+1).padStart(2,"0"), colX+16, y+6);
@@ -3735,7 +3739,7 @@ window.shareSpirit=async function(name){
     y+=20; const bw=(W-M*2-14)/2, bh=56;
     x.fillStyle="rgba(242,196,90,.08)"; rr(x,M,y,bw,bh,8); x.fill(); x.strokeStyle="rgba(242,196,90,.25)"; x.lineWidth=1; rr(x,M,y,bw,bh,8); x.stroke();
     x.fillStyle="rgba(143,168,155,.08)"; rr(x,M+bw+14,y,bw,bh,8); x.fill(); x.strokeStyle="rgba(143,168,155,.25)"; rr(x,M+bw+14,y,bw,bh,8); x.stroke();
-    x.font="700 12px Silkscreen, monospace"; x.fillStyle="#F2C45A"; x.fillText(String(m.season||0), M+bw/2, y+23);
+    x.font="700 12px Silkscreen, monospace"; x.fillStyle="#F2C45A"; x.fillText(String(seasonView(m)), M+bw/2, y+23);
     x.fillStyle="#ECE3CC"; x.fillText(String(m.points), M+bw+14+bw/2, y+23);
     x.font="8px Silkscreen, monospace"; x.fillStyle="#8FA89B"; x.fillText("✦ THIS SEASON", M+bw/2, y+43); x.fillText("✦ LIFETIME", M+bw+14+bw/2, y+43);
     y+=bh;
@@ -3978,7 +3982,7 @@ function nominatorDeedReward(pts){ const p=Math.abs(pts||0); if(p<=20)return 5; 
 function rewardNominator(r,amt,label){
   if(!r||!amt||!r.nominator||r.nominator===r.target) return;
   const nm=memByName(r.nominator); if(!nm) return;
-  nm.points=Math.max(0,(nm.points||0)+amt); nm.season=Math.max(0,(nm.season||0)+amt);
+  nm.points=Math.max(0,(nm.points||0)+amt); nm.season=(nm.season||0)+amt;
   nm.history=nm.history||[]; nm.history.push({l:label,d:amt,t:Date.now()/1000});
 }
 function applyRiteEffect(r){
@@ -3994,7 +3998,7 @@ function applyRiteEffect(r){
   else if(r.kind==="badge"){ m.badges=m.badges||[]; if(!m.badges.includes(_lbl)) m.badges.push(_lbl); if(r.color){ MEM.badgeColors=MEM.badgeColors||{}; if(!MEM.badgeColors[_lbl]) MEM.badgeColors[_lbl]=r.color; } rewardNominator(r,20,"Named a badge"); }
   else if(r.kind==="deed"){
     m.points=Math.max(0,(m.points||0)+r.points);
-    m.season=Math.max(0,(m.season||0)+r.points);
+    m.season=(m.season||0)+r.points;
     m.history=m.history||[]; m.history.push({l:_lbl,d:r.points,t:Date.now()/1000});
     // reward the nominator only for recognising a GAIN — not for getting a spirit penalised
     rewardNominator(r,(r.points>0?nominatorDeedReward(r.points):0),"Named a deed");
@@ -4033,7 +4037,7 @@ function grantRiteOfPassage(m){
   if((m.history||[]).some(h=>h && /^\s*rite of passage\b/i.test(String(h.l||'')))){ m.rop=true; return false; }
   m.rop=true;
   m.points=Math.max(0,(m.points||0)+100);
-  m.season=Math.max(0,(m.season||0)+100);
+  m.season=(m.season||0)+100;
   m.history=m.history||[]; m.history.push({l:"Rite of Passage",d:100,n:1,t:Date.now()/1000});
   return true;
 }
@@ -4402,7 +4406,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bv · Stress-test fixes: escape wager/challenge titles, community-offering robe now reverts after 3h, stoke needs a log before it fires, and the wheel explains a cooldown denial.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bw · Season score now carries its true net so a stake→refund can't inflate it (still shows 0, never negative); wheel win/loss reaction lands after the ceremony; expired offering pop-banners no longer resurface; offline actions carry an idempotency key so a lost reply can't double-spend.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4425,6 +4429,9 @@ function lockedStake(name){ let s=0;
 function moodSnapshot(){ const s={}; (MEM.members||[]).forEach(m=>{ s[m.name]={p:(m.points||0)+lockedStake(m.name),h:(m.history||[]).length}; }); return s; }
 function initMoodSnap(){ MOOD_SNAP=moodSnapshot(); }
 function detectReactions(){
+  // while the Eye's wheel ceremony is on screen, hold spirit reactions (the rain/spark
+  // card) — leave the snapshot untouched so the card fires on the refresh AFTER the verdict
+  if(typeof WHEEL_BUSY!=='undefined' && WHEEL_BUSY) return;
   if(!MOOD_SNAP){ MOOD_SNAP=moodSnapshot(); return; }
   const ev=[];
   (MEM.members||[]).forEach(m=>{ const o=MOOD_SNAP[m.name]; if(!o) return; const dp=((m.points||0)+lockedStake(m.name))-o.p; if(dp!==0){ let lbl=(dp>0?'+':'')+dp+' \u2726'; const hist=m.history||[]; if(hist.length>o.h){ const last=hist[hist.length-1]; if(last&&last.l) lbl=last.l+' '+(dp>0?'+':'')+dp; } ev.push({name:m.name,dp,lbl}); } });
@@ -4439,6 +4446,7 @@ function logSnapshot(){ const s={}; (MEM.members||[]).forEach(m=>{ s[m.name]=(m.
 function initLogSnap(){ LOG_SNAP=logSnapshot(); }
 let FIRE_BLESS_SNAP=0;
 function detectLogGains(){
+  if(typeof WHEEL_BUSY!=='undefined' && WHEEL_BUSY) return;   // defer log-gain pops past the wheel ceremony too
   if(!LOG_SNAP){ LOG_SNAP=logSnapshot(); FIRE_BLESS_SNAP=(MEM.fire&&MEM.fire.lastBlessed)||0; return; }
   // the last log just caught and the grove was blessed — roar the fire (for the stoker and observers alike)
   try{ const lb=(MEM.fire&&MEM.fire.lastBlessed)||0; if(lb>FIRE_BLESS_SNAP){ FIRE_BLESS_SNAP=lb; if(Date.now()/1000-lb<30 && typeof Snd!=='undefined' && Snd.fireRoar) Snd.fireRoar(); } }catch(e){}
@@ -4533,7 +4541,10 @@ function spiritReact(name,type,label,done){
 }
 
 function memByName(n){ return (MEM.members||[]).find(x=>x.name===n); }
-function adjPts(m,d){ if(!m)return; m.points=Math.max(0,(m.points||0)+d); m.season=Math.max(0,(m.season||0)+d); }
+// season carries its TRUE net internally (may dip below 0 while a stake is escrowed) so a
+// stake->refund / stake->loss round-trip conserves it and can't be farmed; display clamps to 0.
+function seasonView(m){ return Math.max(0, (m&&m.season)||0); }
+function adjPts(m,d){ if(!m)return; m.points=Math.max(0,(m.points||0)+d); m.season=(m.season||0)+d; }
 function consumeMult(m){ const x=(m&&m.winMult)||1; if(m&&m.winMult) delete m.winMult; return x; }
 function maybeEarnLog(m,gained){ if(!m||gained<=0)return false; if(Math.random()<Math.min(1,gained/100)){ m.logs=(m.logs||0)+1; return true; } return false; }
 function sweepFire(now){ const f=MEM.fire; if(!f)return false; if(f.lastDecay===undefined)f.lastDecay=now; const dec=Math.floor((now-f.lastDecay)/(2*3600)); if(dec>0){ f.level=Math.max(0,(f.level||0)-dec); f.lastDecay=f.lastDecay+dec*2*3600; if((f.level||0)===0)f.stokers=[]; return true; } return false; }
@@ -4620,6 +4631,10 @@ function applyAction(a){
 }
 async function communityAction(a){
   let okR=false;
+  // stamp a stable idempotency key BEFORE the first send, so an ambiguous failure
+  // (action applied, response lost) that gets optimistically re-queued replays under
+  // the SAME id — grove_action dedups it server-side instead of double-applying.
+  if(a && !a.opId){ try{ a.opId='op-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,9); }catch(_){} }
   if(MODE==="remote"){
     let online=true; try{ online=navigator.onLine; }catch(_){}
     if(online){
@@ -6616,7 +6631,7 @@ const _origApply = window.applyAction;
 window.applyAction = function(a){
   if(a && a.t==='chalice'){
     MEM.chalice = a.state || null;
-    if(a.commit && a.commit.length){ a.commit.forEach(c=>{ const m=(typeof memByName==='function')?memByName(c.name):null; if(!m) return; m.points=Math.max(0,(m.points||0)+(c.delta||0)); m.season=Math.max(0,(m.season||0)+(c.delta||0)); m.chalice=m.chalice||{total:0,games:0,drained:0}; m.chalice.total+=(c.delta||0); m.chalice.games+=(c.games||1); if(c.drained){ m.chalice.drained=(m.chalice.drained||0)+1; m.badges=m.badges||[]; if(m.badges.indexOf(CHAL_BADGE)<0) m.badges.push(CHAL_BADGE); } if(c.delta){ m.history=m.history||[]; m.history.push({t:nowS(), d:c.delta, l:'Trial of the Chalice'}); } }); }
+    if(a.commit && a.commit.length){ a.commit.forEach(c=>{ const m=(typeof memByName==='function')?memByName(c.name):null; if(!m) return; m.points=Math.max(0,(m.points||0)+(c.delta||0)); m.season=(m.season||0)+(c.delta||0); m.chalice=m.chalice||{total:0,games:0,drained:0}; m.chalice.total+=(c.delta||0); m.chalice.games+=(c.games||1); if(c.drained){ m.chalice.drained=(m.chalice.drained||0)+1; m.badges=m.badges||[]; if(m.badges.indexOf(CHAL_BADGE)<0) m.badges.push(CHAL_BADGE); } if(c.delta){ m.history=m.history||[]; m.history.push({t:nowS(), d:c.delta, l:'Trial of the Chalice'}); } }); }
     return;
   }
   return _origApply ? _origApply.apply(this, arguments) : undefined;

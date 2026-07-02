@@ -2336,10 +2336,12 @@ window.bulkApply=async function(){ bulkSyncInputs(); const names=Object.keys(BUL
   let mag=parseInt(BULK_PTS,10); if(isNaN(mag)||mag===0){ if(err)err.textContent='Enter a Devotion Points value.'; return; }
   mag=Math.min(100000,Math.abs(mag)); const net=mag*(BULK_SIGN<0?-1:1); const reason=clampText(BULK_REASON,80)||'Deed recorded'; const tnow=Date.now()/1000;
   const undo=[]; const roseUp=[];
-  names.forEach(n=>{ const m=memByName(n); if(!m)return; undo.push({name:n,pts:m.points,season:(m.season||0),histLen:(m.history||[]).length,logs:m.logs,winMult:m.winMult});
+  names.forEach(n=>{ const m=memByName(n); if(!m)return; undo.push({name:n,pts:m.points,season:(m.season||0),histLen:(m.history||[]).length,logs:m.logs,winMult:m.winMult,lossMult:m.lossMult});
     const _b=tierIndex(m.points);
-    // a banked ×2/×3 blessing multiplies a Keeper-awarded gain here too (consumed on use)
-    let _net=net; if(_net>0 && (m.winMult||1)>1){ const _wm=consumeMult(m); _net=_net*_wm; }
+    // a banked ×2/×3 blessing multiplies a Keeper-awarded gain; a curse deepens a Keeper penalty (consumed on use)
+    let _net=net;
+    if(_net>0 && (m.winMult||1)>1){ const _wm=consumeMult(m); _net=_net*_wm; }
+    else if(_net<0 && (m.lossMult||1)>1){ const _lm=consumeLoss(m); _net=_net*_lm; }
     m.points=Math.max(0,m.points+_net); m.season=(m.season||0)+_net; m.history=m.history||[]; m.history.push({l:reason,d:_net,n:1,t:tnow}); if(_net>0 && BULK_LOG) maybeEarnLog(m,_net);
     const _a=tierIndex(m.points); if(_a>_b) roseUp.push({name:m.name,rank:tiers()[_a].name,idx:_a}); });
   // advance rank snapshots so a later poll doesn't re-celebrate, and announce any rank-ups
@@ -2348,7 +2350,7 @@ window.bulkApply=async function(){ bulkSyncInputs(); const names=Object.keys(BUL
   if(roseUp.length===1) celebrateRankUp(roseUp[0].name, roseUp[0].rank);
   else if(roseUp.length>1){ try{ toast(roseUp.length+' spirits ascended — '+roseUp.map(r=>r.name).join(', ')); }catch(e){} }
   actionToast(`${names.length} spirit${names.length===1?'':'s'} ${net>0?'gain':'lose'} ${Math.abs(net)} — ${reason}`, '↩ Undo', async ()=>{
-    undo.forEach(u=>{ const m=memByName(u.name); if(!m)return; m.points=u.pts; m.season=u.season; if(m.history&&m.history.length>u.histLen)m.history.length=u.histLen; m.logs=u.logs; if(u.winMult>1) m.winMult=u.winMult; else delete m.winMult; });
+    undo.forEach(u=>{ const m=memByName(u.name); if(!m)return; m.points=u.pts; m.season=u.season; if(m.history&&m.history.length>u.histLen)m.history.length=u.histLen; m.logs=u.logs; if(u.winMult>1) m.winMult=u.winMult; else delete m.winMult; if(u.lossMult>1) m.lossMult=u.lossMult; else delete m.lossMult; });
     await saveData(); layoutGrove(); renderLedger(); toast('Bulk award undone.'); });
 };
 window.seasonForm=function(){
@@ -4051,8 +4053,10 @@ function applyRiteEffect(r){
   if(r.kind==="title"){ m.epithet=_lbl; rewardNominator(r,25,"Named a title"); }
   else if(r.kind==="badge"){ m.badges=m.badges||[]; if(!m.badges.includes(_lbl)) m.badges.push(_lbl); if(r.color){ MEM.badgeColors=MEM.badgeColors||{}; if(!MEM.badgeColors[_lbl]) MEM.badgeColors[_lbl]=r.color; } rewardNominator(r,20,"Named a badge"); }
   else if(r.kind==="deed"){
-    // a banked ×2/×3 blessing multiplies a community-voted deed gain (consumed on use)
-    let _pv=r.points; if(_pv>0 && (m.winMult||1)>1){ const _wm=consumeMult(m); _pv=_pv*_wm; }
+    // a banked ×2/×3 blessing multiplies a community-voted deed gain; a curse deepens a penalty (consumed on use)
+    let _pv=r.points;
+    if(_pv>0 && (m.winMult||1)>1){ const _wm=consumeMult(m); _pv=_pv*_wm; }
+    else if(_pv<0 && (m.lossMult||1)>1){ const _lm=consumeLoss(m); _pv=_pv*_lm; }
     m.points=Math.max(0,(m.points||0)+_pv);
     m.season=(m.season||0)+_pv;
     m.history=m.history||[]; m.history.push({l:_lbl,d:_pv,t:Date.now()/1000});
@@ -4439,7 +4443,7 @@ function renderRules(){
     <div class="ritehdr">The Reckoning · Group Wagers</div>
     <p class="rtext">Rally two sides — up to <b>6</b> a side, even lopsided (6 v 1). Everyone stakes the same; the starter <b>locks</b> the wager and the winning side <b>splits the whole pot</b>, so fewer winners each take a bigger share. All spirits must agree who won; if they can’t, the grove votes to settle it.</p>
     <div class="ritehdr">Test of Devotion</div>
-    <p class="rtext"><b>15 ✦</b> laid before the <b>Devotion Weirwood</b>, once every 2 hours. The Eye's verdict runs from a <b>+250</b> radiance down to <b>−100</b> wrath, with returned offerings and <b>×2 / ×3</b> blessings that multiply your next <b>gain</b> — a deed (Keeper-awarded or community-voted), a challenge, a wheel win or a Chalice triumph — though <b>never a wager</b>. Blessings can't stack: land a second while one is banked and the Eye pays <b>+100</b> (×2) or <b>+150</b> (×3) on the spot instead. There is also a <b>×2 curse</b> on your next penalty. Roughly 56% of verdicts favor you. Every spin rides one running <b>Test of Devotion</b> line in your ledger — the 15 stake and the verdict both fold into it, so the line always matches the Devotion the Eye actually moved.</p>
+    <p class="rtext"><b>15 ✦</b> laid before the <b>Devotion Weirwood</b>, once every 2 hours. The Eye's verdict runs from a <b>+250</b> radiance down to <b>−100</b> wrath, with returned offerings and <b>×2 / ×3</b> blessings that multiply your next <b>gain</b> — a deed (Keeper-awarded or community-voted), a challenge, a wheel win or a Chalice triumph — though <b>never a wager</b>. Blessings can't stack: land a second while one is banked and the Eye pays <b>+100</b> (×2) or <b>+150</b> (×3) on the spot instead. A <b>×2 curse</b> mirrors it — it doubles your next <b>loss</b> (a penalty deed, a wheel loss or a Chalice loss, never a wager), and likewise can't stack: land another while cursed and the Eye strikes <b>−100</b> on the spot. Roughly 56% of verdicts favor you. Every spin rides one running <b>Test of Devotion</b> line in your ledger — the 15 stake and the verdict both fold into it, so the line always matches the Devotion the Eye actually moved.</p>
     <div class="ritehdr">Trial of the Chalice</div>
     <p class="rtext">A 52-card King’s Cup for the circle — <b>4–20 spirits</b>, and one phone may hold several. The <b>host</b> opens the lobby and begins the trial; if they don’t, the right to begin passes down the join order so the circle never stalls. Each spirit’s <b>rank shows beneath their name</b>. On your turn you draw a card and the circle acts it out aloud — sending others to drink, binding a partner, decreeing a <b>law</b> (no two laws alike), or pouring into the Chalice. Devotion rides a <b>hidden tally</b> all game and commits as a single “Trial of the Chalice” line when it ends.</p>
     <p class="rtext">The <b>fourth King</b> is the reckoning — the <b>Eye itself opens</b> over the circle: that drawer either <b>drinks the Chalice</b> (gaining Devotion and the <i>Drained the Chalice</i> badge) or <b>braves a ritual</b> the circle sets aloud — 3 minutes, half must approve. Succeed for the badge and a communal cup (up to four sip, +10 each); fail or refuse and lose <b>40</b>. Break a law and a spirit can <b>report you by tapping your name</b> — reports lapse after 30 seconds, and if enough agree you’re judged (−5); you may even own up and vote on your own report. Spirits may step away (the host passes on), be <b>cast out by tapping a name</b> and a half-vote (the named may vote too), or rejoin — and a lobby that never begins dissolves after <b>3 minutes</b>.</p>
@@ -4466,7 +4470,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">A Keeper (🔥, passphrase-held) tends the grove — awarding Devotion, titles and badges, and running the seasons.</p>`}
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30cc · Blessings now multiply ANY gain — Keeper or community deed, challenge, wheel win, Chalice (never a wager) — and can’t stack: a second ×2 pays +100, ×3 pays +150. Keeper saves fixed; new seasons refund open wagers; rigour-pass fixes throughout.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30cd · Curses now mirror blessings: a ×2 curse doubles your next loss anywhere (penalty deed, wheel loss, Chalice — never a wager) and can’t stack (a second strikes −100 now). Plus the round-2 rigour fixes.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4607,6 +4611,7 @@ function memByName(n){ return (MEM.members||[]).find(x=>x.name===n); }
 function seasonView(m){ return Math.max(0, (m&&m.season)||0); }
 function adjPts(m,d){ if(!m)return; m.points=Math.max(0,(m.points||0)+d); m.season=(m.season||0)+d; }
 function consumeMult(m){ const x=(m&&m.winMult)||1; if(m&&m.winMult) delete m.winMult; return x; }
+function consumeLoss(m){ const x=(m&&m.lossMult)||1; if(m&&m.lossMult) delete m.lossMult; return x; }   // curse: mirror of consumeMult for penalties
 function maybeEarnLog(m,gained){ if(!m||gained<=0)return false; if(Math.random()<Math.min(1,gained/100)){ m.logs=(m.logs||0)+1; return true; } return false; }
 function sweepFire(now){ const f=MEM.fire; if(!f)return false; if(f.lastDecay===undefined)f.lastDecay=now; const dec=Math.floor((now-f.lastDecay)/(2*3600)); if(dec>0){ f.level=Math.max(0,(f.level||0)-dec); f.lastDecay=f.lastDecay+dec*2*3600; if((f.level||0)===0)f.stokers=[]; return true; } return false; }
 function fireKeeperBadge(){ const ms=MEM.members||[]; let top=null,topN=0; ms.forEach(m=>{ if((m.fireLogs||0)>topN){topN=m.fireLogs||0;top=m;} }); ms.forEach(m=>{ m.badges=(m.badges||[]).filter(b=>b!=='Keeper of the Flame'); }); if(top&&topN>0){ top.badges=top.badges||[]; top.badges.push('Keeper of the Flame'); } }
@@ -4679,8 +4684,15 @@ function applyAction(a){
       if((m.winMult||1)>1){ const bonus=(o.special==='x2')?100:150; o.convertedPts=bonus; adjPts(m,bonus); maybeEarnLog(m,bonus); }
       else { m.winMult=(o.special==='x2')?2:3; }
     }
-    else if(o.special==='x2neg'){ m.lossMult=2; }
-    else if(typeof o.pts==='number'){ let pv=o.pts; if(pv>0&&(m.winMult||1)>1){ const wm=consumeMult(m); pv=pv*wm; o.ptsFinal=pv; o.mult=wm; } adjPts(m,pv); if(pv>0)maybeEarnLog(m,pv); }
+    else if(o.special==='x2neg'){
+      // curses don't stack either: land one while cursed and the Eye strikes −100 now instead
+      if((m.lossMult||1)>1){ o.convertedPts=-100; adjPts(m,-100); }
+      else { m.lossMult=2; }
+    }
+    else if(typeof o.pts==='number'){ let pv=o.pts;
+      if(pv>0&&(m.winMult||1)>1){ const wm=consumeMult(m); pv=pv*wm; o.ptsFinal=pv; o.mult=wm; }
+      else if(pv<0&&(m.lossMult||1)>1){ const lm=consumeLoss(m); pv=pv*lm; o.ptsFinal=pv; o.lossMult=lm; }   // a banked curse deepens a wheel loss
+      adjPts(m,pv); if(pv>0)maybeEarnLog(m,pv); }
     // the Eye's verdicts ride one running "Test of Devotion" deed line — track the offering spent
     // and the verdict separately so the soul card can show −15 + verdict = net, and it always sums
     // to the points actually moved (blessed wins count the multiplied amount; converted boons their tribute)
@@ -4936,7 +4948,7 @@ function wheelSectionHTML(me){
   let ctrl;
   if(!me){ ctrl=`<p class="hint">Pick your spirit to lay devotion before the Eye.</p>`; }
   else {
-    const buff = (me.winMult>1 ? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:#E8C45A;margin:2px 0 6px">✦ ×${me.winMult} blessing banked for your next gain ✦</div>`:'') + (me.lossMult>1 ? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:#C77B9A;margin:2px 0 6px">☠ ×${me.lossMult} curse on your next penalty ☠</div>`:'');
+    const buff = (me.winMult>1 ? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:#E8C45A;margin:2px 0 6px">✦ ×${me.winMult} blessing banked for your next gain ✦</div>`:'') + (me.lossMult>1 ? `<div style="text-align:center;font-family:'Silkscreen',monospace;font-size:11px;color:#C77B9A;margin:2px 0 6px">☠ ×${me.lossMult} curse deepens your next loss ☠</div>`:'');
     let btn;
     if(cd>0){ const tm=Math.ceil(cd/60), hh=Math.floor(tm/60), mm=tm%60; btn=`<button class="rapprove" disabled>The Eye looks away · ${hh>0?hh+'h ':''}${mm}m</button>`; }
     else if((me.points||0)<15){ btn=`<button class="rapprove" disabled>Need 15 ✦ to be tested</button>`; }
@@ -5301,8 +5313,11 @@ function wwApplyReaction(scope,type){ if(!scope)return; const fx=scope.querySele
 const WHEEL_STAKE=15;
 function verdictOf(o){
   if(o.special==='free')   return {line:'The Eye is unmoved — your devotion is returned to you.',reward:'stake returned',tone:'neutral'};
-  // blessings don't stack — landing one while already blessed converts to flat tribute
-  if(typeof o.convertedPts==='number') return {line:'Already blessed — the boon cannot stack, so the Eye pays tribute instead.',reward:`+${o.convertedPts} ✦`,tone:'great'};
+  // blessings/curses don't stack — landing another while banked converts to a flat amount now
+  if(typeof o.convertedPts==='number'){
+    if(o.convertedPts<0) return {line:'Already marked — the curse cannot deepen, so the Eye strikes you now.',reward:`${o.convertedPts} ✦`,tone:'bad'};
+    return {line:'Already blessed — the boon cannot stack, so the Eye pays tribute instead.',reward:`+${o.convertedPts} ✦`,tone:'great'};
+  }
   if(o.special==='x2')     return {line:'A blessing settles upon you.',reward:'×2 your next gain',tone:'buff'};
   if(o.special==='x3')     return {line:'Twice-blessed — the Eye burns bright.',reward:'×3 your next gain',tone:'buff'};
   if(o.special==='x2neg')  return {line:'The Eye marks you — a shadow waits on your next fall.',reward:'×2 your next penalty',tone:'bad'};
@@ -5313,7 +5328,11 @@ function verdictOf(o){
     if(fin!==o.pts) return {line:`The Eye acknowledges your devotion — and your ×${o.mult||2} blessing ignites.`,reward:`+${fin} ✦`,tone:'great'};
     return {line:'The Eye acknowledges your devotion.',reward:`+${fin} ✦`,tone:'good'};
   }
-  if(typeof o.pts==='number' && o.pts<0) return {line:(o.pts<=-100?'You have displeased the Eye.':'The Eye turns from you.'),reward:`${o.pts} ✦`,tone:'bad'};
+  if(typeof o.pts==='number' && o.pts<0){
+    const fin=(typeof o.ptsFinal==='number')?o.ptsFinal:o.pts;
+    if(fin!==o.pts) return {line:`The Eye turns from you — and your ×${o.lossMult||2} curse bites deeper.`,reward:`${fin} ✦`,tone:'bad'};
+    return {line:(o.pts<=-100?'You have displeased the Eye.':'The Eye turns from you.'),reward:`${o.pts} ✦`,tone:'bad'};
+  }
   return {line:'The Eye considers you.',reward:'',tone:'neutral'};
 }
 function devotionVerdict(o){
@@ -6728,7 +6747,7 @@ const _origApply = window.applyAction;
 window.applyAction = function(a){
   if(a && a.t==='chalice'){
     MEM.chalice = a.state || null;
-    if(a.commit && a.commit.length){ a.commit.forEach(c=>{ const m=(typeof memByName==='function')?memByName(c.name):null; if(!m) return; let dv=(c.delta||0); if(dv>0 && (m.winMult||1)>1){ const wm=(typeof consumeMult==='function')?consumeMult(m):1; dv=dv*wm; } /* a banked ×2/×3 blessing multiplies a Chalice gain */ m.points=Math.max(0,(m.points||0)+dv); m.season=(m.season||0)+dv; m.chalice=m.chalice||{total:0,games:0,drained:0}; m.chalice.total+=dv; m.chalice.games+=(c.games||1); if(c.drained){ m.chalice.drained=(m.chalice.drained||0)+1; m.badges=m.badges||[]; if(m.badges.indexOf(CHAL_BADGE)<0) m.badges.push(CHAL_BADGE); } if(dv){ m.history=m.history||[]; m.history.push({t:nowS(), d:dv, l:'Trial of the Chalice'}); } }); }
+    if(a.commit && a.commit.length){ a.commit.forEach(c=>{ const m=(typeof memByName==='function')?memByName(c.name):null; if(!m) return; let dv=(c.delta||0); if(dv>0 && (m.winMult||1)>1){ const wm=(typeof consumeMult==='function')?consumeMult(m):1; dv=dv*wm; } else if(dv<0 && (m.lossMult||1)>1){ const lm=(typeof consumeLoss==='function')?consumeLoss(m):1; dv=dv*lm; } /* blessing multiplies a Chalice gain; curse deepens a Chalice loss */ m.points=Math.max(0,(m.points||0)+dv); m.season=(m.season||0)+dv; m.chalice=m.chalice||{total:0,games:0,drained:0}; m.chalice.total+=dv; m.chalice.games+=(c.games||1); if(c.drained){ m.chalice.drained=(m.chalice.drained||0)+1; m.badges=m.badges||[]; if(m.badges.indexOf(CHAL_BADGE)<0) m.badges.push(CHAL_BADGE); } if(dv){ m.history=m.history||[]; m.history.push({t:nowS(), d:dv, l:'Trial of the Chalice'}); } }); }
     return;
   }
   return _origApply ? _origApply.apply(this, arguments) : undefined;

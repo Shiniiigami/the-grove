@@ -4446,7 +4446,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">A Keeper (🔥, passphrase-held) tends the grove — awarding Devotion, titles and badges, and running the seasons.</p>`}
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ca · Keeper controls under the Test of Devotion: reset a spirit’s spin cooldown and clear a banked blessing/curse (shown only when the Keeper is unlocked).</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30cb · A ×2/×3 blessing (or a returned free spin) no longer triggers the “sad”/rain spirit reaction — that −15 is just the offering, and the boon is banked.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -5337,6 +5337,10 @@ window.spinTheWheel=async function(){
     // win/loss when the animation lifts — never a beat before it
     if(typeof MODE!=='undefined' && MODE==='remote'){ try{ await refreshRemote(); }catch(e){} }
     try{ await cer; }catch(e){}
+    // a ×2/×3 blessing (or a returned free spin) only spends the 15 offering this instant — the boon is
+    // banked, not a loss. Re-baseline this spirit's mood snapshot so that −15 doesn't fire a "sad"/rain
+    // reaction; the Eye's overlay already showed the blessing.
+    try{ if(o && (o.special==='x2'||o.special==='x3'||o.special==='free') && MOOD_SNAP){ const _sm=memByName(VOTER); if(_sm) MOOD_SNAP[VOTER]={p:(_sm.points||0)+lockedStake(VOTER), h:(_sm.history||[]).length}; } }catch(e){}
   }
   WHEEL_BUSY=false;
   try{ trialsRefresh(); }catch(e){}

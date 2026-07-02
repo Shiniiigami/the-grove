@@ -4391,7 +4391,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bp · Retired the "The Offering" preset deed — the formal Offering rite (robe · +150 · the open Eye) is now the one true path, so the honour can't be scored twice.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bq · Fixed thoughts that never faded — a thought's timestamp is now read as seconds no matter how it was stored (server milliseconds or an ISO string included), so every thought reliably drifts away at the 12-hour mark.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4625,9 +4625,21 @@ async function communityAction(a){
   return okR;
 }
 function trialsRefresh(){ renderTrials(); layoutGrove(); renderLedger(); try{ syncOffering(); }catch(e){} try{ detectReactions(); }catch(e){} try{ detectLogGains(); }catch(e){} try{ detectNewOffers(); }catch(e){} try{ detectBetEndings(); }catch(e){} }
-function thoughtLive(t){ return !!(t && t.text && (Date.now()/1000 - (t.at||0)) < 12*3600); }
+// Normalise a thought's timestamp to epoch SECONDS no matter how it was stored — the client
+// stamps seconds, but a server (grove_thought) might hand back milliseconds or an ISO string.
+// Without this, a millisecond value (~1.7e12) makes `now - at` hugely negative, so the thought
+// reads as "live" forever and never fades — the "thought lasted >13h" bug.
+function thoughtAt(t){
+  let a=t&&t.at; if(a==null) return 0;
+  if(typeof a==='string'){ const p=Date.parse(a); a=isNaN(p)?parseFloat(a):p/1000; }
+  a=+a; if(!isFinite(a)||a<=0) return 0;
+  if(a>1e12) a=a/1000;                                   // milliseconds → seconds
+  const now=Date.now()/1000; if(a>now+300) a=now;        // future/skewed-ahead stamp can't extend the life
+  return a;
+}
+function thoughtLive(t){ return !!(t && t.text && (Date.now()/1000 - thoughtAt(t)) < 12*3600); }
 // Seconds until a thought fades (0 if gone). Thoughts float for 12h from when they were set.
-function thoughtRemain(t){ if(!t||!t.text)return 0; return Math.max(0, 12*3600 - (Date.now()/1000 - (t.at||0))); }
+function thoughtRemain(t){ if(!t||!t.text)return 0; return Math.max(0, 12*3600 - (Date.now()/1000 - thoughtAt(t))); }
 // Short, friendly countdown — "fades in 5h 12m", "fades in 47m", "fading in 4m".
 function thoughtFadeLabel(t){ const s=thoughtRemain(t); if(s<=0)return ''; const h=Math.floor(s/3600), m=Math.floor((s%3600)/60);
   const soon=s<3600; const txt = h>0 ? ('fades in '+h+'h '+m+'m') : (m>0 ? ((soon?'fading in ':'fades in ')+m+'m') : 'fading now');

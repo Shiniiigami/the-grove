@@ -1951,11 +1951,8 @@ function devotionDeedRow(m){
   const cnt = d.spins>1 ? ` <span style="opacity:.7">×${roman(d.spins)}</span>` : '';
   const net = d.total||0;
   const val = `<b class="${net<0?'neg':''}">${net>0?'+':''}${net}</b>`;
-  // break out the offering(s) laid and the Eye's verdict(s) so −15 + verdict = net is plain to see
-  const S = (d.staked!==undefined) ? d.staked : 15*d.spins;
-  const V = (d.verdict!==undefined) ? d.verdict : (net + S);
-  const bk = ` <span style="opacity:.55;font-size:11px">(verdict ${V>=0?'+':''}${V} · -${S} offered)</span>`;
-  return `<div class="h"><em>🔮 Test of Devotion${cnt}${bk}</em>${val}</div>`;
+  // the running net (offering + verdict) already tells the whole story — no bracketed breakdown
+  return `<div class="h"><em>🔮 Test of Devotion${cnt}</em>${val}</div>`;
 }
 function deedLedgerHTML(m,keeper){
   const gs=histGroups(m).filter(g=>g.base!=='Rite of the Chalice' && g.base!=='Trial of the Chalice');
@@ -4403,7 +4400,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bt · The wheel keeps showing the Eye's plain verdict (−25), and the soul card's Test of Devotion line now spells out the discrepancy — "(verdict −25 · −15 offered) −40" — so the offering and the verdict both add up on your ledger.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bu · The Test of Devotion deed line shows just its net now (no bracketed breakdown), and the wheel's win/loss lands on your soul card only after the Eye's animation, not a beat before it.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -5264,12 +5261,18 @@ window.spinTheWheel=async function(){
       if(o && o.denied){
         if(o.reason==='cooldown'){} else if(o.reason==='funds'){ toast('You need 15 ✦ to be tested.'); }
         o=null;
-      } else { try{ await refreshRemote(); }catch(e){} }
+      }
     } else {
       o=spinWheel(); applyAction({t:'wheel_spin',name:VOTER,outcome:o}); if(typeof saveData==='function') await saveData();
     }
   }catch(e){ try{ if(typeof isNetErr==='function'&&isNetErr(e)){ toast('The Eye needs a connection to weigh you.'); } else { toast('The Eye did not answer — run the wheel update in Supabase.'); } }catch(_){}; o=null; }
-  if(o){ try{ await devotionVerdict(o); }catch(e){} }
+  if(o){
+    const cer=devotionVerdict(o);                                // the ceremony covers the screen first
+    // pull the new state *behind* the overlay so the soul card only reveals the
+    // win/loss when the animation lifts — never a beat before it
+    if(typeof MODE!=='undefined' && MODE==='remote'){ try{ await refreshRemote(); }catch(e){} }
+    try{ await cer; }catch(e){}
+  }
   WHEEL_BUSY=false;
   try{ trialsRefresh(); }catch(e){}
 };

@@ -562,7 +562,7 @@ const DEFAULT_TIERS = [
 ];
 const TIER_COLORS_V2 = {Initiate:"#7C8A82",Acolyte:"#8AA67E",Disciple:"#6FA3AB",Warden:"#357A4C",Sage:"#C2855E",Luminary:"#BE869F","The Ascended":"#A99BD4"};
 const DEFAULT_DEEDS = [
-  ["The Pilgrimage",100],
+  ["Made the Pilgrimage",100],
   ["Of the First Fire",200],
   ["Kept the Flame",30],
   ["First Light",20],
@@ -4393,7 +4393,7 @@ function renderRules(){
     <div class="ritehdr">Devotion</div>
     <p class="rtext"><b>Lifetime</b> Devotion drives your rank; <b>season</b> Devotion tracks the current trip. These days they move together — deeds, challenges, wagers, the fire and the Eye's Test all shift both at once, up or down, floored at zero. The Keeper can start a fresh season to reset the race without touching ranks.</p>
     <div class="ritehdr">Deeds</div>
-    <p class="rtext">Devotion is awarded for deeds at the fire. The Keeper can multiply them (×II, ×III…) — e.g. "Night swim ×III". ${deedCount} deeds sit on the ledger; the Keeper tends the list. The great milestones — <b>The Pilgrimage</b> and <b>Of the First Fire</b> — are the <b>Keeper’s alone</b> to bestow, while the <b>Rite of Passage</b> (+100) comes automatically the moment a spirit is initiated.</p>
+    <p class="rtext">Devotion is awarded for deeds at the fire. The Keeper can multiply them (×II, ×III…) — e.g. "Night swim ×III". ${deedCount} deeds sit on the ledger; the Keeper tends the list. The great milestones — <b>Made the Pilgrimage</b> and <b>Of the First Fire</b> — are the <b>Keeper’s alone</b> to bestow, while the <b>Rite of Passage</b> (+100) comes automatically the moment a spirit is initiated.</p>
     <div class="ritehdr">Stoke the Fire</div>
     <p class="rtext">The Order feeds one shared fire. You <b>earn logs by doing</b> — every deed and finished challenge rolls for a log, and the bigger the reward the better the odds (a ~100-Devotion reward is all but certain). Add a log every <b>3 hours</b>; the flame <b>loses one every 2 hours</b> if neglected. When <b>6 logs</b> burn together, everyone who fed it is blessed — starting at <b>+50</b> and climbing <b>+25</b> with each blessing up to <b>+200</b> (no daily limit), resetting to +50 if a full day passes with no fire. Whoever lands the final log earns a <b>+20</b> spark, and the season's top tender wears <b>Keeper of the Flame</b>.</p>
     <div class="ritehdr">Challenges</div>
@@ -4427,7 +4427,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bx · Keeper can now strike a whole stacked deed at once — a new ✕all button beside the single ✕ removes every instance (e.g. all 6 “The Pilgrimage”) and unwinds the Devotion.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30by · The preset milestone deed is now “Made the Pilgrimage” (was “The Pilgrimage”), matching what’s already on the ledgers.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

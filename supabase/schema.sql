@@ -64,7 +64,7 @@ create or replace function public.grove_adj(m jsonb, delta integer)
 as $$
   select jsonb_set(
            jsonb_set(m, '{points}', to_jsonb(greatest(0, coalesce((m->>'points')::int,0)+delta))),
-           '{season}', to_jsonb(greatest(0, coalesce((m->>'season')::int,0)+delta)));
+           '{season}', to_jsonb(coalesce((m->>'season')::int,0)+delta));
 $$;
 
 create or replace function public.grove_credit(members jsonb, nm text, delta integer)
@@ -456,7 +456,7 @@ begin
             mem := mem - 'winMult';
           end if;
           cur := greatest(0, coalesce((mem->>'points')::int, 0) + pts);
-          sea := greatest(0, coalesce((mem->>'season')::int, 0) + pts);
+          sea := coalesce((mem->>'season')::int, 0) + pts;
           mem := jsonb_set(mem, '{points}', to_jsonb(cur));
           mem := jsonb_set(mem, '{season}', to_jsonb(sea));
           mem := jsonb_set(mem, '{history}',
@@ -474,7 +474,7 @@ begin
           if cnt < 3 then
             if coalesce((mem->>'offered')::double precision, 0) <= nowe then
               cur := greatest(0, coalesce((mem->>'points')::int, 0) + 150);
-              sea := greatest(0, coalesce((mem->>'season')::int, 0) + 150);
+              sea := coalesce((mem->>'season')::int, 0) + 150;
               mem := jsonb_set(mem, '{points}', to_jsonb(cur));
               mem := jsonb_set(mem, '{season}', to_jsonb(sea));
               mem := jsonb_set(mem, '{history}',
@@ -489,7 +489,7 @@ begin
                 if nidx >= 0 then
                   nommem := members->nidx;
                   ncur := greatest(0, coalesce((nommem->>'points')::int, 0) + 50);
-                  nsea := greatest(0, coalesce((nommem->>'season')::int, 0) + 50);
+                  nsea := coalesce((nommem->>'season')::int, 0) + 50;
                   nommem := jsonb_set(nommem, '{points}', to_jsonb(ncur));
                   nommem := jsonb_set(nommem, '{season}', to_jsonb(nsea));
                   nommem := jsonb_set(nommem, '{history}',
@@ -533,7 +533,7 @@ begin
             if nidx >= 0 then
               nommem := members->nidx;
               ncur := greatest(0, coalesce((nommem->>'points')::int, 0) + rew);
-              nsea := greatest(0, coalesce((nommem->>'season')::int, 0) + rew);
+              nsea := coalesce((nommem->>'season')::int, 0) + rew;
               nommem := jsonb_set(nommem, '{points}', to_jsonb(ncur));
               nommem := jsonb_set(nommem, '{season}', to_jsonb(nsea));
               nommem := jsonb_set(nommem, '{history}',
@@ -791,6 +791,11 @@ declare
 begin
   select data into d from public.grove_state where id = 1 for update;
   if d is null then raise exception 'grove not seeded'; end if;
+  -- idempotency: an offline-queue replay or a lost-response retry carries the same opId;
+  -- if we have already applied it, return the current state unchanged (no double-spend).
+  if p_action ? 'opId' and coalesce(d->'opLog','[]'::jsonb) @> to_jsonb(p_action->>'opId') then
+    return d;
+  end if;
   t     := p_action->>'t';
   nowe  := extract(epoch from now());
   members := coalesce(d->'members','[]'::jsonb);
@@ -1344,6 +1349,13 @@ begin
   d := jsonb_set(d, '{challenges}', chals);
   d := jsonb_set(d, '{wagers}',     wagers);
   d := jsonb_set(d, '{groups}',     groups);
+  -- record this op so a later replay is deduped (bounded ring of the last 200 opIds)
+  if p_action ? 'opId' then
+    d := jsonb_set(d, '{opLog}', coalesce(d->'opLog','[]'::jsonb) || jsonb_build_array(p_action->>'opId'));
+    if jsonb_array_length(d->'opLog') > 200 then
+      d := jsonb_set(d, '{opLog}', (d->'opLog') - 0);
+    end if;
+  end if;
   update public.grove_state set data = d, updated_at = now() where id = 1;
   return d;
 end; $$;
@@ -1385,7 +1397,7 @@ begin
             m := m - 'winMult';
           end if;
           m := jsonb_set(m, '{points}', to_jsonb(greatest(0, coalesce((m->>'points')::int,0) + delta)));
-          m := jsonb_set(m, '{season}', to_jsonb(greatest(0, coalesce((m->>'season')::int,0) + delta)));
+          m := jsonb_set(m, '{season}', to_jsonb(coalesce((m->>'season')::int,0) + delta));
           ch := coalesce(m->'chalice', '{"total":0,"games":0,"drained":0}'::jsonb);
           ch := jsonb_set(ch, '{total}',   to_jsonb(coalesce((ch->>'total')::int,0)   + delta));
           ch := jsonb_set(ch, '{games}',   to_jsonb(coalesce((ch->>'games')::int,0)   + games));
@@ -1497,7 +1509,7 @@ end; $$;
 -- ---------------------------------------------------------------------------
 create or replace function public.grove_ver()
  returns text language sql set search_path to 'public','pg_temp'
-as $$ select '2026-07-02b'::text; $$;
+as $$ select '2026-07-02d'::text; $$;
 
 -- ---------------------------------------------------------------------------
 --  Grants — the public PWA calls every RPC with the anon key

@@ -1,0 +1,8 @@
+-- 2026-07-02d — season score conservation.
+-- season now carries its TRUE net (may go below 0 while a stake is escrowed) so a
+-- stake->refund / stake->loss round-trip can't inflate it; the client clamps to 0
+-- only at display (seasonView), so it never SHOWS negative. points stays floored.
+-- Changed: grove_adj (the season leg drops greatest(0,...)), and the explicit
+-- season writes in grove_vote (deed / offer / both nominator bounties) and
+-- grove_chalice. No data backfill — existing season values are >= 0 and only
+-- future deltas differ. Full bodies in ../schema.sql. grove_ver -> 2026-07-02d.

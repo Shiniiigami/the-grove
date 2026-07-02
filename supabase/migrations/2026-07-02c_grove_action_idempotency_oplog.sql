@@ -1,0 +1,9 @@
+-- 2026-07-02c — offline / lost-response idempotency for grove_action.
+-- The client (communityAction) stamps a stable opId on an action before its first
+-- send, and re-queues the SAME opId on an ambiguous network failure. grove_action
+-- now:
+--   * returns the current state unchanged if the opId is already in d.opLog
+--     (a replay / lost-response retry) — no double stake, payout or stoke;
+--   * appends the opId to a bounded ring (last 200) after applying.
+-- Mirrors the Chalice gid guard. Full body in ../schema.sql. Applied to
+-- drthfetglhqfgqxcrngr via apply_migration. grove_ver -> 2026-07-02c.

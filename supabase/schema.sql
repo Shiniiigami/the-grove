@@ -451,10 +451,7 @@ begin
           -- reward the nominator only for recognising a GAIN, never for a penalty
           -- (matches client: r.points>0 ? nominatorDeedReward : 0)
           if pts <= 0 then rew := 0; end if;
-          if pts > 0 and coalesce((mem->>'winMult')::int,1) > 1 then
-            pts := pts * coalesce((mem->>'winMult')::int,1);
-            mem := mem - 'winMult';
-          end if;
+          -- a community-voted deed does NOT consume a banked ×2/×3 (Keeper deed / challenge only)
           cur := greatest(0, coalesce((mem->>'points')::int, 0) + pts);
           sea := coalesce((mem->>'season')::int, 0) + pts;
           mem := jsonb_set(mem, '{points}', to_jsonb(cur));
@@ -745,11 +742,8 @@ begin
   elsif sp = 'x2neg' then
     members := jsonb_set(members, array[midx::text], jsonb_set(members->midx,'{lossMult}', to_jsonb(2)));
   else
+    -- a banked ×2/×3 does NOT apply to wheel wins (Keeper deed / challenge only, per Rules)
     spv := coalesce((o->>'pts')::int,0);
-    if spv > 0 and coalesce((members->midx->>'winMult')::int,1) > 1 then
-      spv := spv * coalesce((members->midx->>'winMult')::int,1);
-      members := jsonb_set(members, array[midx::text], (members->midx) - 'winMult');
-    end if;
     members := jsonb_set(members, array[midx::text], grove_adj(members->midx, spv));
     if spv > 0 and random() < least(1.0, spv::numeric/100.0) then
       members := jsonb_set(members, array[midx::text], jsonb_set(members->midx,'{logs}', to_jsonb(coalesce((members->midx->>'logs')::int,0)+1)));
@@ -1392,10 +1386,7 @@ begin
       for idx in 0 .. jsonb_array_length(members) - 1 loop
         if members->idx->>'name' = nm then
           m := members->idx;
-          if delta > 0 and coalesce((m->>'winMult')::int,1) > 1 then
-            delta := delta * coalesce((m->>'winMult')::int,1);
-            m := m - 'winMult';
-          end if;
+          -- a Chalice gain does NOT consume a banked ×2/×3 (Keeper deed / challenge only)
           m := jsonb_set(m, '{points}', to_jsonb(greatest(0, coalesce((m->>'points')::int,0) + delta)));
           m := jsonb_set(m, '{season}', to_jsonb(coalesce((m->>'season')::int,0) + delta));
           ch := coalesce(m->'chalice', '{"total":0,"games":0,"drained":0}'::jsonb);
@@ -1509,7 +1500,7 @@ end; $$;
 -- ---------------------------------------------------------------------------
 create or replace function public.grove_ver()
  returns text language sql set search_path to 'public','pg_temp'
-as $$ select '2026-07-02d'::text; $$;
+as $$ select '2026-07-02e'::text; $$;
 
 -- ---------------------------------------------------------------------------
 --  Grants — the public PWA calls every RPC with the anon key

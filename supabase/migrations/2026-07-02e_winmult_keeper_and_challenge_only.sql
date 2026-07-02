@@ -1,0 +1,7 @@
+-- 2026-07-02e — a banked ×2/×3 blessing is consumed ONLY by a Keeper-awarded deed
+-- or an approved challenge, per the Rules ("not a community vote or wager") and the
+-- client. Removed the winMult multiply+consume from: grove_wheel (wheel wins — which
+-- also drifted devotion.total, since it recorded the raw verdict while points moved
+-- by the multiplied amount), grove_vote (community-voted deeds), and grove_chalice
+-- (Chalice deltas). grove_action's chal_approve keeps it (matches client + anti-cheat).
+-- Full bodies in ../schema.sql. Applied live. grove_ver -> 2026-07-02e.

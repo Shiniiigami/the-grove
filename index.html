@@ -4002,7 +4002,9 @@ function applyRiteEffect(r){
   else if(r.kind==="offer"){
     const wasOffered=m.offered && m.offered>Date.now()/1000;
     m.unlocks=m.unlocks||[]; if(!m.unlocks.includes('robes')) m.unlocks.push('robes');
-    const c=cloneChibi(m); c.top_style='robes'; m.sprite={chibi:c};
+    // stash the pre-robe top so ensureDefaults can restore it when the 3h robe window lapses
+    // (the Keeper offer path already does this; without it a community-offered robe never reverts)
+    const c=cloneChibi(m); if(!wasOffered) m._preTop=c.top_style; c.top_style='robes'; m.sprite={chibi:c};
     m.offered=Date.now()/1000 + OFFER_ROBE_SECS;
     m.badges=m.badges||[]; if(!m.badges.includes("Of the Eye")) m.badges.push("Of the Eye");
     if(!wasOffered){ m.points=(m.points||0)+150; m.season=(m.season||0)+150; m.history=m.history||[]; m.history.push({l:"Offered to the Eye",d:150,t:Date.now()/1000}); rewardNominator(r,50,"Named the offering"); }
@@ -4400,7 +4402,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bu · The Test of Devotion deed line shows just its net now (no bracketed breakdown), and the wheel's win/loss lands on your soul card only after the Eye's animation, not a beat before it.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bv · Stress-test fixes: escape wager/challenge titles, community-offering robe now reverts after 3h, stoke needs a log before it fires, and the wheel explains a cooldown denial.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -5259,7 +5261,7 @@ window.spinTheWheel=async function(){
     if(typeof MODE!=='undefined' && MODE==='remote'){
       o=await sbRpc('grove_wheel',{p_name:VOTER});               // authoritative spin + apply
       if(o && o.denied){
-        if(o.reason==='cooldown'){} else if(o.reason==='funds'){ toast('You need 15 ✦ to be tested.'); }
+        if(o.reason==='cooldown'){ toast('The Eye has already weighed you — rest before the next test.'); } else if(o.reason==='funds'){ toast('You need 15 ✦ to be tested.'); }
         o=null;
       }
     } else {
@@ -5282,7 +5284,7 @@ function wagerOpenCard(w){
   const btn = mine ? `<button class="rapprove" onclick="cancelWager('${w.id}')">Withdraw</button>`
     : (canTake ? `<button class="rapprove" onclick="takeWager('${w.id}')">Take · stake ${w.amount}</button>`
                : `<button class="rapprove" disabled>Stake ${w.amount}</button>`);
-  return `<div class="ritecard"><div class="rbody"><div class="rdesc"><b>${w.proposer}</b> wagers &nbsp;<span style="color:var(--candle)">${w.amount} ✦</span> — ${w.title}</div><div class="rmeta">open · winner takes ${2*w.amount} ✦</div></div>${btn}</div>`;
+  return `<div class="ritecard"><div class="rbody"><div class="rdesc"><b>${w.proposer}</b> wagers &nbsp;<span style="color:var(--candle)">${w.amount} ✦</span> — ${esc(w.title)}</div><div class="rmeta">open · winner takes ${2*w.amount} ✦</div></div>${btn}</div>`;
 }
 function wagerMatchedCard(w){
   const now=Date.now()/1000;
@@ -5313,12 +5315,12 @@ function wagerMatchedCard(w){
     rows = `<div style="text-align:center;font-size:11px;color:#E8A88F;margin-top:8px">⚖ Disputed — 5 votes settle it, or in <b>${lbl}</b> both forfeit the pot</div>${voteRow}${rows}`;
   }
   const keeperExtra = keeperUnlocked? `<div style="margin-top:8px;text-align:center;font-size:11px">Keeper · <a onclick="resolveWager('${w.id}','${w.proposer.replace(/'/g,"\\'")}')" style="cursor:pointer;color:var(--sage)">${w.proposer} won</a> · <a onclick="resolveWager('${w.id}','${w.taker.replace(/'/g,"\\'")}')" style="cursor:pointer;color:var(--sage)">${w.taker} won</a> · <a onclick="voidWager('${w.id}')" style="cursor:pointer;color:#E8A88F">void</a></div>`:"";
-  return `<div class="ritecard" style="flex-direction:column;align-items:stretch"><div class="rbody"><div class="rdesc"><b>${w.proposer}</b> vs <b>${w.taker}</b> &nbsp;<span style="color:var(--candle)">${w.amount} ✦</span> each — ${w.title}</div><div class="rmeta">${disputed?'disputed':'matched'} · pot ${2*w.amount} ✦</div></div>${rows}${keeperExtra}</div>`;
+  return `<div class="ritecard" style="flex-direction:column;align-items:stretch"><div class="rbody"><div class="rdesc"><b>${w.proposer}</b> vs <b>${w.taker}</b> &nbsp;<span style="color:var(--candle)">${w.amount} ✦</span> each — ${esc(w.title)}</div><div class="rmeta">${disputed?'disputed':'matched'} · pot ${2*w.amount} ✦</div></div>${rows}${keeperExtra}</div>`;
 }
 function wagerSettledCard(w){
-  if(w.status==='forfeit') return `<div class="ritecard" style="opacity:.6"><div class="rbody"><div class="rdesc"><b>Forfeit</b> — pot lost &nbsp;<span style="color:#E8A88F">${w.amount} ✦ each gone</span> — ${w.title}</div><div class="rmeta">${w.proposer} vs ${w.taker} · no verdict</div></div></div>`;
-  if(w.winner==='tie') return `<div class="ritecard" style="opacity:.6"><div class="rbody"><div class="rdesc"><b>Tie</b> — stakes returned &nbsp;<span style="color:var(--sage)">${w.amount} ✦ each</span> — ${w.title}</div><div class="rmeta">${w.proposer} vs ${w.taker}</div></div></div>`;
-  return `<div class="ritecard" style="opacity:.6"><div class="rbody"><div class="rdesc"><b>${w.winner}</b> won &nbsp;<span style="color:var(--candle)">${2*w.amount} ✦</span> — ${w.title}</div><div class="rmeta">settled · ${w.proposer} vs ${w.taker}</div></div></div>`;
+  if(w.status==='forfeit') return `<div class="ritecard" style="opacity:.6"><div class="rbody"><div class="rdesc"><b>Forfeit</b> — pot lost &nbsp;<span style="color:#E8A88F">${w.amount} ✦ each gone</span> — ${esc(w.title)}</div><div class="rmeta">${w.proposer} vs ${w.taker} · no verdict</div></div></div>`;
+  if(w.winner==='tie') return `<div class="ritecard" style="opacity:.6"><div class="rbody"><div class="rdesc"><b>Tie</b> — stakes returned &nbsp;<span style="color:var(--sage)">${w.amount} ✦ each</span> — ${esc(w.title)}</div><div class="rmeta">${w.proposer} vs ${w.taker}</div></div></div>`;
+  return `<div class="ritecard" style="opacity:.6"><div class="rbody"><div class="rdesc"><b>${w.winner}</b> won &nbsp;<span style="color:var(--candle)">${2*w.amount} ✦</span> — ${esc(w.title)}</div><div class="rmeta">settled · ${w.proposer} vs ${w.taker}</div></div></div>`;
 }
 window.newWagerForm=function(){
   if(!VOTER){ toast("Choose your spirit first."); return; }
@@ -5486,7 +5488,7 @@ function challengeCard(c,now){
   const subDdl = c.deadline ? `must finish — 1h window` : leftLbl;
   const sub = c.status==='open'? `by ${c.owner} · ${leftLbl}` : `by ${c.owner} · taken by ${c.accepter} · ${subDdl}`;
   return `<div class="ritecard">
-    <div class="rbody"><div class="rdesc"><b>${c.title}</b> &nbsp;<span style="color:var(--candle)">${c.reward} ✦</span></div>
+    <div class="rbody"><div class="rdesc"><b>${esc(c.title)}</b> &nbsp;<span style="color:var(--candle)">${c.reward} ✦</span></div>
       <div class="rmeta">${sub}</div></div>
     ${foot}</div>`;
 }
@@ -5494,6 +5496,8 @@ function localStokeGet(name){ try{ return +(localStorage.getItem('grove-laststok
 function localStokeSet(name){ try{ localStorage.setItem('grove-laststoke-'+name, String(Date.now()/1000)); }catch(e){} }
 window.stokeFire=async function(){ if(!VOTER){ toast("Pick your name first."); return; }
   const _me=memByName(VOTER), _now=Date.now()/1000;
+  // a log is spent to stoke — guard here too so a stale/racey tap can't toast false success and eat the 3h cooldown
+  if(!_me || (_me.logs||0)<1){ toast("You need a log to feed the fire — win one from the Eye first."); trialsRefresh(); return; }
   const _ls=_me?Math.max(_me.lastStoke||0, localStokeGet(VOTER)):0;
   if(_me && _now-_ls < 3*3600){ const left=3*3600-(_now-_ls); toast(`Rest — add another in ${Math.floor(left/3600)}h ${Math.floor((left%3600)/60)}m.`); trialsRefresh(); return; }
   const before=(MEM.fire&&MEM.fire.level)||0; const ok=await communityAction({t:'stoke',name:VOTER}); if(!ok)return; localStokeSet(VOTER); trialsRefresh(); const f=MEM.fire||{}; if(f.lastBlessed && Date.now()/1000-f.lastBlessed<6){ Snd.sfx('gong'); toast(`The fire roars — blessed +${f.lastBless||50} each${f.lastSpark===VOTER?', and +20 spark for your final log!':'!'}`); } else { Snd.sfx('whoosh'); toast("You feed the fire."); } };

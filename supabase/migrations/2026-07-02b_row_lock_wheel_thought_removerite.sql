@@ -1,0 +1,16 @@
+-- 2026-07-02b — concurrency fix. grove_wheel, grove_thought and grove_remove_rite
+-- read grove_state, mutate the jsonb blob, and write it back, but (unlike every
+-- other mutating RPC) did NOT lock the row. Two near-simultaneous calls could each
+-- read the same state and clobber the other's write (lost update). grove_wheel is
+-- the important one — it moves points and is user-triggered — and this is a source
+-- of the "phantom points" class of drift under concurrent spins.
+--
+-- Fix: add "for update" to each function's initial
+--   select data into d from public.grove_state where id = 1;
+-- so they serialise on the single state row, exactly like grove_action /
+-- grove_vote / grove_propose / grove_withdraw / grove_set_chibi / grove_chalice /
+-- grove_clear_rites already do.
+--
+-- grove_ver() bumped 2026-07-02a -> 2026-07-02b.
+-- Applied to project drthfetglhqfgqxcrngr via mcp apply_migration. Full function
+-- bodies are in ../schema.sql (the canonical source of truth).

@@ -634,7 +634,7 @@ begin
   ) then
     raise exception 'bad passphrase';
   end if;
-  select data into d from public.grove_state where id = 1;
+  select data into d from public.grove_state where id = 1 for update;
   rites := coalesce(d->'rites','[]'::jsonb);
   for i in 0 .. jsonb_array_length(rites) - 1 loop
     if rites->i->>'id' <> p_id then
@@ -654,7 +654,7 @@ create or replace function public.grove_thought(p_name text, p_text text)
 as $$
 declare d jsonb; members jsonb; m jsonb; i int; txt text; nowe double precision;
 begin
-  select data into d from public.grove_state where id = 1;
+  select data into d from public.grove_state where id = 1 for update;
   if d is null then raise exception 'grove not seeded'; end if;
   nowe := extract(epoch from now());
   txt := left(btrim(coalesce(p_text, '')), 40);
@@ -715,7 +715,7 @@ declare
   d jsonb; members jsonb; midx int := -1; i int; nowe double precision := extract(epoch from now());
   o jsonb; sp text; spv int;
 begin
-  select data into d from public.grove_state where id = 1;
+  select data into d from public.grove_state where id = 1 for update;
   if d is null then raise exception 'grove not seeded'; end if;
   members := coalesce(d->'members','[]'::jsonb);
   for i in 0 .. jsonb_array_length(members)-1 loop
@@ -1497,7 +1497,7 @@ end; $$;
 -- ---------------------------------------------------------------------------
 create or replace function public.grove_ver()
  returns text language sql set search_path to 'public','pg_temp'
-as $$ select '2026-07-02a'::text; $$;
+as $$ select '2026-07-02b'::text; $$;
 
 -- ---------------------------------------------------------------------------
 --  Grants — the public PWA calls every RPC with the anon key

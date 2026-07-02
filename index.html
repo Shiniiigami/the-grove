@@ -562,7 +562,7 @@ const DEFAULT_TIERS = [
 ];
 const TIER_COLORS_V2 = {Initiate:"#7C8A82",Acolyte:"#8AA67E",Disciple:"#6FA3AB",Warden:"#357A4C",Sage:"#C2855E",Luminary:"#BE869F","The Ascended":"#A99BD4"};
 const DEFAULT_DEEDS = [
-  ["The Pilgrimage",100],
+  ["Made the Pilgrimage",100],
   ["Of the First Fire",200],
   ["Kept the Flame",30],
   ["First Light",20],
@@ -599,7 +599,7 @@ function ensureDefaults(){ if(!MEM)return;
   if(MEM.fire && typeof MEM.fire==='object'){ const F=MEM.fire; ['level','streak','lastDecay','lastBlessed','lastBless'].forEach(k=>{ if(!Number.isFinite(F[k])) F[k]=0; }); if(!Number.isFinite(F.goal)||F.goal<1) F.goal=6; if(F.level<0)F.level=0; if(!Array.isArray(F.stokers))F.stokers=[]; }
   if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); if(MEM._tierMig!==1){ if(!MEM.tiers||!MEM.tiers.length)MEM.tiers=structuredClone(DEFAULT_TIERS); MEM._tierMig=1; } if(MEM._tierColorMig!==3){ (MEM.tiers||[]).forEach(t=>{ if(!t.hex && TIER_COLORS_V2[t.name]) t.hex=TIER_COLORS_V2[t.name]; }); MEM._tierColorMig=3; } if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); if(MEM._deedMig!==3){ if(!MEM.deeds||!MEM.deeds.length)MEM.deeds=structuredClone(DEFAULT_DEEDS); MEM._deedMig=3; } if(!MEM.rites)MEM.rites=[]; if(!MEM.challenges)MEM.challenges=[]; if(!MEM.seasonHistory)MEM.seasonHistory=[]; if(!MEM.wagers)MEM.wagers=[]; if(!MEM.itemLocks)MEM.itemLocks={}; normAura(); if(!MEM.badgeColors)MEM.badgeColors={}; if(!MEM.badgeColors["Of the Eye"])MEM.badgeColors["Of the Eye"]="#E0B466"; if(!MEM.badgeColors["Drained the Chalice"])MEM.badgeColors["Drained the Chalice"]="#E0743A"; if(MEM.seasonStart===undefined)MEM.seasonStart=0;
   if(MEM._hatMig!==3){ const _hm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && ['crown','laurel','halo'].includes(c.hat)){ c.hat='none'; _hm.push(m); } }); MEM._hatMig=3; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _hm.length && !localStorage.getItem('grove-crownpurge3')){ _hm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-crownpurge3','1'); } }catch(e){} }
-  if(MEM._fadeMig!==1){ const _fm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && c.hair_style==='fade'){ c.hair_style='short'; _fm.push(m); } }); MEM._fadeMig=1; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _fm.length && !localStorage.getItem('grove-fademig1')){ _fm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-fademig1','1'); } }catch(e){} } if(!MEM.fire)MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[]}; if(!MEM.fire.stokers)MEM.fire.stokers=[]; if(MEM.fire.lastDecay===undefined)MEM.fire.lastDecay=Date.now()/1000; if(MEM.fire.streak===undefined)MEM.fire.streak=0; if(MEM._fireTune!==2){ MEM.fire.goal=6; MEM._fireTune=2; } (MEM.members||[]).forEach(m=>{ if(m.season===undefined) m.season=0; if(m.chalBudget===undefined) m.chalBudget=150; else { const cb=m.chalBudget|0; m.chalBudget = cb>150?150 : (cb<0?0:cb); } if(m.oath===undefined) m.oath=true; if(m.lastStoke===undefined) m.lastStoke=0; if(m.logs===undefined) m.logs=0; if(m.fireLogs===undefined) m.fireLogs=0; if(!(m.points>0)) m.points=Math.max(0,m.points||0); if(!(m.season>0)) m.season=Math.max(0,m.season||0); if(m._preTop!==undefined && !(m.offered&&m.offered>Date.now()/1000)){ const c=m.sprite&&m.sprite.chibi; if(c&&c.top_style==='robes'){ const cc=structuredClone(c); cc.top_style=m._preTop||(cc.sleeves===false?'tank':'tee'); m.sprite={chibi:cc}; } delete m._preTop; if(Array.isArray(m.unlocks)) m.unlocks=m.unlocks.filter(u=>u!=='robes'); } }); }
+  if(MEM._fadeMig!==1){ const _fm=[]; (MEM.members||[]).forEach(m=>{ const c=m.sprite&&m.sprite.chibi; if(c && c.hair_style==='fade'){ c.hair_style='short'; _fm.push(m); } }); MEM._fadeMig=1; try{ if(typeof MODE!=='undefined' && MODE==='remote' && _fm.length && !localStorage.getItem('grove-fademig1')){ _fm.forEach(m=>{ try{ sbRpc('grove_set_chibi',{p_name:m.name,p_chibi:m.sprite.chibi}); }catch(e){} }); localStorage.setItem('grove-fademig1','1'); } }catch(e){} } if(!MEM.fire)MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[]}; if(!MEM.fire.stokers)MEM.fire.stokers=[]; if(MEM.fire.lastDecay===undefined)MEM.fire.lastDecay=Date.now()/1000; if(MEM.fire.streak===undefined)MEM.fire.streak=0; if(MEM._fireTune!==2){ MEM.fire.goal=6; MEM._fireTune=2; } (MEM.members||[]).forEach(m=>{ if(m.season===undefined) m.season=0; if(m.chalBudget===undefined) m.chalBudget=150; else { const cb=m.chalBudget|0; m.chalBudget = cb>150?150 : (cb<0?0:cb); } if(m.oath===undefined) m.oath=true; if(m.lastStoke===undefined) m.lastStoke=0; if(m.logs===undefined) m.logs=0; if(m.fireLogs===undefined) m.fireLogs=0; if(!(m.points>0)) m.points=Math.max(0,m.points||0); if(!Number.isFinite(m.season)) m.season=0; if(m._preTop!==undefined && !(m.offered&&m.offered>Date.now()/1000)){ const c=m.sprite&&m.sprite.chibi; if(c&&c.top_style==='robes'){ const cc=structuredClone(c); cc.top_style=m._preTop||(cc.sleeves===false?'tank':'tee'); m.sprite={chibi:cc}; } delete m._preTop; if(Array.isArray(m.unlocks)) m.unlocks=m.unlocks.filter(u=>u!=='robes'); } }); }
 function tierOf(p){const T=tiers();let t=T[0];for(const x of T)if(p>=x.min)t=x;return t;}
 function tierIndex(p){const T=tiers();let i=0;T.forEach((x,k)=>{if(p>=x.min)i=k;});return i;}
 function rankProgress(p){
@@ -814,13 +814,17 @@ function robeGroveAfterOffering(offerId){
 }
 function detectOfferPassed(){ try{
   if(!APPLIED_OFFER_SNAP){ APPLIED_OFFER_SNAP=appliedOfferIds(); return; }
-  const fresh=(MEM.rites||[]).filter(r=>r&&r.kind==='offer'&&r.applied&&r.id&&!APPLIED_OFFER_SNAP[r.id]);
+  // only celebrate an offering that passed recently — never replay an ancient/expired one
+  const _nowS=Date.now()/1000;
+  const fresh=(MEM.rites||[]).filter(r=>r&&r.kind==='offer'&&r.applied&&r.id&&!APPLIED_OFFER_SNAP[r.id] && (_nowS-(+r.created||0))<OFFER_ROBE_SECS);
   APPLIED_OFFER_SNAP=appliedOfferIds();
   if(fresh.length){ OFFER_CEREMONY_AT=Date.now()/1000; try{ offeringCeremony(fresh[0].target); }catch(e){} try{ applyOfferSky(); }catch(e){} try{ robeGroveAfterOffering(fresh[0].id); }catch(e){} }
 }catch(e){} }
 function detectNewOffers(){ try{
   if(!OFFER_SNAP){ OFFER_SNAP=offerIds(); return; }
-  const fresh=(MEM.rites||[]).filter(r=>r&&r.kind==='offer'&&!r.applied&&r.id&&!OFFER_SNAP[r.id]);
+  // only pop offerings still inside their nomination window — never a long-expired one
+  const _nowS=Date.now()/1000;
+  const fresh=(MEM.rites||[]).filter(r=>r&&r.kind==='offer'&&!r.applied&&r.id&&!OFFER_SNAP[r.id] && (_nowS-(+r.created||0))<OFFER_RITE_TTL);
   OFFER_SNAP=offerIds();
   const me=(typeof VOTER!=='undefined')?VOTER:null;
   fresh.slice(0,3).forEach(r=>{ if(r.nominator && r.nominator===me) return; offerPop(r.target, r.nominator, r.label); });
@@ -1700,7 +1704,7 @@ function renderLedger(){
   }
   document.getElementById("seasonLine").textContent="◈ "+MEM.season+" ◈";
   const bySeason = LEDGER_SORT==="season";
-  const list=[...MEM.members].sort((a,b)=> (bySeason?((b.season||0)-(a.season||0)):0) || (b.points-a.points));
+  const list=[...MEM.members].sort((a,b)=> (bySeason?(seasonView(b)-seasonView(a)):0) || (b.points-a.points));
   rowsEl.innerHTML="";
   if(histSel){ const hw=document.createElement("div"); hw.innerHTML=histSel; rowsEl.appendChild(hw); }
   const tog=document.createElement("div");
@@ -1741,8 +1745,8 @@ function renderLedger(){
     const prog = rp.atMax ? `<div class="nrp-lbl" style="color:var(--candle)">✦ highest order reached</div>`
       : `<div class="nrp"><i style="width:${rp.pct}%"></i></div><div class="nrp-lbl">${rp.toNext} ✦ Devotion Points to ${rp.nextName}</div>`;
     info.innerHTML=`<div class="rn">${m.name}${epi}</div><div class="tt" style="color:${tier.hex}">${tier.name}</div>${prog}`;
-    const big = bySeason ? (m.season||0) : m.points;
-    const small = bySeason ? `${m.points} lifetime` : `${m.season||0} this season`;
+    const big = bySeason ? seasonView(m) : m.points;
+    const small = bySeason ? `${m.points} lifetime` : `${seasonView(m)} this season`;
     const pp=document.createElement("div");
     pp.innerHTML=`<div class="pp" style="color:${tier.hex}">${big}</div><div class="pl">${small}</div>`;
     row.append(no,cv,info,pp);
@@ -1951,11 +1955,8 @@ function devotionDeedRow(m){
   const cnt = d.spins>1 ? ` <span style="opacity:.7">×${roman(d.spins)}</span>` : '';
   const net = d.total||0;
   const val = `<b class="${net<0?'neg':''}">${net>0?'+':''}${net}</b>`;
-  // break out the offering(s) laid and the Eye's verdict(s) so −15 + verdict = net is plain to see
-  const S = (d.staked!==undefined) ? d.staked : 15*d.spins;
-  const V = (d.verdict!==undefined) ? d.verdict : (net + S);
-  const bk = ` <span style="opacity:.55;font-size:11px">(verdict ${V>=0?'+':''}${V} · -${S} offered)</span>`;
-  return `<div class="h"><em>🔮 Test of Devotion${cnt}${bk}</em>${val}</div>`;
+  // the running net (offering + verdict) already tells the whole story — no bracketed breakdown
+  return `<div class="h"><em>🔮 Test of Devotion${cnt}</em>${val}</div>`;
 }
 function deedLedgerHTML(m,keeper){
   const gs=histGroups(m).filter(g=>g.base!=='Rite of the Chalice' && g.base!=='Trial of the Chalice');
@@ -1969,8 +1970,11 @@ function deedLedgerHTML(m,keeper){
   gs.forEach(g=>{
     const label = g.count>1 ? `${g.base} <span style="opacity:.7">×${roman(g.count)}</span>` : g.base;
     const val = `<b class="${g.sum<0?'neg':''}">${g.sum>0?'+':''}${g.sum}</b>`;
-    const x = keeper ? `<button onclick="removeDeed('${m.name.replace(/'/g,"\\'")}',${g.maxi})" title="Undo one — ${esc(g.base)}" style="background:none;border:none;color:var(--ember);font-size:14px;cursor:pointer;margin-left:6px;padding:0 2px">✕</button>` : '';
-    rows.push({sum:g.sum, html:`<div class="h"><em>${label}</em>${val}${x}</div>`});
+    const _nm = m.name.replace(/'/g,"\\'");
+    const x = keeper ? `<button onclick="removeDeed('${_nm}',${g.maxi})" title="Undo one — ${esc(g.base)}" style="background:none;border:none;color:var(--ember);font-size:14px;cursor:pointer;margin-left:6px;padding:0 2px">✕</button>` : '';
+    // when a deed is stacked, also offer a one-tap "strike them all"
+    const xall = (keeper && g.count>1) ? `<button onclick="removeDeedAll('${_nm}',${g.maxi})" title="Undo all ${g.count} — ${esc(g.base)}" style="background:none;border:1px solid rgba(232,168,143,.5);border-radius:6px;color:var(--ember);font-size:9px;font-family:'Silkscreen',monospace;cursor:pointer;margin-left:4px;padding:1px 4px;vertical-align:middle">✕all</button>` : '';
+    rows.push({sum:g.sum, html:`<div class="h"><em>${label}</em>${val}${x}${xall}</div>`});
   });
   rows.sort((a,b)=>b.sum-a.sum);
   const body=rows.map(r=>r.html).join('');
@@ -2047,7 +2051,7 @@ function openSoul(name){
     <div class="meterlbl"><span>member since ${m.since||2026}</span><span>${txt}</span></div>
     <div style="display:flex;justify-content:space-between;margin-top:8px;gap:8px">
       <div style="flex:1;text-align:center;background:rgba(242,196,90,.08);border:1px solid rgba(242,196,90,.25);border-radius:9px;padding:7px">
-        <div style="font-family:'Silkscreen',monospace;font-size:16px;color:var(--candle)">${m.season||0}</div>
+        <div style="font-family:'Silkscreen',monospace;font-size:16px;color:var(--candle)">${seasonView(m)}</div>
         <div style="font-family:'Silkscreen',monospace;font-size:7px;color:var(--candle);opacity:.85;letter-spacing:.03em;margin-top:2px">✦ Devotion Points</div>
         <div style="font-family:'Silkscreen',monospace;font-size:8px;color:var(--sage);letter-spacing:.1em">THIS SEASON</div>
       </div>
@@ -2332,7 +2336,7 @@ window.bulkApply=async function(){ bulkSyncInputs(); const names=Object.keys(BUL
   const undo=[]; const roseUp=[];
   names.forEach(n=>{ const m=memByName(n); if(!m)return; undo.push({name:n,pts:m.points,season:(m.season||0),histLen:(m.history||[]).length,logs:m.logs});
     const _b=tierIndex(m.points);
-    m.points=Math.max(0,m.points+net); m.season=Math.max(0,(m.season||0)+net); m.history=m.history||[]; m.history.push({l:reason,d:net,n:1,t:tnow}); if(net>0 && BULK_LOG) maybeEarnLog(m,net);
+    m.points=Math.max(0,m.points+net); m.season=(m.season||0)+net; m.history=m.history||[]; m.history.push({l:reason,d:net,n:1,t:tnow}); if(net>0 && BULK_LOG) maybeEarnLog(m,net);
     const _a=tierIndex(m.points); if(_a>_b) roseUp.push({name:m.name,rank:tiers()[_a].name,idx:_a}); });
   // advance rank snapshots so a later poll doesn't re-celebrate, and announce any rank-ups
   try{ if(roseUp.length){ const s=loadRankSnap(); roseUp.forEach(r=>{ s[r.name]=r.idx; }); saveRankSnap(s); } }catch(e){}
@@ -2403,7 +2407,7 @@ window.newSeason=async function(){
   if(!confirm("Start a new season? Everyone's season score resets to 0. Lifetime points, ranks and chibis are kept."))return;
   const now=Date.now()/1000;
   MEM.seasonHistory=MEM.seasonHistory||[];
-  MEM.seasonHistory.unshift({ label: MEM.season, ended: now, standings: [...MEM.members].sort((a,b)=>(b.season||0)-(a.season||0)).map(m=>({name:m.name, score:m.season||0, points:m.points})) });
+  MEM.seasonHistory.unshift({ label: MEM.season, ended: now, standings: [...MEM.members].sort((a,b)=>(seasonView(b)-seasonView(a))).map(m=>({name:m.name, score:seasonView(m), points:m.points})) });
   if(MEM.seasonHistory.length>24) MEM.seasonHistory.length=24;
   MEM.members.forEach(m=>{m.season=0; m.chalBudget=150;});
   MEM.challenges=[]; MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[]};
@@ -2544,7 +2548,7 @@ function buildSummary(){
   L.push("");
   [...MEM.members].sort((a,b)=>b.points-a.points).forEach((m,i)=>{
     L.push(`${i+1}. ${m.name}${m.epithet?" — "+m.epithet:""}`);
-    L.push(`   Season ${m.season||0} · Lifetime ${m.points} · ${tierOf(m.points).name}`);
+    L.push(`   Season ${seasonView(m)} · Lifetime ${m.points} · ${tierOf(m.points).name}`);
     if((m.badges||[]).length) L.push("   Badges: "+m.badges.join(", "));
   });
   L.push(""); L.push("(Full restorable backup is the downloaded .json file.)");
@@ -2628,7 +2632,7 @@ window.awardPoints=async function(){
   if(netPts>0){ if(KBUFF){ const wm=consumeMult(m); if(wm>1){ netPts=netPts*wm; reason+=` (×${wm} wheel)`; } } if(KLOG)maybeEarnLog(m,netPts); }
   else if(netPts<0 && m.lossMult>1){ const lm=m.lossMult; delete m.lossMult; netPts=netPts*lm; reason+=` (×${lm} curse)`; }
   m.points=Math.max(0,m.points+netPts);
-  m.season=Math.max(0,(m.season||0)+netPts);
+  m.season=(m.season||0)+netPts;
   // the wheel/curse multiplier is folded into the points + noted in the label; the Keeper's
   // manual multiplier (the ledger's × field) is the deed's tally, so it shows as ×roman on the soul card
   m.history=m.history||[];m.history.push({l:reason,d:netPts,n:Math.max(1,mult),t:Date.now()/1000});
@@ -2659,9 +2663,27 @@ window.removeDeed=async function(name,i){
   m.points=Math.max(0,(m.points||0)-(h.d||0));
   // only unwind the SEASON score if this deed was earned in the current season — a deed from a
   // past season no longer contributes to m.season (newSeason reset it), so don't subtract it twice.
-  if((h.t||0) >= (MEM.seasonStart||0)) m.season=Math.max(0,(m.season||0)-(h.d||0));
+  if((h.t||0) >= (MEM.seasonStart||0)) m.season=(m.season||0)-(h.d||0);
   m.history.splice(i,1);
   await saveData(); layoutGrove(); renderLedger(); openSoul(name); toast(`Struck "${h.l}" from ${name}'s ledger.`);
+};
+// strike EVERY instance of a deed stack at once (bulk). `i` anchors any entry of the stack;
+// we match all history rows that share its base label (the same grouping the ledger stacks by).
+window.removeDeedAll=async function(name,i){
+  if(!keeperUnlocked){ toast("Only the Keeper may strike a deed."); return; }
+  const m=MEM.members.find(x=>x.name===name); if(!m||!m.history||!m.history[i]) return;
+  const base=deedBase(m.history[i].l)||String(m.history[i].l||'');
+  const key=base.toLowerCase().replace(/\s+/g,' ').trim();
+  const idxs=[]; let ptsTot=0, seaTot=0, tally=0;
+  m.history.forEach((h,j)=>{ const b=(deedBase(h.l)||String(h.l||'')).toLowerCase().replace(/\s+/g,' ').trim();
+    if(b===key){ idxs.push(j); ptsTot+=(h.d||0); tally+=deedTally(h); if((h.t||0)>=(MEM.seasonStart||0)) seaTot+=(h.d||0); } });
+  if(!idxs.length) return;
+  if(!confirm(`Strike ALL ${tally}× "${base}" from ${name}'s ledger?\n\nTheir Devotion will be adjusted by ${ptsTot>=0?'−':'+'}${Math.abs(ptsTot)}.`)) return;
+  m.points=Math.max(0,(m.points||0)-ptsTot);
+  // unwind only the current-season share (a past-season deed no longer contributes to m.season)
+  if(seaTot) m.season=(m.season||0)-seaTot;
+  idxs.sort((a,b)=>b-a).forEach(j=>m.history.splice(j,1));   // splice high→low so indices stay valid
+  await saveData(); layoutGrove(); renderLedger(); openSoul(name); toast(`Struck all ${tally}× "${base}" from ${name}.`);
 };
 window.addMemberForm=function(){
   sheet.innerHTML=`
@@ -2973,7 +2995,7 @@ window.ledgerSave=async function(){ syncLedger(); const m=MEM.members.find(x=>x.
   const clean=LEDGER_EDIT.filter(h=>String(h.l).trim());
   const newSum=clean.reduce((s,h)=>s+(h.d||0),0);
   const delta=newSum-LEDGER_OLDSUM;
-  m.points=Math.max(0,(m.points||0)+delta); m.season=Math.max(0,(m.season||0)+delta);
+  m.points=Math.max(0,(m.points||0)+delta); m.season=(m.season||0)+delta;
   const tnow=Date.now()/1000;
   m.history=clean.map(h=>({l:String(h.l).trim(), d:h.d||0, n:Math.max(1,h.n||1), t:(h.t||tnow)}));
   await saveData(); layoutGrove(); renderLedger(); toast(`${m.name}'s ledger updated.`); deedsForm();
@@ -3612,7 +3634,7 @@ window.setCardTheme=function(t){ try{ if(CARD_THEMES[t]) localStorage.setItem('g
 window.shareStandings=async function(){
   try{
     const bySeason = LEDGER_SORT==="season";
-    const list=[...MEM.members].sort((a,b)=> (bySeason?((b.season||0)-(a.season||0)):0) || (b.points-a.points)).slice(0,24);
+    const list=[...MEM.members].sort((a,b)=> (bySeason?(seasonView(b)-seasonView(a)):0) || (b.points-a.points)).slice(0,24);
     // The shared image lays out in TWO columns past ~7 spirits so it stays a readable
     // shape instead of a tall thin ribbon (the on-screen ledger is unchanged — still one scroll).
     const cols = list.length>7 ? 2 : 1;
@@ -3639,7 +3661,7 @@ window.shareStandings=async function(){
       const col=Math.floor(i/rowsPerCol), rowInCol=i%rowsPerCol;
       const colX=margin + col*(colW+gap);
       const y=padTop+rowInCol*rowH; const tier=tierOf(m.points);
-      const big=bySeason?(m.season||0):m.points;
+      const big=bySeason?seasonView(m):m.points;
       x.fillStyle = i%2? "rgba(22,34,27,.5)":"rgba(22,34,27,.25)"; x.fillRect(colX,y-26,colW,rowH-10);
       x.textAlign="left"; x.fillStyle="#9DB0A4"; x.font="700 22px Silkscreen, monospace";
       x.fillText(String(i+1).padStart(2,"0"), colX+16, y+6);
@@ -3738,7 +3760,7 @@ window.shareSpirit=async function(name){
     y+=20; const bw=(W-M*2-14)/2, bh=56;
     x.fillStyle="rgba(242,196,90,.08)"; rr(x,M,y,bw,bh,8); x.fill(); x.strokeStyle="rgba(242,196,90,.25)"; x.lineWidth=1; rr(x,M,y,bw,bh,8); x.stroke();
     x.fillStyle="rgba(143,168,155,.08)"; rr(x,M+bw+14,y,bw,bh,8); x.fill(); x.strokeStyle="rgba(143,168,155,.25)"; rr(x,M+bw+14,y,bw,bh,8); x.stroke();
-    x.font="700 12px Silkscreen, monospace"; x.fillStyle="#F2C45A"; x.fillText(String(m.season||0), M+bw/2, y+23);
+    x.font="700 12px Silkscreen, monospace"; x.fillStyle="#F2C45A"; x.fillText(String(seasonView(m)), M+bw/2, y+23);
     x.fillStyle="#ECE3CC"; x.fillText(String(m.points), M+bw+14+bw/2, y+23);
     x.font="8px Silkscreen, monospace"; x.fillStyle="#8FA89B"; x.fillText("✦ THIS SEASON", M+bw/2, y+43); x.fillText("✦ LIFETIME", M+bw+14+bw/2, y+43);
     y+=bh;
@@ -3981,7 +4003,7 @@ function nominatorDeedReward(pts){ const p=Math.abs(pts||0); if(p<=20)return 5; 
 function rewardNominator(r,amt,label){
   if(!r||!amt||!r.nominator||r.nominator===r.target) return;
   const nm=memByName(r.nominator); if(!nm) return;
-  nm.points=Math.max(0,(nm.points||0)+amt); nm.season=Math.max(0,(nm.season||0)+amt);
+  nm.points=Math.max(0,(nm.points||0)+amt); nm.season=(nm.season||0)+amt;
   nm.history=nm.history||[]; nm.history.push({l:label,d:amt,t:Date.now()/1000});
 }
 function applyRiteEffect(r){
@@ -3997,7 +4019,7 @@ function applyRiteEffect(r){
   else if(r.kind==="badge"){ m.badges=m.badges||[]; if(!m.badges.includes(_lbl)) m.badges.push(_lbl); if(r.color){ MEM.badgeColors=MEM.badgeColors||{}; if(!MEM.badgeColors[_lbl]) MEM.badgeColors[_lbl]=r.color; } rewardNominator(r,20,"Named a badge"); }
   else if(r.kind==="deed"){
     m.points=Math.max(0,(m.points||0)+r.points);
-    m.season=Math.max(0,(m.season||0)+r.points);
+    m.season=(m.season||0)+r.points;
     m.history=m.history||[]; m.history.push({l:_lbl,d:r.points,t:Date.now()/1000});
     // reward the nominator only for recognising a GAIN — not for getting a spirit penalised
     rewardNominator(r,(r.points>0?nominatorDeedReward(r.points):0),"Named a deed");
@@ -4005,7 +4027,9 @@ function applyRiteEffect(r){
   else if(r.kind==="offer"){
     const wasOffered=m.offered && m.offered>Date.now()/1000;
     m.unlocks=m.unlocks||[]; if(!m.unlocks.includes('robes')) m.unlocks.push('robes');
-    const c=cloneChibi(m); c.top_style='robes'; m.sprite={chibi:c};
+    // stash the pre-robe top so ensureDefaults can restore it when the 3h robe window lapses
+    // (the Keeper offer path already does this; without it a community-offered robe never reverts)
+    const c=cloneChibi(m); if(!wasOffered) m._preTop=c.top_style; c.top_style='robes'; m.sprite={chibi:c};
     m.offered=Date.now()/1000 + OFFER_ROBE_SECS;
     m.badges=m.badges||[]; if(!m.badges.includes("Of the Eye")) m.badges.push("Of the Eye");
     if(!wasOffered){ m.points=(m.points||0)+150; m.season=(m.season||0)+150; m.history=m.history||[]; m.history.push({l:"Offered to the Eye",d:150,t:Date.now()/1000}); rewardNominator(r,50,"Named the offering"); }
@@ -4034,7 +4058,7 @@ function grantRiteOfPassage(m){
   if((m.history||[]).some(h=>h && /^\s*rite of passage\b/i.test(String(h.l||'')))){ m.rop=true; return false; }
   m.rop=true;
   m.points=Math.max(0,(m.points||0)+100);
-  m.season=Math.max(0,(m.season||0)+100);
+  m.season=(m.season||0)+100;
   m.history=m.history||[]; m.history.push({l:"Rite of Passage",d:100,n:1,t:Date.now()/1000});
   return true;
 }
@@ -4367,9 +4391,9 @@ function renderRules(){
     <p class="rtext">Your Devotion raises your rank — and it can <b>slip back</b> if your Devotion falls, so wagers and the Eye's Test carry real stakes. Devotion never goes below zero.</p>
     <div class="ladder">${ladder}</div>
     <div class="ritehdr">Devotion</div>
-    <p class="rtext"><b>Lifetime</b> Devotion drives your rank; <b>season</b> Devotion tracks the current trip. These days they move together — deeds, challenges, wagers, the fire and the Eye's Test all shift both at once, up or down, floored at zero. The Keeper can start a fresh season to reset the race without touching ranks.</p>
+    <p class="rtext"><b>Lifetime</b> Devotion drives your rank; <b>season</b> Devotion tracks the current trip. These days they move together — deeds, challenges, wagers, the fire and the Eye's Test all shift both at once, up or down. The Keeper can start a fresh season to reset the race without touching ranks.</p>
     <div class="ritehdr">Deeds</div>
-    <p class="rtext">Devotion is awarded for deeds at the fire. The Keeper can multiply them (×II, ×III…) — e.g. "Night swim ×III". ${deedCount} deeds sit on the ledger; the Keeper tends the list. The great milestones — <b>The Pilgrimage</b> and <b>Of the First Fire</b> — are the <b>Keeper’s alone</b> to bestow, while the <b>Rite of Passage</b> (+100) comes automatically the moment a spirit is initiated.</p>
+    <p class="rtext">Devotion is awarded for deeds at the fire. The Keeper can multiply them (×II, ×III…) — e.g. "Night swim ×III". ${deedCount} deeds sit on the ledger. The great milestones — <b>Made the Pilgrimage</b> and <b>Of the First Fire</b> — are the <b>Keeper’s alone</b> to bestow, while the <b>Rite of Passage</b> (+100) comes automatically the moment a spirit is initiated.</p>
     <div class="ritehdr">Stoke the Fire</div>
     <p class="rtext">The Order feeds one shared fire. You <b>earn logs by doing</b> — every deed and finished challenge rolls for a log, and the bigger the reward the better the odds (a ~100-Devotion reward is all but certain). Add a log every <b>3 hours</b>; the flame <b>loses one every 2 hours</b> if neglected. When <b>6 logs</b> burn together, everyone who fed it is blessed — starting at <b>+50</b> and climbing <b>+25</b> with each blessing up to <b>+200</b> (no daily limit), resetting to +50 if a full day passes with no fire. Whoever lands the final log earns a <b>+20</b> spark, and the season's top tender wears <b>Keeper of the Flame</b>.</p>
     <div class="ritehdr">Challenges</div>
@@ -4379,7 +4403,7 @@ function renderRules(){
     <div class="ritehdr">The Reckoning · Group Wagers</div>
     <p class="rtext">Rally two sides — up to <b>6</b> a side, even lopsided (6 v 1). Everyone stakes the same; the starter <b>locks</b> the wager and the winning side <b>splits the whole pot</b>, so fewer winners each take a bigger share. All spirits must agree who won; if they can’t, the grove votes to settle it.</p>
     <div class="ritehdr">Test of Devotion</div>
-    <p class="rtext"><b>15 ✦</b> laid before the <b>Devotion Weirwood</b>, once every 2 hours. The Eye's verdict runs from a <b>+250</b> radiance down to <b>−100</b> wrath, with returned offerings and <b>×2 / ×3</b> blessings that boost your next <b>Keeper-awarded deed or challenge</b> (not a community vote or wager), plus a <b>×2 curse</b> on your next penalty. Roughly 56% of verdicts favor you, and the Eye can never drop you below zero. Every spin rides one running <b>Test of Devotion</b> line in your ledger — the 15 stake and the verdict both fold into it, so the line always matches the Devotion the Eye actually moved.</p>
+    <p class="rtext"><b>15 ✦</b> laid before the <b>Devotion Weirwood</b>, once every 2 hours. The Eye's verdict runs from a <b>+250</b> radiance down to <b>−100</b> wrath, with returned offerings and <b>×2 / ×3</b> blessings that boost your next <b>Keeper-awarded deed or challenge</b> (not a community vote or wager), plus a <b>×2 curse</b> on your next penalty. Roughly 56% of verdicts favor you. Every spin rides one running <b>Test of Devotion</b> line in your ledger — the 15 stake and the verdict both fold into it, so the line always matches the Devotion the Eye actually moved.</p>
     <div class="ritehdr">Trial of the Chalice</div>
     <p class="rtext">A 52-card King’s Cup for the circle — <b>4–20 spirits</b>, and one phone may hold several. The <b>host</b> opens the lobby and begins the trial; if they don’t, the right to begin passes down the join order so the circle never stalls. Each spirit’s <b>rank shows beneath their name</b>. On your turn you draw a card and the circle acts it out aloud — sending others to drink, binding a partner, decreeing a <b>law</b> (no two laws alike), or pouring into the Chalice. Devotion rides a <b>hidden tally</b> all game and commits as a single “Trial of the Chalice” line when it ends.</p>
     <p class="rtext">The <b>fourth King</b> is the reckoning — the <b>Eye itself opens</b> over the circle: that drawer either <b>drinks the Chalice</b> (gaining Devotion and the <i>Drained the Chalice</i> badge) or <b>braves a ritual</b> the circle sets aloud — 3 minutes, half must approve. Succeed for the badge and a communal cup (up to four sip, +10 each); fail or refuse and lose <b>40</b>. Break a law and a spirit can <b>report you by tapping your name</b> — reports lapse after 30 seconds, and if enough agree you’re judged (−5); you may even own up and vote on your own report. Spirits may step away (the host passes on), be <b>cast out by tapping a name</b> and a half-vote (the named may vote too), or rejoin — and a lobby that never begins dissolves after <b>3 minutes</b>.</p>
@@ -4400,10 +4424,13 @@ function renderRules(){
     <p class="rtext">A new spirit is an <b>unsworn initiate</b> until they take the oath — gather <b>three witnesses</b> to attest it from your Rites. The unsworn are locked out of every <b>Trial</b> (the Chalice included) and can't <b>reshape their spirit</b> until sworn. The moment a spirit is initiated they earn a one-time <b>+100 Rite of Passage</b>.</p>
     <div class="ritehdr">Your Spirit</div>
     <p class="rtext">Tap any spirit → <b>Edit this spirit</b> to shape your form (once sworn). New gear — held items and the Offering Robe — unlocks as you rise in rank.</p>
+    ${keeperUnlocked ? `
+    <div class="ritehdr">Keeper’s Tools</div>
+    <p class="rtext">You hold the 🔥. Award or deduct Devotion, grant titles &amp; badges, tend the deed list, and run seasons. In a spirit’s <b>ledger</b>, tap <b>✕</b> beside a deed to strike one, or <b>✕all</b> to strike a whole stack — the Devotion is unwound automatically. <b>Reconcile ledgers</b> books any unrecorded trials so points match the listed deeds, and you can back up or roll the grove back.</p>` : `
     <div class="ritehdr">The Keeper</div>
-    <p class="rtext">The Keeper (🔥, passphrase-held) awards points and titles, grants badges, tends deeds, ranks and seasons, and can back up or roll back the grove.</p>
+    <p class="rtext">A Keeper (🔥, passphrase-held) tends the grove — awarding Devotion, titles and badges, and running the seasons.</p>`}
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bt · The wheel keeps showing the Eye's plain verdict (−25), and the soul card's Test of Devotion line now spells out the discrepancy — "(verdict −25 · −15 offered) −40" — so the offering and the verdict both add up on your ledger.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30bz · Tidied the Rules: Keeper tools (including the ledger ✕ / ✕all deed strikes) now show only when the Keeper is unlocked, and the “never below zero” rule is stated once instead of three times.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4426,6 +4453,9 @@ function lockedStake(name){ let s=0;
 function moodSnapshot(){ const s={}; (MEM.members||[]).forEach(m=>{ s[m.name]={p:(m.points||0)+lockedStake(m.name),h:(m.history||[]).length}; }); return s; }
 function initMoodSnap(){ MOOD_SNAP=moodSnapshot(); }
 function detectReactions(){
+  // while the Eye's wheel ceremony is on screen, hold spirit reactions (the rain/spark
+  // card) — leave the snapshot untouched so the card fires on the refresh AFTER the verdict
+  if(typeof WHEEL_BUSY!=='undefined' && WHEEL_BUSY) return;
   if(!MOOD_SNAP){ MOOD_SNAP=moodSnapshot(); return; }
   const ev=[];
   (MEM.members||[]).forEach(m=>{ const o=MOOD_SNAP[m.name]; if(!o) return; const dp=((m.points||0)+lockedStake(m.name))-o.p; if(dp!==0){ let lbl=(dp>0?'+':'')+dp+' \u2726'; const hist=m.history||[]; if(hist.length>o.h){ const last=hist[hist.length-1]; if(last&&last.l) lbl=last.l+' '+(dp>0?'+':'')+dp; } ev.push({name:m.name,dp,lbl}); } });
@@ -4440,6 +4470,7 @@ function logSnapshot(){ const s={}; (MEM.members||[]).forEach(m=>{ s[m.name]=(m.
 function initLogSnap(){ LOG_SNAP=logSnapshot(); }
 let FIRE_BLESS_SNAP=0;
 function detectLogGains(){
+  if(typeof WHEEL_BUSY!=='undefined' && WHEEL_BUSY) return;   // defer log-gain pops past the wheel ceremony too
   if(!LOG_SNAP){ LOG_SNAP=logSnapshot(); FIRE_BLESS_SNAP=(MEM.fire&&MEM.fire.lastBlessed)||0; return; }
   // the last log just caught and the grove was blessed — roar the fire (for the stoker and observers alike)
   try{ const lb=(MEM.fire&&MEM.fire.lastBlessed)||0; if(lb>FIRE_BLESS_SNAP){ FIRE_BLESS_SNAP=lb; if(Date.now()/1000-lb<30 && typeof Snd!=='undefined' && Snd.fireRoar) Snd.fireRoar(); } }catch(e){}
@@ -4534,7 +4565,10 @@ function spiritReact(name,type,label,done){
 }
 
 function memByName(n){ return (MEM.members||[]).find(x=>x.name===n); }
-function adjPts(m,d){ if(!m)return; m.points=Math.max(0,(m.points||0)+d); m.season=Math.max(0,(m.season||0)+d); }
+// season carries its TRUE net internally (may dip below 0 while a stake is escrowed) so a
+// stake->refund / stake->loss round-trip conserves it and can't be farmed; display clamps to 0.
+function seasonView(m){ return Math.max(0, (m&&m.season)||0); }
+function adjPts(m,d){ if(!m)return; m.points=Math.max(0,(m.points||0)+d); m.season=(m.season||0)+d; }
 function consumeMult(m){ const x=(m&&m.winMult)||1; if(m&&m.winMult) delete m.winMult; return x; }
 function maybeEarnLog(m,gained){ if(!m||gained<=0)return false; if(Math.random()<Math.min(1,gained/100)){ m.logs=(m.logs||0)+1; return true; } return false; }
 function sweepFire(now){ const f=MEM.fire; if(!f)return false; if(f.lastDecay===undefined)f.lastDecay=now; const dec=Math.floor((now-f.lastDecay)/(2*3600)); if(dec>0){ f.level=Math.max(0,(f.level||0)-dec); f.lastDecay=f.lastDecay+dec*2*3600; if((f.level||0)===0)f.stokers=[]; return true; } return false; }
@@ -4621,6 +4655,10 @@ function applyAction(a){
 }
 async function communityAction(a){
   let okR=false;
+  // stamp a stable idempotency key BEFORE the first send, so an ambiguous failure
+  // (action applied, response lost) that gets optimistically re-queued replays under
+  // the SAME id — grove_action dedups it server-side instead of double-applying.
+  if(a && !a.opId){ try{ a.opId='op-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,9); }catch(_){} }
   if(MODE==="remote"){
     let online=true; try{ online=navigator.onLine; }catch(_){}
     if(online){
@@ -5262,14 +5300,20 @@ window.spinTheWheel=async function(){
     if(typeof MODE!=='undefined' && MODE==='remote'){
       o=await sbRpc('grove_wheel',{p_name:VOTER});               // authoritative spin + apply
       if(o && o.denied){
-        if(o.reason==='cooldown'){} else if(o.reason==='funds'){ toast('You need 15 ✦ to be tested.'); }
+        if(o.reason==='cooldown'){ toast('The Eye has already weighed you — rest before the next test.'); } else if(o.reason==='funds'){ toast('You need 15 ✦ to be tested.'); }
         o=null;
-      } else { try{ await refreshRemote(); }catch(e){} }
+      }
     } else {
       o=spinWheel(); applyAction({t:'wheel_spin',name:VOTER,outcome:o}); if(typeof saveData==='function') await saveData();
     }
   }catch(e){ try{ if(typeof isNetErr==='function'&&isNetErr(e)){ toast('The Eye needs a connection to weigh you.'); } else { toast('The Eye did not answer — run the wheel update in Supabase.'); } }catch(_){}; o=null; }
-  if(o){ try{ await devotionVerdict(o); }catch(e){} }
+  if(o){
+    const cer=devotionVerdict(o);                                // the ceremony covers the screen first
+    // pull the new state *behind* the overlay so the soul card only reveals the
+    // win/loss when the animation lifts — never a beat before it
+    if(typeof MODE!=='undefined' && MODE==='remote'){ try{ await refreshRemote(); }catch(e){} }
+    try{ await cer; }catch(e){}
+  }
   WHEEL_BUSY=false;
   try{ trialsRefresh(); }catch(e){}
 };
@@ -5279,7 +5323,7 @@ function wagerOpenCard(w){
   const btn = mine ? `<button class="rapprove" onclick="cancelWager('${w.id}')">Withdraw</button>`
     : (canTake ? `<button class="rapprove" onclick="takeWager('${w.id}')">Take · stake ${w.amount}</button>`
                : `<button class="rapprove" disabled>Stake ${w.amount}</button>`);
-  return `<div class="ritecard"><div class="rbody"><div class="rdesc"><b>${w.proposer}</b> wagers &nbsp;<span style="color:var(--candle)">${w.amount} ✦</span> — ${w.title}</div><div class="rmeta">open · winner takes ${2*w.amount} ✦</div></div>${btn}</div>`;
+  return `<div class="ritecard"><div class="rbody"><div class="rdesc"><b>${w.proposer}</b> wagers &nbsp;<span style="color:var(--candle)">${w.amount} ✦</span> — ${esc(w.title)}</div><div class="rmeta">open · winner takes ${2*w.amount} ✦</div></div>${btn}</div>`;
 }
 function wagerMatchedCard(w){
   const now=Date.now()/1000;
@@ -5310,12 +5354,12 @@ function wagerMatchedCard(w){
     rows = `<div style="text-align:center;font-size:11px;color:#E8A88F;margin-top:8px">⚖ Disputed — 5 votes settle it, or in <b>${lbl}</b> both forfeit the pot</div>${voteRow}${rows}`;
   }
   const keeperExtra = keeperUnlocked? `<div style="margin-top:8px;text-align:center;font-size:11px">Keeper · <a onclick="resolveWager('${w.id}','${w.proposer.replace(/'/g,"\\'")}')" style="cursor:pointer;color:var(--sage)">${w.proposer} won</a> · <a onclick="resolveWager('${w.id}','${w.taker.replace(/'/g,"\\'")}')" style="cursor:pointer;color:var(--sage)">${w.taker} won</a> · <a onclick="voidWager('${w.id}')" style="cursor:pointer;color:#E8A88F">void</a></div>`:"";
-  return `<div class="ritecard" style="flex-direction:column;align-items:stretch"><div class="rbody"><div class="rdesc"><b>${w.proposer}</b> vs <b>${w.taker}</b> &nbsp;<span style="color:var(--candle)">${w.amount} ✦</span> each — ${w.title}</div><div class="rmeta">${disputed?'disputed':'matched'} · pot ${2*w.amount} ✦</div></div>${rows}${keeperExtra}</div>`;
+  return `<div class="ritecard" style="flex-direction:column;align-items:stretch"><div class="rbody"><div class="rdesc"><b>${w.proposer}</b> vs <b>${w.taker}</b> &nbsp;<span style="color:var(--candle)">${w.amount} ✦</span> each — ${esc(w.title)}</div><div class="rmeta">${disputed?'disputed':'matched'} · pot ${2*w.amount} ✦</div></div>${rows}${keeperExtra}</div>`;
 }
 function wagerSettledCard(w){
-  if(w.status==='forfeit') return `<div class="ritecard" style="opacity:.6"><div class="rbody"><div class="rdesc"><b>Forfeit</b> — pot lost &nbsp;<span style="color:#E8A88F">${w.amount} ✦ each gone</span> — ${w.title}</div><div class="rmeta">${w.proposer} vs ${w.taker} · no verdict</div></div></div>`;
-  if(w.winner==='tie') return `<div class="ritecard" style="opacity:.6"><div class="rbody"><div class="rdesc"><b>Tie</b> — stakes returned &nbsp;<span style="color:var(--sage)">${w.amount} ✦ each</span> — ${w.title}</div><div class="rmeta">${w.proposer} vs ${w.taker}</div></div></div>`;
-  return `<div class="ritecard" style="opacity:.6"><div class="rbody"><div class="rdesc"><b>${w.winner}</b> won &nbsp;<span style="color:var(--candle)">${2*w.amount} ✦</span> — ${w.title}</div><div class="rmeta">settled · ${w.proposer} vs ${w.taker}</div></div></div>`;
+  if(w.status==='forfeit') return `<div class="ritecard" style="opacity:.6"><div class="rbody"><div class="rdesc"><b>Forfeit</b> — pot lost &nbsp;<span style="color:#E8A88F">${w.amount} ✦ each gone</span> — ${esc(w.title)}</div><div class="rmeta">${w.proposer} vs ${w.taker} · no verdict</div></div></div>`;
+  if(w.winner==='tie') return `<div class="ritecard" style="opacity:.6"><div class="rbody"><div class="rdesc"><b>Tie</b> — stakes returned &nbsp;<span style="color:var(--sage)">${w.amount} ✦ each</span> — ${esc(w.title)}</div><div class="rmeta">${w.proposer} vs ${w.taker}</div></div></div>`;
+  return `<div class="ritecard" style="opacity:.6"><div class="rbody"><div class="rdesc"><b>${w.winner}</b> won &nbsp;<span style="color:var(--candle)">${2*w.amount} ✦</span> — ${esc(w.title)}</div><div class="rmeta">settled · ${w.proposer} vs ${w.taker}</div></div></div>`;
 }
 window.newWagerForm=function(){
   if(!VOTER){ toast("Choose your spirit first."); return; }
@@ -5483,7 +5527,7 @@ function challengeCard(c,now){
   const subDdl = c.deadline ? `must finish — 1h window` : leftLbl;
   const sub = c.status==='open'? `by ${c.owner} · ${leftLbl}` : `by ${c.owner} · taken by ${c.accepter} · ${subDdl}`;
   return `<div class="ritecard">
-    <div class="rbody"><div class="rdesc"><b>${c.title}</b> &nbsp;<span style="color:var(--candle)">${c.reward} ✦</span></div>
+    <div class="rbody"><div class="rdesc"><b>${esc(c.title)}</b> &nbsp;<span style="color:var(--candle)">${c.reward} ✦</span></div>
       <div class="rmeta">${sub}</div></div>
     ${foot}</div>`;
 }
@@ -5491,6 +5535,8 @@ function localStokeGet(name){ try{ return +(localStorage.getItem('grove-laststok
 function localStokeSet(name){ try{ localStorage.setItem('grove-laststoke-'+name, String(Date.now()/1000)); }catch(e){} }
 window.stokeFire=async function(){ if(!VOTER){ toast("Pick your name first."); return; }
   const _me=memByName(VOTER), _now=Date.now()/1000;
+  // a log is spent to stoke — guard here too so a stale/racey tap can't toast false success and eat the 3h cooldown
+  if(!_me || (_me.logs||0)<1){ toast("You need a log to feed the fire — win one from the Eye first."); trialsRefresh(); return; }
   const _ls=_me?Math.max(_me.lastStoke||0, localStokeGet(VOTER)):0;
   if(_me && _now-_ls < 3*3600){ const left=3*3600-(_now-_ls); toast(`Rest — add another in ${Math.floor(left/3600)}h ${Math.floor((left%3600)/60)}m.`); trialsRefresh(); return; }
   const before=(MEM.fire&&MEM.fire.level)||0; const ok=await communityAction({t:'stoke',name:VOTER}); if(!ok)return; localStokeSet(VOTER); trialsRefresh(); const f=MEM.fire||{}; if(f.lastBlessed && Date.now()/1000-f.lastBlessed<6){ Snd.sfx('gong'); toast(`The fire roars — blessed +${f.lastBless||50} each${f.lastSpark===VOTER?', and +20 spark for your final log!':'!'}`); } else { Snd.sfx('whoosh'); toast("You feed the fire."); } };
@@ -6609,7 +6655,7 @@ const _origApply = window.applyAction;
 window.applyAction = function(a){
   if(a && a.t==='chalice'){
     MEM.chalice = a.state || null;
-    if(a.commit && a.commit.length){ a.commit.forEach(c=>{ const m=(typeof memByName==='function')?memByName(c.name):null; if(!m) return; m.points=Math.max(0,(m.points||0)+(c.delta||0)); m.season=Math.max(0,(m.season||0)+(c.delta||0)); m.chalice=m.chalice||{total:0,games:0,drained:0}; m.chalice.total+=(c.delta||0); m.chalice.games+=(c.games||1); if(c.drained){ m.chalice.drained=(m.chalice.drained||0)+1; m.badges=m.badges||[]; if(m.badges.indexOf(CHAL_BADGE)<0) m.badges.push(CHAL_BADGE); } if(c.delta){ m.history=m.history||[]; m.history.push({t:nowS(), d:c.delta, l:'Trial of the Chalice'}); } }); }
+    if(a.commit && a.commit.length){ a.commit.forEach(c=>{ const m=(typeof memByName==='function')?memByName(c.name):null; if(!m) return; m.points=Math.max(0,(m.points||0)+(c.delta||0)); m.season=(m.season||0)+(c.delta||0); m.chalice=m.chalice||{total:0,games:0,drained:0}; m.chalice.total+=(c.delta||0); m.chalice.games+=(c.games||1); if(c.drained){ m.chalice.drained=(m.chalice.drained||0)+1; m.badges=m.badges||[]; if(m.badges.indexOf(CHAL_BADGE)<0) m.badges.push(CHAL_BADGE); } if(c.delta){ m.history=m.history||[]; m.history.push({t:nowS(), d:c.delta, l:'Trial of the Chalice'}); } }); }
     return;
   }
   return _origApply ? _origApply.apply(this, arguments) : undefined;

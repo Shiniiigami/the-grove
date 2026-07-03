@@ -1955,25 +1955,28 @@ function histGroups(m){
   });
   return [...map.values()].sort((a,b)=>b.maxi-a.maxi);
 }
-function chaliceDeedRow(m){
+// the wheel & Chalice totals are aggregates (m.devotion / m.chalice), not history deeds,
+// so the deed editor can't reach them — give the Keeper a ✎ on the row itself to edit the total.
+function aggEditBtn(m,which,keeper){ if(!keeper) return ''; const _nm=String(m.name||'').replace(/'/g,"\\'"); return `<button onclick="keeperEditAggregate('${_nm}','${which}')" title="Edit this total" style="background:none;border:none;color:var(--candle);font-size:13px;cursor:pointer;margin-left:6px;padding:0 2px">✎</button>`; }
+function chaliceDeedRow(m,keeper){
   const ch=m.chalice; if(!ch||!ch.games) return '';
   const cnt = ch.games>1 ? ` <span style="opacity:.7">×${roman(ch.games)}</span>` : '';
   const dr = ch.drained ? ` <span style="opacity:.55;font-size:11px">(drained ${ch.drained>1?ch.drained+'×':'it'})</span>` : '';
   const val = `<b class="${ch.total<0?'neg':''}">${ch.total>0?'+':''}${ch.total}</b>`;
-  return `<div class="h"><em>🍷 Trial of the Chalice${cnt}${dr}</em>${val}</div>`;
+  return `<div class="h"><em>🍷 Trial of the Chalice${cnt}${dr}</em>${val}${aggEditBtn(m,'chalice',keeper)}</div>`;
 }
-function devotionDeedRow(m){
+function devotionDeedRow(m,keeper){
   const d=m.devotion; if(!d||!d.spins) return '';
   const cnt = d.spins>1 ? ` <span style="opacity:.7">×${roman(d.spins)}</span>` : '';
   const net = d.total||0;
   const val = `<b class="${net<0?'neg':''}">${net>0?'+':''}${net}</b>`;
   // the running net (offering + verdict) already tells the whole story — no bracketed breakdown
-  return `<div class="h"><em>🔮 Test of Devotion${cnt}</em>${val}</div>`;
+  return `<div class="h"><em>🔮 Test of Devotion${cnt}</em>${val}${aggEditBtn(m,'devotion',keeper)}</div>`;
 }
 function deedLedgerHTML(m,keeper){
   const gs=histGroups(m).filter(g=>g.base!=='Rite of the Chalice' && g.base!=='Trial of the Chalice');
-  const chal=chaliceDeedRow(m);
-  const dev=devotionDeedRow(m);
+  const chal=chaliceDeedRow(m,keeper);
+  const dev=devotionDeedRow(m,keeper);
   if(!gs.length && !chal && !dev) return `<div class="h"><em>The Eye has yet to record their deeds.</em></div>`;
   // greatest Devotion first, least last
   const rows=[];
@@ -3137,6 +3140,41 @@ window.saveKeeperDevotion=async function(name){
   m.season=Math.max(0,s);
   try{ const rs=loadRankSnap(); rs[m.name]=tierIndex(m.points); saveRankSnap(rs); }catch(e){}
   await saveData(); layoutGrove(); renderLedger(); closeSheet(); openSoul(name); toast(`${name}'s Devotion set.`);
+};
+// ── keeper: edit a wheel / Chalice aggregate total from the ledger tab ──
+// (m.devotion / m.chalice are running nets, not history deeds — points already include them,
+//  so changing the total adjusts the spirit's Devotion by the difference.)
+window.keeperEditAggregate=function(name,which){
+  if(!keeperUnlocked){ toast("Only the Keeper may edit this."); return; }
+  const m=MEM.members.find(x=>x.name===name); if(!m)return;
+  const isDev = which==='devotion';
+  const agg = isDev ? (m.devotion||{total:0,spins:0}) : (m.chalice||{total:0,games:0,drained:0});
+  const lbl = isDev ? '🔮 Test of Devotion' : '🍷 Trial of the Chalice';
+  const src = isDev ? 'the Wheel' : 'the Chalice';
+  const _nm = name.replace(/'/g,"\\'");
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="kpanel">
+      <h3>✎ ${esc(name)} · ${lbl}</h3>
+      <p class="sub">This is ${esc(name)}'s running net from ${src}. Editing the total adjusts their Devotion (lifetime &amp; season) by the difference — the individual spins aren't re-listed.</p>
+      <div class="field"><label>Net Devotion from ${src}</label><input id="ag_v" type="number" inputmode="numeric" value="${agg.total||0}"></div>
+      <button class="gold" style="margin-top:6px" onclick="saveAggregate('${_nm}','${which}')">Save total</button>
+      <button class="ghostbtn" onclick="closeSheet();openSoul('${_nm}')">Back</button>
+      <div class="err" id="kerr"></div>
+    </div>`;
+};
+window.saveAggregate=async function(name,which){
+  if(!keeperUnlocked)return;
+  const m=MEM.members.find(x=>x.name===name); if(!m)return;
+  const v=parseInt(document.getElementById('ag_v').value,10);
+  if(isNaN(v)){ document.getElementById('kerr').textContent="Enter the total as a number."; return; }
+  const isDev = which==='devotion';
+  const agg = isDev ? (m.devotion=m.devotion||{total:0,spins:0,verdict:0,staked:0}) : (m.chalice=m.chalice||{total:0,games:0,drained:0});
+  const delta = v - (agg.total||0);
+  agg.total = v;
+  if(delta) adjPts(m, delta);
+  try{ const rs=loadRankSnap(); rs[name]=tierIndex(m.points); saveRankSnap(rs); }catch(e){}
+  await saveData(); layoutGrove(); renderLedger(); closeSheet(); openSoul(name); toast(`${name}'s ${isDev?'Wheel':'Chalice'} total updated.`);
 };
 // net Devotion a settled/forfeit wager contributes to a party (matches the soul-card math)
 function wagerNet(w,name){
@@ -4602,7 +4640,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">A Keeper (🔥, passphrase-held) tends the grove — awarding Devotion, titles and badges, and running the seasons.</p>`}
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30cj · Fixed the offering song looping at random — an expired offering rite no longer keeps the chant playing. Plus the ci keeper ledger tools (set Devotion, edit deeds &amp; wagers).</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ck · Keeper can now edit the 🔮 Test of Devotion (wheel) and 🍷 Chalice totals from a spirit's ledger — tap the ✎ on the row; the spirit's Devotion adjusts by the difference.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

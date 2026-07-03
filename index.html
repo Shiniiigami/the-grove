@@ -1994,8 +1994,10 @@ function deedLedgerHTML(m,keeper){
   if(rows.length>10) return `<div class="ledscroll">${body}</div><div class="ledhint">↕ scroll · ${rows.length} deeds, greatest first</div>`;
   return body;
 }
+let SOUL_OPEN=null;
 function openSoul(name){
   const m=MEM.members.find(x=>x.name===name);if(!m)return;
+  SOUL_OPEN=name;
   const soul=buildSoul(m.name,m.points,m.sprite);
   const tier=tierOf(m.points);
   const nt=nextTier(m.points);
@@ -2022,7 +2024,8 @@ function openSoul(name){
     else if(w.winner==='tie'){ res=`tie · returned`; col=`<b style="opacity:.6">±0</b>`; val=0; }
     else if(w.winner===name){ res=`won the wager`; col=`<b>+${w.amount}</b>`; val=(w.amount||0); }
     else { res=`lost the wager`; col=`<b style="color:#E8A88F">−${w.amount}</b>`; val=-(w.amount||0); }
-    cwItems.push({val, html:`<div class="h"><em>${esc(w.title)} <span style="opacity:.55;font-size:11px">(${res})</span></em>${col}</div>`});
+    const wed = keeperUnlocked ? `<button onclick="editWagerEntry('${String(w.id).replace(/'/g,"\\'")}')" title="Edit this wager" style="background:none;border:none;color:var(--candle);font-size:13px;cursor:pointer;margin-left:6px;padding:0 2px">✎</button>` : '';
+    cwItems.push({val, html:`<div class="h"><em>${esc(w.title)} <span style="opacity:.55;font-size:11px">(${res})</span></em>${col}${wed}</div>`});
   });
   (MEM.groups||[]).filter(g=>g&&g.status==='settled'&&[].concat(g.sideA||[],g.sideB||[]).indexOf(name)>=0).forEach(g=>{
     const parts=[].concat(g.sideA||[],g.sideB||[]); let val,res,col;
@@ -2041,6 +2044,11 @@ function openSoul(name){
   const mineSpirit = (typeof VOTER!=='undefined') && VOTER===m.name;
   const thoughtSection = mineSpirit ? thoughtComposerHTML(m)
     : (thoughtLive(m.thought) ? `<div class="hist"><h4>Thought${thoughtFadeLabel(m.thought)}</h4><div class="h"><em>${esc(m.thought.text)}</em></div></div>` : '');
+  const _knm = m.name.replace(/'/g,"\\'");
+  const keeperTools = keeperUnlocked ? `<div style="display:flex;gap:8px;margin-top:8px">
+      <button class="ghostbtn" style="flex:1;margin:0" onclick="keeperSetDevotion('${_knm}')">✎ Devotion points</button>
+      <button class="ghostbtn" style="flex:1;margin:0" onclick="ledgerEditFor('${_knm}')">✎ Edit deeds</button>
+    </div>` : '';
   const editBtn = keeperUnlocked
     ? `<button class="ghostbtn" style="margin-top:10px" onclick="editMySpirit('${m.name.replace(/'/g,"\\'")}')">✦ Edit this spirit</button>`
     : mineSpirit
@@ -2076,6 +2084,7 @@ function openSoul(name){
     <div class="hist"><h4>Ledger of Deeds</h4>${hist}</div>
     ${thoughtSection}
     ${chSection}
+    ${keeperTools}
     ${editBtn}
     <button class="ghostbtn" style="margin-top:8px" onclick="shareSpirit('${m.name.replace(/'/g,"\\'")}')">⤓ Share this spirit</button>
     <button class="closebtn" onclick="closeSheet()">Return to the grove</button>`;
@@ -3062,7 +3071,10 @@ window.logsZero=async function(){ if(!confirm("Clear everyone's logs back to 0?"
 let LEDGER_EDIT=null, LEDGER_MEM=null, LEDGER_OLDSUM=0;
 function loadLedgerEdit(){ const m=MEM.members.find(x=>x.name===LEDGER_MEM)||{history:[]}; LEDGER_EDIT=histGroups(m).map(g=>({l:g.base, d:g.sum, n:g.count, t:((m.history||[])[g.maxi]||{}).t})); LEDGER_OLDSUM=(m.history||[]).reduce((s,h)=>s+(h.d||0),0); }
 function syncLedger(){ if(!LEDGER_EDIT)return; LEDGER_EDIT.forEach((h,i)=>{ const l=document.getElementById('le_l'+i),d=document.getElementById('le_d'+i); if(l)h.l=l.value; if(d)h.d=parseInt(d.value,10)||0; }); }
-window.ledgerEditForm=function(){ LEDGER_MEM=sortedMembers()[0].name; loadLedgerEdit(); renderLedgerEdit(); };
+let LEDGER_RETURN=null;   // when opened from a spirit's soul card, save/back return there
+window.ledgerEditForm=function(){ LEDGER_RETURN=null; LEDGER_MEM=sortedMembers()[0].name; loadLedgerEdit(); renderLedgerEdit(); };
+// open the deed editor straight to one spirit, from their ledger-tab soul card
+window.ledgerEditFor=function(name){ if(!keeperUnlocked)return; LEDGER_RETURN=name; LEDGER_MEM=name; loadLedgerEdit(); renderLedgerEdit(); };
 window.ledgerPick=function(n){ LEDGER_MEM=n; loadLedgerEdit(); renderLedgerEdit(); };
 window.ledgerDel=function(i){ syncLedger(); LEDGER_EDIT.splice(i,1); renderLedgerEdit(); };
 window.ledgerSave=async function(){ syncLedger(); const m=MEM.members.find(x=>x.name===LEDGER_MEM); if(!m)return;
@@ -3072,7 +3084,9 @@ window.ledgerSave=async function(){ syncLedger(); const m=MEM.members.find(x=>x.
   m.points=Math.max(0,(m.points||0)+delta); m.season=(m.season||0)+delta;
   const tnow=Date.now()/1000;
   m.history=clean.map(h=>({l:String(h.l).trim(), d:h.d||0, n:Math.max(1,h.n||1), t:(h.t||tnow)}));
-  await saveData(); layoutGrove(); renderLedger(); toast(`${m.name}'s ledger updated.`); deedsForm();
+  try{ const s=loadRankSnap(); s[m.name]=tierIndex(m.points); saveRankSnap(s); }catch(e){}
+  await saveData(); layoutGrove(); renderLedger(); toast(`${m.name}'s ledger updated.`);
+  if(LEDGER_RETURN){ const r=LEDGER_RETURN; LEDGER_RETURN=null; openSoul(r); } else deedsForm();
 };
 function renderLedgerEdit(){
   const opts=sortedMembers().map(m=>`<option value="${m.name}" ${m.name===LEDGER_MEM?'selected':''}>${m.name}</option>`).join("");
@@ -3092,10 +3106,86 @@ function renderLedgerEdit(){
       <div class="field"><label>Spirit</label><select onchange="ledgerPick(this.value)">${opts}</select></div>
       ${rows}
       <button class="gold" style="margin-top:10px" onclick="ledgerSave()">Save the ledger</button>
-      <button class="ghostbtn" onclick="deedsForm()">Back</button>
+      <button class="ghostbtn" onclick="${LEDGER_RETURN?`(function(){var r=LEDGER_RETURN;LEDGER_RETURN=null;closeSheet();openSoul('${String(LEDGER_RETURN).replace(/'/g,"\\'")}');})()`:'deedsForm()'}">Back</button>
       <div class="err" id="kerr"></div>
     </div>`;
 }
+// ── keeper: set a spirit's Devotion directly (lifetime + season), from the ledger tab ──
+window.keeperSetDevotion=function(name){
+  if(!keeperUnlocked){ toast("Only the Keeper may edit Devotion."); return; }
+  const m=MEM.members.find(x=>x.name===name); if(!m){ toast("Spirit not found."); return; }
+  const _nm=name.replace(/'/g,"\\'");
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="kpanel">
+      <h3>✎ ${esc(name)}'s Devotion</h3>
+      <p class="sub">Set the totals directly. <b>Lifetime</b> is their all-time Devotion (drives rank); <b>Season</b> is this season's race. The ledger of deeds is left as-is — use “Edit deeds” to change individual entries.</p>
+      <div class="field"><label>Lifetime Devotion (drives rank)</label><input id="kd_pts" type="number" inputmode="numeric" value="${m.points||0}"></div>
+      <div class="field"><label>Season score</label><input id="kd_sea" type="number" inputmode="numeric" value="${seasonView(m)}"></div>
+      <button class="gold" style="margin-top:6px" onclick="saveKeeperDevotion('${_nm}')">Save Devotion</button>
+      <button class="ghostbtn" onclick="closeSheet();openSoul('${_nm}')">Back</button>
+      <div class="err" id="kerr"></div>
+    </div>`;
+};
+window.saveKeeperDevotion=async function(name){
+  if(!keeperUnlocked)return;
+  const m=MEM.members.find(x=>x.name===name); if(!m)return;
+  const p=parseInt(document.getElementById('kd_pts').value,10);
+  const s=parseInt(document.getElementById('kd_sea').value,10);
+  if(isNaN(p)||isNaN(s)){ document.getElementById('kerr').textContent="Enter both totals as numbers."; return; }
+  m.points=Math.max(0,p);
+  m.season=Math.max(0,s);
+  try{ const rs=loadRankSnap(); rs[m.name]=tierIndex(m.points); saveRankSnap(rs); }catch(e){}
+  await saveData(); layoutGrove(); renderLedger(); closeSheet(); openSoul(name); toast(`${name}'s Devotion set.`);
+};
+// net Devotion a settled/forfeit wager contributes to a party (matches the soul-card math)
+function wagerNet(w,name){
+  if(!w) return 0;
+  if(w.status==='forfeit') return -(w.amount||0);
+  if(w.status!=='settled') return 0;
+  if(w.winner==='tie') return 0;
+  if(w.winner===name) return (w.amount||0);
+  return -(w.amount||0);
+}
+// ── keeper: edit a 2-party wager (title · stake · outcome), re-accounting both parties ──
+window.editWagerEntry=function(id){
+  if(!keeperUnlocked){ toast("Only the Keeper may edit a wager."); return; }
+  const w=wagerById(id); if(!w){ toast("Wager not found."); return; }
+  const _id=String(id).replace(/'/g,"\\'");
+  const cur = (w.status==='forfeit')?'forfeit':(w.winner==='tie'?'tie':(w.winner===w.proposer?'p':'t'));
+  const opt=(v,lbl)=>`<option value="${v}" ${cur===v?'selected':''}>${esc(lbl)}</option>`;
+  sheet.innerHTML=`
+    <div class="grip"></div>
+    <div class="kpanel">
+      <h3>✎ Edit wager</h3>
+      <p class="sub"><b>${esc(w.proposer)}</b> vs <b>${esc(w.taker)}</b>. Fix the title, the stake, or who won — both spirits' Devotion is corrected by the difference.</p>
+      <div class="field"><label>Title</label><input id="we_t" maxlength="60" value="${String(w.title||'').replace(/"/g,'&quot;')}"></div>
+      <div class="field"><label>Stake each (max ${WAGER_CAP})</label><input id="we_a" type="number" inputmode="numeric" min="0" max="${WAGER_CAP}" value="${w.amount||0}"></div>
+      <div class="field"><label>Outcome</label><select id="we_w" class="chal-sel" style="width:100%">
+        ${opt('p',w.proposer+' won')}${opt('t',w.taker+' won')}${opt('tie','Tie — stakes returned')}${opt('forfeit','Forfeit — both lose the stake')}
+      </select></div>
+      <button class="gold" style="margin-top:6px" onclick="saveWagerEntry('${_id}')">Save wager</button>
+      <button class="ghostbtn" onclick="closeSheet()">Cancel</button>
+      <div class="err" id="kerr"></div>
+    </div>`;
+};
+window.saveWagerEntry=async function(id){
+  if(!keeperUnlocked)return;
+  const w=wagerById(id); if(!w)return;
+  const title=clampText(document.getElementById('we_t').value,60)||w.title||'Wager';
+  const amt=Math.max(0,Math.min(WAGER_CAP,parseInt(document.getElementById('we_a').value,10)||0));
+  const sel=document.getElementById('we_w').value;
+  const newW={ amount:amt, proposer:w.proposer, taker:w.taker,
+    status:(sel==='forfeit')?'forfeit':'settled',
+    winner:(sel==='forfeit')?'forfeit':(sel==='tie'?'tie':(sel==='p'?w.proposer:w.taker)) };
+  // correct each party by the change in net contribution (old outcome → new outcome)
+  [w.proposer,w.taker].forEach(nm=>{ const m=memByName(nm); if(!m)return; const d=wagerNet(newW,nm)-wagerNet(w,nm); if(d) adjPts(m,d); });
+  w.title=title; w.amount=amt; w.status=newW.status; w.winner=newW.winner;
+  try{ [w.proposer,w.taker].forEach(nm=>{ const m=memByName(nm); if(m){ const rs=loadRankSnap(); rs[nm]=tierIndex(m.points); saveRankSnap(rs); } }); }catch(e){}
+  await saveData(); layoutGrove(); renderLedger(); closeSheet();
+  if(typeof SOUL_OPEN!=='undefined' && SOUL_OPEN) openSoul(SOUL_OPEN);
+  toast("Wager updated.");
+};
 
 /* --- ranks --- */
 let RANKS_EDIT=null;
@@ -4512,7 +4602,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">A Keeper (🔥, passphrase-held) tends the grove — awarding Devotion, titles and badges, and running the seasons.</p>`}
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ch · Audit-pass fixes: sealed a badge-colour XSS hole, stopped a struck penalty from refunding Devotion it never took, kept season rewinds from mis-crediting open wagers, tidied dev-only warnings out of players' view, and hardened the Chalice timeout against a rare data-loss race.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30ci · Keeper ledger tools: open any spirit's soul card to set their Devotion directly, edit each deed's name/points, or fix a wager's stake &amp; outcome (both spirits are re-credited automatically). Made the Pilgrimage &amp; Of the First Fire remain the Keeper's alone to bestow.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

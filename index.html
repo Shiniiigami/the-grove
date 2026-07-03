@@ -2053,7 +2053,8 @@ function openSoul(name){
   const keeperTools = keeperUnlocked ? `<div style="display:flex;gap:8px;margin-top:8px">
       <button class="ghostbtn" style="flex:1;margin:0" onclick="keeperSetDevotion('${_knm}')">✎ Devotion points</button>
       <button class="ghostbtn" style="flex:1;margin:0" onclick="ledgerEditFor('${_knm}')">✎ Edit deeds</button>
-    </div>` : '';
+    </div>${(keeperUnlocked && m.spinUndo)?`
+    <button class="ghostbtn" style="margin-top:8px;border-color:rgba(232,168,143,.5);color:#E8A88F" onclick="undoLastSpin('${_knm}')">↩ Undo last wheel spin</button>`:''}` : '';
   const editBtn = keeperUnlocked
     ? `<button class="ghostbtn" style="margin-top:10px" onclick="editMySpirit('${m.name.replace(/'/g,"\\'")}')">✦ Edit this spirit</button>`
     : mineSpirit
@@ -2421,7 +2422,7 @@ window.confirmFreshSlate=async function(){
   const v=document.getElementById("fsPass").value;
   if(!(await verifyPass(v))){ document.getElementById("kerr").textContent="Wrong passphrase — nothing was changed."; return; }
   if(!confirm("Last warning: wipe ALL Devotion Points, titles, badges and history for everyone? This cannot be undone."))return;
-  MEM.members.forEach(m=>{ m.points=0; m.season=0; m.epithet=""; m.badges=[]; m.history=[]; m.offered=0; m.chalBudget=150; m.chalice={total:0,games:0,drained:0}; m.devotion={total:0,spins:0};
+  MEM.members.forEach(m=>{ m.points=0; m.season=0; m.epithet=""; m.badges=[]; m.history=[]; m.offered=0; m.chalBudget=150; m.chalice={total:0,games:0,drained:0}; m.devotion={total:0,spins:0}; delete m.spinUndo;
     if(m.sprite&&m.sprite.chibi&&m.sprite.chibi.top_style==='robes'){ const c=cloneChibi(m); c.top_style=(m._preTop||(c.sleeves===false?'tank':'tee')); delete m._preTop; m.sprite={chibi:c}; }
   });
   MEM.challenges=[]; MEM.wagers=[]; MEM.groups=[]; MEM.rites=[];
@@ -2450,7 +2451,7 @@ window.newSeason=async function(){
   MEM.seasonHistory.unshift({ label: MEM.season, ended: now, standings: [...MEM.members].sort((a,b)=>(seasonView(b)-seasonView(a))).map(m=>({name:m.name, score:seasonView(m), points:m.points})) });
   if(MEM.seasonHistory.length>24) MEM.seasonHistory.length=24;
   // fireLogs also resets — "Keeper of the Flame" belongs to the SEASON's top tender
-  MEM.members.forEach(m=>{m.season=0; m.chalBudget=150; m.fireLogs=0;});
+  MEM.members.forEach(m=>{m.season=0; m.chalBudget=150; m.fireLogs=0; delete m.spinUndo;});
   MEM.challenges=[]; MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[]};
   MEM.wagers=[]; MEM.groups=[]; MEM.seasonStart=now;
   if(label) MEM.season=label;
@@ -2472,7 +2473,7 @@ window.resetSeasonScores=async function(){
   // signed-season model: season holds true net (can be negative); zero it for everyone.
   // Move the season window to now so deeds done earlier this season fall outside it —
   // otherwise removing an old deed later would subtract from a score that's already been rewound.
-  MEM.members.forEach(m=>{ m.season=0; });
+  MEM.members.forEach(m=>{ m.season=0; delete m.spinUndo; });
   MEM.seasonStart=now;
   await saveData(); layoutGrove(); renderLedger(); closeSheet(); toast("Season scores rewound to the opening line.");
 };
@@ -3192,6 +3193,23 @@ window.keeperRemoveAggregate=async function(name,which){
   else { m.chalice=m.chalice||{}; m.chalice.total=0; m.chalice.games=0; m.chalice.drained=0; }
   try{ const rs=loadRankSnap(); rs[name]=tierIndex(m.points); saveRankSnap(rs); }catch(e){}
   await saveData(); layoutGrove(); renderLedger(); closeSheet(); openSoul(name); toast(`${name}'s ${isDev?'Wheel':'Chalice'} record struck.`);
+};
+// ── keeper: undo a spirit's most recent wheel spin (restores the pre-spin snapshot) ──
+window.undoLastSpin=async function(name){
+  if(!keeperUnlocked){ toast("Only the Keeper may undo a spin."); return; }
+  const m=MEM.members.find(x=>x.name===name); const u=m&&m.spinUndo;
+  if(!u){ toast("No wheel spin to undo."); return; }
+  if(!confirm(`Undo ${name}'s last wheel spin?\n\nTheir Devotion, any banked blessing/curse, and the spin cooldown are restored to just before that spin. (Best done right after — anything changed since is overwritten.)`)) return;
+  m.points=Math.max(0, +(u.points)||0);
+  m.season=+(u.season)||0;
+  if((u.winMult||1)>1) m.winMult=u.winMult; else delete m.winMult;
+  if((u.lossMult||1)>1) m.lossMult=u.lossMult; else delete m.lossMult;
+  m.lastSpin=+(u.lastSpin)||0;
+  if(u.logs!==undefined && u.logs!==null) m.logs=+(u.logs)||0;
+  if(u.devotion) m.devotion=JSON.parse(JSON.stringify(u.devotion)); else delete m.devotion;
+  delete m.spinUndo;
+  try{ const rs=loadRankSnap(); rs[name]=tierIndex(m.points); saveRankSnap(rs); }catch(e){}
+  await saveData(); layoutGrove(); renderLedger(); closeSheet(); openSoul(name); toast(`${name}'s last spin undone.`);
 };
 // net Devotion a settled/forfeit wager contributes to a party (matches the soul-card math)
 function wagerNet(w,name){
@@ -4657,7 +4675,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">A Keeper (🔥, passphrase-held) tends the grove — awarding Devotion, titles and badges, and running the seasons.</p>`}
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30cl · Keeper can now edit (✎) or strike (✕) the 🔮 Test of Devotion (wheel) and 🍷 Chalice records from a spirit's ledger — the spirit's Devotion adjusts by the difference. Badges already earned are kept.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30cm · Keeper can now undo a spirit's last wheel spin — open their ledger and tap ↩ Undo last wheel spin. Restores their Devotion, any banked blessing/curse and the spin cooldown to just before that spin.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4867,7 +4885,10 @@ function applyAction(a){
   else if(a.t==='wager_void'){ const w=wagerById(a.id); if(!w||(w.status!=='matched'&&w.status!=='disputed')||!a.keeper)return; const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); MEM.wagers=(MEM.wagers||[]).filter(x=>x.id!==a.id); }
   else if(a.t==='wager_vote'){ const w=wagerById(a.id); if(!w||w.status!=='disputed')return; if(a.side!=='proposer'&&a.side!=='taker')return; if(a.voter===w.proposer||a.voter===w.taker)return; /* parties can't vote in their own dispute (matches group_vote) */ w.votes=w.votes||{}; if(w.votes[a.voter])return; w.votes[a.voter]=a.side; let pv=0,tv=0; for(const k in w.votes){ if(w.votes[k]==='proposer')pv++; else if(w.votes[k]==='taker')tv++; } if(pv>=5||tv>=5){ const winnerName=(pv>=5)?w.proposer:w.taker; const win=memByName(winnerName); if(win){ adjPts(win,2*(w.amount||0)); maybeEarnLog(win,w.amount||0); } w.status='settled'; w.winner=winnerName; } }
   else if(a.t==='wager_tie'){ const w=wagerById(a.id); if(!w||(w.status!=='matched'&&w.status!=='disputed'))return; if(a.keeper){ const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); w.status='settled'; w.winner='tie'; return; } if(a.name!==w.proposer&&a.name!==w.taker)return; w.tie=w.tie||[]; if(!w.tie.includes(a.name))w.tie.push(a.name); if(w.tie.includes(w.proposer)&&w.tie.includes(w.taker)){ const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); w.status='settled'; w.winner='tie'; } }
-  else if(a.t==='wheel_spin'){ const m=memByName(a.name); if(!m)return; if(now-(m.lastSpin||0)<2*3600)return; if((m.points||0)<15)return; const o=a.outcome||{}; adjPts(m,-15); m.lastSpin=now;
+  else if(a.t==='wheel_spin'){ const m=memByName(a.name); if(!m)return; if(now-(m.lastSpin||0)<2*3600)return; if((m.points||0)<15)return; const o=a.outcome||{};
+    // snapshot pre-spin state so the Keeper can undo just this spin (mirrors grove_wheel's server-side snapshot)
+    m.spinUndo={ points:m.points, season:(m.season||0), winMult:m.winMult, lossMult:m.lossMult, lastSpin:(m.lastSpin||0), logs:m.logs, devotion:(m.devotion?JSON.parse(JSON.stringify(m.devotion)):null), t:now };
+    adjPts(m,-15); m.lastSpin=now;
     if(o.special==='free'){ adjPts(m,15); m.lastSpin=0; }
     else if(o.special==='x2'||o.special==='x3'){
       // blessings don't stack: landing one while blessed pays flat tribute instead (×2→+100, ×3→+150)

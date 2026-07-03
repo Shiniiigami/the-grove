@@ -653,10 +653,14 @@ let liveStorage = (typeof window!=="undefined" && window.storage && window.stora
 
 function stripPass(o){ const c=structuredClone(o); delete c.pass; return c; }
 function sbHeaders(){ return {apikey:SUPABASE.anonKey, Authorization:"Bearer "+SUPABASE.anonKey, "Content-Type":"application/json"}; }
+// optimistic-concurrency token: the server row's updated_at as of our last read/save. Sent with
+// every keeper grove_save so a save based on stale state is REJECTED instead of silently stomping
+// player actions (spins, wagers, chalice turns) that landed while a keeper panel was open.
+let SRV_AT='';
 async function sbRead(){
-  const r=await fetch(`${SUPABASE.url}/rest/v1/grove_state?id=eq.1&select=data`,{headers:sbHeaders()});
+  const r=await fetch(`${SUPABASE.url}/rest/v1/grove_state?id=eq.1&select=data,updated_at`,{headers:sbHeaders()});
   if(!r.ok) throw new Error("read "+r.status);
-  const j=await r.json(); return (Array.isArray(j)&&j[0])?j[0].data:null;
+  const j=await r.json(); if(Array.isArray(j)&&j[0]){ SRV_AT=j[0].updated_at||''; return j[0].data; } return null;
 }
 async function sbRpc(fn,args){
   const r=await fetch(`${SUPABASE.url}/rest/v1/rpc/${fn}`,{method:"POST",headers:sbHeaders(),body:JSON.stringify(args)});
@@ -938,8 +942,16 @@ async function saveData(){
   if(MODE==="remote"){
     // only snapshot on a CONFIRMED server write — snapshotting after a failed save would record a
     // state the server never accepted, which a later rollback could resurrect over live data.
-    try{ await sbRpc("grove_save",{p_pass:SESSION_PASS||"",p_data:MEM}); takeSnap(); }
-    catch(e){ console.warn("save failed",e.message); toast("Save failed — check passphrase / connection."); }
+    try{ const ts=await sbRpc("grove_save",{p_pass:SESSION_PASS||"",p_data:MEM,p_expected:SRV_AT||""}); if(ts) SRV_AT=String(ts); takeSnap(); }
+    catch(e){
+      if(/stale grove/i.test(String((e&&e.message)||''))){
+        // someone acted between our last read and this save — reload the live grove instead of
+        // stomping their action; the keeper's edit is dropped and must be re-applied on fresh state.
+        try{ await refreshRemote(); }catch(_){}
+        try{ layoutGrove(); renderLedger(); }catch(_){}
+        toast("The grove moved while you edited — nothing was overwritten. Please re-apply your change.");
+      } else { console.warn("save failed",e.message); toast("Save failed — check passphrase / connection."); }
+    }
     return;
   }
   if(liveStorage){ try{ await window.storage.set(KEY,JSON.stringify(MEM),true); }catch(e){} }
@@ -978,7 +990,13 @@ let REACT_SUPPRESS=false;
 function rebaselineSnaps(){ try{ MOOD_SNAP=moodSnapshot(); }catch(e){} try{ LOG_SNAP=logSnapshot(); }catch(e){} try{ OFFER_SNAP=offerIds(); APPLIED_OFFER_SNAP=appliedOfferIds(); }catch(e){} try{ BET_SNAP=betSnapshot(); }catch(e){} try{ const snap={}; (MEM.members||[]).forEach(m=>{ snap[m.name]=tierIndex(m.points||0); }); saveRankSnap(snap); }catch(e){} }
 async function pollRemote(){
   if(MODE!=="remote") return;
-  if(scrim.classList.contains("show")) return;   // don't yank the UI mid-edit
+  if(scrim.classList.contains("show")){
+    // a sheet is open (keeper panel / soul card / editor): keep our copy of the grove FRESH so an
+    // eventual keeper save applies to near-live state and passes the staleness check — but don't
+    // re-render or fire popups, which would yank the form out from under the edit.
+    try{ const d=await sbRead(); if(d && JSON.stringify(d)!==JSON.stringify(MEM)){ MEM=d; ensureDefaults(); cacheRemote(); rebaselineSnaps(); takeSnap(); } }catch(e){}
+    return;
+  }
   try{ const d=await sbRead(); if(d && JSON.stringify(d)!==JSON.stringify(MEM)){
     MEM=d; ensureDefaults(); cacheRemote();
     const quiet = document.hidden || REACT_SUPPRESS; REACT_SUPPRESS=false;
@@ -3079,7 +3097,7 @@ window.logsSetAll=async function(){ const n=Math.max(0,parseInt(document.getElem
 window.logsZero=async function(){ if(!confirm("Clear everyone's logs back to 0?"))return; (MEM.members||[]).forEach(m=>{ m.logs=0; }); await saveData(); renderLogs(); toast("All logs cleared."); };
 
 /* --- edit a member's awarded deeds (their ledger) --- */
-let LEDGER_EDIT=null, LEDGER_MEM=null, LEDGER_OLDSUM=0, LEDGER_SNAP=null;
+let LEDGER_EDIT=null, LEDGER_MEM=null, LEDGER_OLDSUM=0, LEDGER_SNAP=null, LEDGER_HISTJSON='';
 function loadLedgerEdit(){ const m=MEM.members.find(x=>x.name===LEDGER_MEM)||{history:[]};
   const seasonStart=(MEM&&MEM.seasonStart)||0;
   const norm=s=>(deedBase(s)||String(s||'')).toLowerCase().replace(/\s+/g,' ').trim();
@@ -3090,6 +3108,7 @@ function loadLedgerEdit(){ const m=MEM.members.find(x=>x.name===LEDGER_MEM)||{hi
   LEDGER_EDIT=histGroups(m).map(g=>{ const k=norm(g.base); const e=extra[k]||{a:0,seasonD:0}; const rt=((m.history||[])[g.maxi]||{}).t;
     return {l:g.base, d:g.sum, n:g.count, t:rt, _key:k, _origD:g.sum, _a:e.a, _seasonD:e.seasonD, _inSeason:((rt||0)>=seasonStart)}; });
   LEDGER_SNAP=LEDGER_EDIT.map(r=>({...r}));
+  LEDGER_HISTJSON=JSON.stringify(m.history||[]);
   LEDGER_OLDSUM=(m.history||[]).reduce((s,h)=>s+(h.d||0),0); }
 function syncLedger(){ if(!LEDGER_EDIT)return; LEDGER_EDIT.forEach((h,i)=>{ const l=document.getElementById('le_l'+i),d=document.getElementById('le_d'+i); if(l)h.l=l.value; if(d)h.d=parseInt(d.value,10)||0; }); }
 let LEDGER_RETURN=null;   // when opened from a spirit's soul card, save/back return there
@@ -3099,6 +3118,9 @@ window.ledgerEditFor=function(name){ if(!keeperUnlocked)return; LEDGER_RETURN=na
 window.ledgerPick=function(n){ LEDGER_MEM=n; loadLedgerEdit(); renderLedgerEdit(); };
 window.ledgerDel=function(i){ syncLedger(); LEDGER_EDIT.splice(i,1); renderLedgerEdit(); };
 window.ledgerSave=async function(){ syncLedger(); const m=MEM.members.find(x=>x.name===LEDGER_MEM); if(!m)return;
+  // this editor REBUILDS the whole history — if a deed landed on this spirit while the sheet was
+  // open (poll refreshes MEM under it), saving would silently drop that new row. Reload instead.
+  if(JSON.stringify(m.history||[])!==LEDGER_HISTJSON){ toast(`${m.name}'s ledger changed while you edited — reloaded fresh, please re-apply.`); loadLedgerEdit(); renderLedgerEdit(); return; }
   const clean=LEDGER_EDIT.filter(h=>String(h.l).trim());
   const tnow=Date.now()/1000;
   // reverse by APPLIED points (a) and only touch season for current-season groups; a label-only edit
@@ -4708,7 +4730,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">A Keeper (🔥, passphrase-held) tends the grove — awarding Devotion, titles and badges, and running the seasons.</p>`}
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30co · Rigour-pass fixes: the deed editor no longer conjures Devotion when a floored penalty is edited and stops mis-crediting past seasons; direct Devotion edits keep a negative season net; the wager editor only touches finished wagers; the blessing banner and Rules now match what actually multiplies (challenges yes, fire no); tidier ledger rows on small phones; toasts/banners no longer hide behind overlays.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30cp · Safer sync: a Keeper save can no longer quietly overwrite a spin, wager or Chalice turn that landed while a panel was open — the grove now version-checks each save, keeps the Keeper's copy live under an open panel, and if something moved it reloads and asks you to re-apply rather than stomping it.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

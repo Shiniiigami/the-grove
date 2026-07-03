@@ -2363,10 +2363,11 @@ window.bulkApply=async function(){ bulkSyncInputs(); const names=Object.keys(BUL
   const undo=[]; const roseUp=[];
   names.forEach(n=>{ const m=memByName(n); if(!m)return; undo.push({name:n,pts:m.points,season:(m.season||0),histLen:(m.history||[]).length,logs:m.logs,winMult:m.winMult,lossMult:m.lossMult});
     const _b=tierIndex(m.points);
-    // a banked ×2/×3 blessing multiplies a Keeper-awarded gain; a curse deepens a Keeper penalty (consumed on use)
-    let _net=net;
-    if(_net>0 && (m.winMult||1)>1){ const _wm=consumeMult(m); _net=_net*_wm; }
-    else if(_net<0 && (m.lossMult||1)>1){ const _lm=consumeLoss(m); _net=_net*_lm; }
+    // a bulk award is UNIFORM — every selected spirit gets the same amount. Banked ×2/×3 blessings
+    // and curses are deliberately NOT consumed here: applying them would make some spirits gain (or
+    // lose) more than others for the same deed. The buff stays banked for their own wheel/Chalice/
+    // single award, where it's meant to fire.
+    const _net=net;
     const _pB=m.points; m.points=Math.max(0,m.points+_net); m.season=(m.season||0)+_net; m.history=m.history||[]; m.history.push({l:reason,d:_net,a:m.points-_pB,n:1,t:tnow}); if(_net>0 && BULK_LOG) maybeEarnLog(m,_net);
     const _a=tierIndex(m.points); if(_a>_b) roseUp.push({name:m.name,rank:tiers()[_a].name,idx:_a}); });
   // advance rank snapshots so a later poll doesn't re-celebrate, and announce any rank-ups
@@ -4675,7 +4676,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">A Keeper (🔥, passphrase-held) tends the grove — awarding Devotion, titles and badges, and running the seasons.</p>`}
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30cm · Keeper can now undo a spirit's last wheel spin — open their ledger and tap ↩ Undo last wheel spin. Restores their Devotion, any banked blessing/curse and the spin cooldown to just before that spin.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30cn · Bulk awards are now uniform — a banked ×2/×3 wheel blessing (or curse) no longer quietly multiplies one spirit's share, so everyone gets the same points for the same bulk deed. The buff stays banked for their own wheel/Chalice/single award.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

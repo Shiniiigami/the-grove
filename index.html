@@ -4703,7 +4703,7 @@ function renderRules(){
     <div class="ritehdr">The Reckoning · Group Wagers</div>
     <p class="rtext">Rally two sides — up to <b>6</b> a side, even lopsided (6 v 1). Everyone stakes the same; the starter <b>locks</b> the wager and the winning side <b>splits the whole pot</b>, so fewer winners each take a bigger share. All spirits must agree who won; if they can’t, the grove votes to settle it.</p>
     <div class="ritehdr">Test of Devotion</div>
-    <p class="rtext"><b>15 ✦</b> laid before the <b>Devotion Weirwood</b>, once every 2 hours. The Eye's verdict runs from a <b>+250</b> radiance down to <b>−100</b> wrath, with returned offerings and <b>×2 / ×3</b> blessings that multiply your next <b>gain</b> — a deed (a single Keeper award or a community vote, <b>not a bulk award</b>), a challenge, a wheel win or a Chalice triumph — though <b>never a wager or the fire</b>. Blessings can't stack: land a second while one is banked and the Eye pays <b>+100</b> (×2) or <b>+150</b> (×3) on the spot instead. A <b>×2 curse</b> mirrors it — it doubles your next <b>loss</b> (a penalty deed, a wheel loss or a Chalice loss, never a wager), and likewise can't stack: land another while cursed and the Eye strikes <b>−100</b> on the spot. Roughly 56% of verdicts favor you.</p>
+    <p class="rtext"><b>15 ✦</b> laid before <b>The Watching Tree</b>, once every 2 hours. The Eye's verdict runs from a <b>+250</b> radiance down to <b>−100</b> wrath, with returned offerings and <b>×2 / ×3</b> blessings that multiply your next <b>gain</b> — a deed (a single Keeper award or a community vote, <b>not a bulk award</b>), a challenge, a wheel win or a Chalice triumph — though <b>never a wager or the fire</b>. Blessings can't stack: land a second while one is banked and the Eye pays <b>+100</b> (×2) or <b>+150</b> (×3) on the spot instead. A <b>×2 curse</b> mirrors it — it doubles your next <b>loss</b> (a penalty deed, a wheel loss or a Chalice loss, never a wager), and likewise can't stack: land another while cursed and the Eye strikes <b>−100</b> on the spot. Roughly 56% of verdicts favor you.</p>
     <div class="ritehdr">Trial of the Chalice</div>
     <p class="rtext">A 52-card King’s Cup for the circle — <b>4–20 spirits</b>, and one phone may hold several. The <b>host</b> opens the lobby and begins the trial; if they don’t, the right to begin passes down the join order so the circle never stalls. Each spirit’s <b>rank shows beneath their name</b>. On your turn you draw a card and the circle acts it out aloud — sending others to drink, binding a partner, decreeing a <b>law</b> (no two laws alike), or pouring into the Chalice. Devotion rides a <b>hidden tally</b> all game and commits as a single “Trial of the Chalice” line when it ends.</p>
     <p class="rtext">The <b>fourth King</b> is the reckoning — the <b>Eye itself opens</b> over the circle: that drawer either <b>drinks the Chalice</b> (gaining Devotion and the <i>Drained the Chalice</i> badge) or <b>braves a ritual</b> the circle sets aloud — 3 minutes, half must approve. Succeed for the badge and a communal cup (up to four sip, +10 each); fail or refuse and lose <b>40</b>. Break a law and a spirit can <b>report you by tapping your name</b> — reports lapse after 30 seconds, and if enough agree you’re judged (−5); you may even own up and vote on your own report. Spirits may step away (the host passes on), be <b>cast out by tapping a name</b> and a half-vote (the named may vote too), or rejoin — and a lobby that never begins dissolves after <b>3 minutes</b>.</p>
@@ -4730,7 +4730,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">A Keeper (🔥, passphrase-held) tends the grove — awarding Devotion, titles and badges, and running the seasons.</p>`}
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30cq · Trimmed a stray line from the Test-of-Devotion rules. (cp: safer sync — a Keeper save can no longer overwrite a spin, wager or Chalice turn made while a panel was open.)</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30cr · The Devotion Weirwood is now <b>The Watching Tree</b> everywhere. (cp: safer sync — a Keeper save can no longer overwrite a spin, wager or Chalice turn made while a panel was open.)</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -5234,7 +5234,7 @@ function wheelSectionHTML(me){
     ctrl=`${buff}<div id="wheelResult" style="text-align:center;min-height:18px;font-family:'Silkscreen',monospace;font-size:13px;color:var(--candle);margin:2px 0 8px"></div><div style="text-align:center">${btn}</div>${kctl}`;
   }
   return `<div class="ritehdr" style="margin-top:22px">Test of Devotion</div>
-    <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Lay <b style="color:var(--candle)">15 ✦</b> before the <b>Devotion Weirwood</b> — once every <b>2 hours</b> — its verdict, radiance to wrath, lands on top of the offering.</p>
+    <p class="rtext" style="text-align:center;margin:0 auto 8px;max-width:36ch">Lay <b style="color:var(--candle)">15 ✦</b> before <b>The Watching Tree</b> — once every <b>2 hours</b> — its verdict, radiance to wrath, lands on top of the offering.</p>
     <div style="text-align:center;margin:6px 0"><div style="display:inline-block;width:min(64vw,240px)">${buildTotemSVG({anim:true, closed: cd>0})}</div></div>
     ${ctrl}`;
 }
@@ -5257,7 +5257,7 @@ function ensureTotemStyle(){
   @keyframes dvFlash{0%{opacity:0}16%{opacity:1}100%{opacity:0}}
   .dvov .totem{position:absolute;top:39%;left:50%;width:min(78vw,340px);transform:translate(-50%,-50%);filter:drop-shadow(0 0 32px rgba(242,196,90,.5))}
   .dvov.reveal.bad .totem{animation:dvShake .62s cubic-bezier(.36,.07,.19,.97)}
-  /* --- weirwood idle + verdict reactions --- */
+  /* --- Watching Tree idle + verdict reactions --- */
   .ww-canopy{transform-box:fill-box;transform-origin:100px 150px;animation:wwSway 6.5s ease-in-out infinite}
   @keyframes wwSway{0%,100%{transform:rotate(-.7deg)}50%{transform:rotate(.7deg)}}
   .ww-aura{animation:wwAura 4.2s ease-in-out infinite}
@@ -5314,7 +5314,7 @@ function ensureTotemStyle(){
     document.body.appendChild(d);
   }
 }
-/* ===== The Devotion Weirwood — a season-grown heart-tree with a carved Eye ===== */
+/* ===== The Watching Tree — a season-grown heart-tree with a carved Eye ===== */
 const WW_CFG={seed:5,depth:5,segPerLimb:3,segTaper:0.92,curve:0.48,upBias:0.03,forkSpread:0.74,forkJitter:0.44,forkThin:0.86,lenDecay:0.86,len0:42,minWid:0.9,triProb:0.5,leafLevels:1,baseY:294,topY:238,baseHW:26,topHW:17,crownW:34,overlap:20,eyeY:268,eyeHW:19};
 const WW_BARK={lo:'#E9E2D2',hi:'#cdbfa8',sh:'#8f8470'}, WW_LEAF={lo:'#7a2a14',hi:'#E5381F'};
 const WW_EX=100, WW_EY=WW_CFG.eyeY, WW_EHW=WW_CFG.eyeHW, WW_EVH=WW_CFG.eyeHW*0.84;

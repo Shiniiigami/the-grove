@@ -4744,7 +4744,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">A Keeper (🔥, passphrase-held) tends the grove — awarding Devotion, titles and badges, and running the seasons.</p>`}
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30db · The fire now truly dies down — it loses a log every 2 hours of neglect on its own, not only when someone acts. Wheel blessings also multiply your share of a fire blessing.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30dc · The offering song now carries through the ceremony itself — the blood-moon rite — instead of cutting out the moment an offering passes (and it plays for keeper-made offerings too). The fire also truly dies down on its own every 2 hours.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -5101,7 +5101,12 @@ function syncOffering(){ try{ if(typeof Snd==='undefined'||!Snd.offering) return
   // an offering rite that expired (past its 30-min window) but was never applied still lingers in
   // MEM.rites — gate on the live window like every other offer check, else the chant/offering song
   // loops forever (played "randomly" whenever the 8s sync runs on a stale rite).
-  const has=((MEM&&MEM.rites)||[]).some(r=>r&&r.kind==='offer' && !r.applied && (_now-(+r.created||0) < OFFER_RITE_TTL)); Snd.offering(has); }catch(e){} }
+  // play through BOTH the pending vote AND the offering ceremony (the blood-moon window) — otherwise
+  // the song cut out exactly when the offering passed (the climax), and a keeper-direct offering
+  // that skips the vote got no music at all.
+  const pending=((MEM&&MEM.rites)||[]).some(r=>r&&r.kind==='offer' && !r.applied && (_now-(+r.created||0) < OFFER_RITE_TTL));
+  const ceremony=(typeof offerEffectRemain==='function' && offerEffectRemain()>0);
+  Snd.offering(pending||ceremony); }catch(e){} }
 /* ===== shared bonfire visual (Stoke the Fire) ===== */
 let _fbRAF=0,_fbCv=null,_fbCtx=null;
 const _fb={cur:0,surge:0,flash:0,last:0,lvl:0,flames:[],embers:[],sparks:[]};

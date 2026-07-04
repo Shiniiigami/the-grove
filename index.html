@@ -4744,7 +4744,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">A Keeper (🔥, passphrase-held) tends the grove — awarding Devotion, titles and badges, and running the seasons.</p>`}
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30dc · The offering song now carries through the ceremony itself — the blood-moon rite — instead of cutting out the moment an offering passes (and it plays for keeper-made offerings too). The fire also truly dies down on its own every 2 hours.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30dd · The offering rite — blood-moon sky and offering song — now lasts the full 3 hours a spirit is robed, instead of a brief ceremony, and it survives a reload. Offering music also plays for keeper-made offerings.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -6289,7 +6289,11 @@ function skyGradient(ph){
 }
 function placeBody(el,frac){ if(!el) return; const x=8+frac*84; const y=44-Math.sin(frac*Math.PI)*34; el.style.left=x+'%'; el.style.top=y+'%'; el.style.transform='translate(-50%,-50%)'; }
 function drawStars(){ const c=document.getElementById('stars'); if(!c) return; const dpr=Math.min(1.5,devicePixelRatio||1); c.width=innerWidth*dpr; c.height=innerHeight*dpr; c.style.width=innerWidth+'px'; c.style.height=innerHeight+'px'; const x=c.getContext('2d'); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,innerWidth,innerHeight); const rnd=rng(42); const N=innerWidth<480?70:120; for(let i=0;i<N;i++){ const sx=rnd()*innerWidth, sy=rnd()*innerHeight*0.62, r=rnd()*1.2+0.3, a=0.35+rnd()*0.6; x.fillStyle='rgba(255,250,235,'+a.toFixed(2)+')'; x.beginPath(); x.arc(sx,sy,r,0,7); x.fill(); } }
-function offerEffectRemain(){ try{ const rem=900-(Date.now()/1000-OFFER_CEREMONY_AT); return (OFFER_CEREMONY_AT>0&&rem>0)?rem:0; }catch(e){ return 0; } }
+// The offering window = however long a spirit is actually robed as an Offering (OFFER_ROBE_SECS, 3h).
+// Drive the blood-moon sky and the offering song off the persisted `offered` timestamp so the whole
+// rite lasts the full 3 hours, survives reloads, and is shared across every device — rather than a
+// short session-local ceremony timer that reset on refresh.
+function offerEffectRemain(){ try{ const now=Date.now()/1000; let rem=0; ((MEM&&MEM.members)||[]).forEach(m=>{ const o=m&&+m.offered; if(o&&o>now){ const r=o-now; if(r>rem) rem=r; } }); return rem; }catch(e){ return 0; } }
 function offerEyeSVG(stroke,iris,pupil,glow){ return '<svg class="ofeye" viewBox="0 0 100 100"><g style="filter:drop-shadow(0 0 5px '+glow+')"><path d="M9 50 Q50 19 91 50 Q50 81 9 50 Z" fill="none" stroke="'+stroke+'" stroke-width="5" stroke-linejoin="round"/><circle cx="50" cy="50" r="16.5" fill="'+iris+'"/><circle cx="50" cy="50" r="7.2" fill="'+pupil+'"/><circle cx="44.5" cy="44.5" r="2.3" fill="rgba(255,255,255,.55)"/></g></svg>'; }
 const ECLIPSE_SKY='radial-gradient(120% 95% at 50% 13%, #3a241f 0%, #1c151a 32%, #0d0a10 64%, #06060a 100%)';
 /* ===== lake: far shore + water tint + moon/sun reflection (reads sky + offering state) ===== */

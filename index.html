@@ -3668,8 +3668,12 @@ const Snd=(function(){
   function musicTickStart(){ if(cmDirTimer) return; var tick=function(){ try{ musicDirect(); }catch(e){} cmDirTimer=setTimeout(tick,20000); }; cmDirTimer=setTimeout(tick,20000); }
   function musicTickStop(){ if(cmDirTimer){ clearTimeout(cmDirTimer); cmDirTimer=null; } }
   /* offering song (loops until decided), replaces the synth chant when music/offering.* exists */
-  function cmOfferDiscover(){ if(cmOffer!==null) return Promise.resolve(cmOffer||null); return (async function(){ var hit=null; for(var k=0;k<CM_EXTS.length;k++){ hit=await cmHead('music/offering.'+CM_EXTS[k]); if(hit) break; } cmOffer=hit||false; return hit; })(); }
-  function cmOfferStart(){ if(!cmOffer) return false; cmLoad(cmOffer).then(function(buf){ if(!buf) return; if(!cmOfferG){ cmOfferG=ctx.createGain(); cmOfferG.gain.value=0.0001; cmOfferG.connect(master); } if(cmOfferNode){ try{ cmOfferNode.onended=null; cmOfferNode.stop(); cmOfferNode.disconnect(); }catch(e){} cmOfferNode=null; } var node=ctx.createBufferSource(); node.buffer=buf; node.loop=true; node.connect(cmOfferG); cmOfferNode=node; var t=ctx.currentTime; try{ cmOfferG.gain.cancelScheduledValues(t); cmOfferG.gain.setValueAtTime(0.0001,t); cmOfferG.gain.linearRampToValueAtTime(CM_OFFER_VOL,t+0.8); }catch(e){} try{ node.start(t); }catch(e){} }); return true; }
+  // only CACHE a positive hit — a failed HEAD (flaky network / SW timing at startup) must not stick
+  // as `false` forever, or the offering song is silently disabled for the rest of the session.
+  function cmOfferDiscover(){ if(cmOffer) return Promise.resolve(cmOffer); return (async function(){ var hit=null; for(var k=0;k<CM_EXTS.length;k++){ hit=await cmHead('music/offering.'+CM_EXTS[k]); if(hit) break; } cmOffer=hit||false; return hit; })(); }
+  // cb(true) once the song is actually playing, cb(false) if the file can't be fetched/decoded — the
+  // caller then falls back to the synth chant so an offering is never left silent.
+  function cmOfferStart(cb){ if(!cmOffer){ if(cb)cb(false); return false; } cmLoad(cmOffer).then(function(buf){ if(!buf){ if(cb)cb(false); return; } if(!cmOfferG){ cmOfferG=ctx.createGain(); cmOfferG.gain.value=0.0001; cmOfferG.connect(master); } if(cmOfferNode){ try{ cmOfferNode.onended=null; cmOfferNode.stop(); cmOfferNode.disconnect(); }catch(e){} cmOfferNode=null; } var node=ctx.createBufferSource(); node.buffer=buf; node.loop=true; node.connect(cmOfferG); cmOfferNode=node; var t=ctx.currentTime; try{ cmOfferG.gain.cancelScheduledValues(t); cmOfferG.gain.setValueAtTime(0.0001,t); cmOfferG.gain.linearRampToValueAtTime(CM_OFFER_VOL,t+0.8); }catch(e){} try{ node.start(t); }catch(e){} if(cb)cb(true); }); return true; }
   function cmOfferStop(){ if(!cmOfferG||!ctx) return; var t=ctx.currentTime; try{ cmOfferG.gain.cancelScheduledValues(t); cmOfferG.gain.setValueAtTime(cmOfferG.gain.value,t); cmOfferG.gain.linearRampToValueAtTime(0.0001,t+0.7); }catch(e){} var nd=cmOfferNode; cmOfferNode=null; if(nd){ setTimeout(function(){ try{ nd.onended=null; nd.stop(); nd.disconnect(); }catch(e){} },800); } }
 
   function startMusic(){ if(mPlaying||!ctx||chantActive||offerWanted) return; mPlaying=true; musicMode=null; cmCurSet=null; musicDirect(); musicTickStart(); }
@@ -3696,7 +3700,7 @@ const Snd=(function(){
   function chantStopInternal(){ if(!chantActive) return; chantActive=false; if(chantTimer){ clearTimeout(chantTimer); chantTimer=null; } if(ctx){ var tt=ctx.currentTime; chantNodes.forEach(function(n){ try{ if(n.stop) n.stop(tt+1.3);}catch(e){} }); if(chantBus){ try{ chantBus.gain.setTargetAtTime(0,tt,0.4);}catch(e){} var old=chantBus; setTimeout(function(){ try{ old.disconnect(); }catch(e){} },1700); } } chantBus=null; chantHALL=null; chantNodes.length=0; if(on) startMusic(); }
   function offering(active){ if(!on||!ctx) return;
     if(active){ if(offerWanted) return; offerWanted=true; offerCustom=false;
-      cmOfferDiscover().then(function(u){ if(!offerWanted) return; if(u){ offerCustom=true; stopMusicSched(); cmOfferStart(); } else { chantStartInternal(); } }); }
+      cmOfferDiscover().then(function(u){ if(!offerWanted) return; if(u){ offerCustom=true; stopMusicSched(); cmOfferStart(function(ok){ if(!ok && offerWanted){ offerCustom=false; chantStartInternal(); } }); } else { chantStartInternal(); } }); }
     else { if(!offerWanted) return; offerWanted=false;
       if(offerCustom){ offerCustom=false; cmOfferStop(); if(on) startMusic(); } else { chantStopInternal(); } } }
 
@@ -4744,7 +4748,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">A Keeper (🔥, passphrase-held) tends the grove — awarding Devotion, titles and badges, and running the seasons.</p>`}
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30de · An offering nomination now sits before the grove for 3 hours (was 30 minutes), so there's far more time to gather the votes. The blood-moon ceremony and its song still last 15 minutes.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30df · Fixed the offering song failing to play: a flaky lookup at startup could disable it for the whole session, and a load failure left it silent. It now retries and always falls back to the chant. Offering nominations still sit for 3 hours.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */

@@ -4721,7 +4721,7 @@ function renderRules(){
     <div class="ritehdr">The Reckoning · Group Wagers</div>
     <p class="rtext">Rally two sides — up to <b>6</b> a side, even lopsided (6 v 1). Everyone stakes the same; the starter <b>locks</b> the wager and the winning side <b>splits the whole pot</b>, so fewer winners each take a bigger share. All spirits must agree who won; if they can’t, the grove votes to settle it.</p>
     <div class="ritehdr">Test of Devotion</div>
-    <p class="rtext"><b>15 ✦</b> laid before <b>The Watching Tree</b>, once every 2 hours. The Eye's verdict runs from a <b>+250</b> radiance down to <b>−100</b> wrath, with returned offerings and <b>×2 / ×3</b> blessings that multiply your next <b>gain</b> — a deed (a single Keeper award or a community vote, <b>not a bulk award</b>), a challenge, a fire blessing, a wheel win or a Chalice triumph — though <b>never a wager</b>. Blessings can't stack: land a second while one is banked and the Eye pays <b>+100</b> (×2) or <b>+150</b> (×3) on the spot instead. A <b>×2 curse</b> mirrors it — it doubles your next <b>loss</b> (a penalty deed, a wheel loss or a Chalice loss, never a wager), and likewise can't stack: land another while cursed and the Eye strikes <b>−100</b> on the spot. Roughly 56% of verdicts favor you.</p>
+    <p class="rtext"><b>15 ✦</b> laid before <b>The Watching Tree</b>, once every 2 hours. The Eye's verdict runs from a <b>+175</b> radiance down to <b>−100</b> wrath, with returned offerings and <b>×2 / ×3</b> blessings that multiply your next <b>gain</b> — a deed (a single Keeper award or a community vote, <b>not a bulk award</b>), a challenge, a fire blessing, a wheel win or a Chalice triumph — though <b>never a wager</b>. Blessings can't stack: land a second while one is banked and the Eye pays <b>+100</b> (×2) or <b>+150</b> (×3) on the spot instead. A <b>×2 curse</b> mirrors it — it doubles your next <b>loss</b> (a penalty deed, a wheel loss or a Chalice loss, never a wager), and likewise can't stack: land another while cursed and the Eye strikes <b>−100</b> on the spot. Roughly 56% of verdicts favor you.</p>
     <div class="ritehdr">Trial of the Chalice</div>
     <p class="rtext">A 52-card King’s Cup for the circle — <b>4–20 spirits</b>, and one phone may hold several. The <b>host</b> opens the lobby and begins the trial; if they don’t, the right to begin passes down the join order so the circle never stalls. Each spirit’s <b>rank shows beneath their name</b>. On your turn you draw a card and the circle acts it out aloud — sending others to drink, binding a partner, decreeing a <b>law</b> (no two laws alike), or pouring into the Chalice. Devotion rides a <b>hidden tally</b> all game and commits as a single “Trial of the Chalice” line when it ends.</p>
     <p class="rtext">The <b>fourth King</b> is the reckoning — the <b>Eye itself opens</b> over the circle: that drawer either <b>drinks the Chalice</b> (gaining Devotion and the <i>Drained the Chalice</i> badge) or <b>braves a ritual</b> the circle sets aloud — 3 minutes, half must approve. Succeed for the badge and a communal cup (up to four sip, +10 each); fail or refuse and lose <b>40</b>. Break a law and a spirit can <b>report you by tapping your name</b> — reports lapse after 30 seconds, and if enough agree you’re judged (−5); you may even own up and vote on your own report. Spirits may step away (the host passes on), be <b>cast out by tapping a name</b> and a half-vote (the named may vote too), or rejoin — and a lobby that never begins dissolves after <b>3 minutes</b>.</p>
@@ -4748,7 +4748,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">A Keeper (🔥, passphrase-held) tends the grove — awarding Devotion, titles and badges, and running the seasons.</p>`}
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30df · Fixed the offering song failing to play: a flaky lookup at startup could disable it for the whole session, and a load failure left it silent. It now retries and always falls back to the chant. Offering nominations still sit for 3 hours.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30dg · The wheel jackpot now pays +175 (was +250), reining in the wheel's biggest swings — a blessed jackpot drops from +750 to +525. Odds are unchanged.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4894,7 +4894,7 @@ function maybeEarnLog(m,gained){ if(!m||gained<=0)return false; if(Math.random()
 function sweepFire(now){ const f=MEM.fire; if(!f)return false; if(f.lastDecay===undefined)f.lastDecay=now; const dec=Math.floor((now-f.lastDecay)/(2*3600)); if(dec>0){ f.level=Math.max(0,(f.level||0)-dec); f.lastDecay=f.lastDecay+dec*2*3600; if((f.level||0)===0)f.stokers=[]; return true; } return false; }
 function fireKeeperBadge(){ const ms=MEM.members||[]; let top=null,topN=0; ms.forEach(m=>{ if((m.fireLogs||0)>topN){topN=m.fireLogs||0;top=m;} }); ms.forEach(m=>{ m.badges=(m.badges||[]).filter(b=>b!=='Keeper of the Flame'); }); if(top&&topN>0){ top.badges=top.badges||[]; top.badges.push('Keeper of the Flame'); } }
 const WHEEL=[
-  {key:'jackpot',label:'JACKPOT  +250',pts:250,w:3},
+  {key:'jackpot',label:'JACKPOT  +175',pts:175,w:3},
   {key:'p150',label:'+150',pts:150,w:6},
   {key:'p100',label:'+100',pts:100,w:10},
   {key:'p75',label:'+75',pts:75,w:12},
@@ -5634,7 +5634,7 @@ function verdictOf(o){
   if(o.special==='x2')     return {line:'A blessing settles upon you.',reward:'×2 your next gain',tone:'buff'};
   if(o.special==='x3')     return {line:'Twice-blessed — the Eye burns bright.',reward:'×3 your next gain',tone:'buff'};
   if(o.special==='x2neg')  return {line:'The Eye marks you — a shadow waits on your next fall.',reward:'×2 your next penalty',tone:'bad'};
-  if(o.key==='jackpot' && !(typeof o.ptsFinal==='number')) return {line:'The Eye blazes — you are seen.',reward:'+250 ✦',tone:'great'};
+  if(o.key==='jackpot' && !(typeof o.ptsFinal==='number')) return {line:'The Eye blazes — you are seen.',reward:'+175 ✦',tone:'great'};
   if(o.key==='zero')       return {line:'The Eye keeps what you gave, and gives nothing.',reward:'no boon — only the toll is kept',tone:'bad'};
   if(typeof o.pts==='number' && o.pts>0){
     const fin=(typeof o.ptsFinal==='number')?o.ptsFinal:o.pts;

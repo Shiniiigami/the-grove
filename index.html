@@ -1997,7 +1997,12 @@ function devotionDeedRow(m,keeper){
   const net = d.total||0;
   const val = `<b class="${net<0?'neg':''}">${net>0?'+':''}${net}</b>`;
   // the running net (offering + verdict) already tells the whole story — no bracketed breakdown
-  return `<div class="h"><em>🔮 Test of Devotion${cnt}</em>${val}${aggEditBtn(m,'devotion',keeper)}</div>`;
+  // Keeper-only: once a spirit passes the season spin cap the Eye secretly turns against them (every
+  // further spin forced to a loss). Ordinary spirits never see this line; the Keeper can lift it here.
+  const capNote = (keeper && (m.seasonSpins||0)>=WHEEL_SEASON_CAP)
+    ? `<div class="h" style="opacity:.9"><em style="color:var(--ember);font-size:11px">⚠ Eye's disfavour · ${m.seasonSpins} spins this season — the wheel is turning against them</em><button onclick="keeperResetWheelCap('${m.name.replace(/'/g,"\\'")}')" title="Reset ${esc(m.name)}'s season spin count — the wheel pays fairly again" style="background:none;border:1px solid rgba(232,168,143,.5);border-radius:6px;color:var(--ember);font-size:9px;font-family:'Silkscreen',monospace;cursor:pointer;margin-left:6px;padding:1px 5px;vertical-align:middle">reset</button></div>`
+    : '';
+  return `<div class="h"><em>🔮 Test of Devotion${cnt}</em>${val}${aggEditBtn(m,'devotion',keeper)}</div>${capNote}`;
 }
 function deedLedgerHTML(m,keeper){
   const gs=histGroups(m).filter(g=>g.base!=='Rite of the Chalice' && g.base!=='Trial of the Chalice');
@@ -2451,7 +2456,7 @@ window.confirmFreshSlate=async function(){
   const v=document.getElementById("fsPass").value;
   if(!(await verifyPass(v))){ document.getElementById("kerr").textContent="Wrong passphrase — nothing was changed."; return; }
   if(!confirm("Last warning: wipe ALL Devotion Points, titles, badges and history for everyone? This cannot be undone."))return;
-  MEM.members.forEach(m=>{ m.points=0; m.season=0; m.epithet=""; m.badges=[]; m.history=[]; m.offered=0; m.chalBudget=150; m.chalice={total:0,games:0,drained:0}; m.devotion={total:0,spins:0}; delete m.spinUndo;
+  MEM.members.forEach(m=>{ m.points=0; m.season=0; m.epithet=""; m.badges=[]; m.history=[]; m.offered=0; m.chalBudget=150; m.chalice={total:0,games:0,drained:0}; m.devotion={total:0,spins:0}; m.seasonSpins=0; delete m.spinUndo;
     if(m.sprite&&m.sprite.chibi&&m.sprite.chibi.top_style==='robes'){ const c=cloneChibi(m); c.top_style=(m._preTop||(c.sleeves===false?'tank':'tee')); delete m._preTop; m.sprite={chibi:c}; }
   });
   MEM.challenges=[]; MEM.wagers=[]; MEM.groups=[]; MEM.rites=[];
@@ -2480,7 +2485,7 @@ window.newSeason=async function(){
   MEM.seasonHistory.unshift({ label: MEM.season, ended: now, standings: [...MEM.members].sort((a,b)=>(seasonView(b)-seasonView(a))).map(m=>({name:m.name, score:seasonView(m), points:m.points})) });
   if(MEM.seasonHistory.length>24) MEM.seasonHistory.length=24;
   // fireLogs also resets — "Keeper of the Flame" belongs to the SEASON's top tender
-  MEM.members.forEach(m=>{m.season=0; m.chalBudget=150; m.fireLogs=0; delete m.spinUndo;});
+  MEM.members.forEach(m=>{m.season=0; m.chalBudget=150; m.fireLogs=0; m.seasonSpins=0; delete m.spinUndo;});
   MEM.challenges=[]; MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[]};
   MEM.wagers=[]; MEM.groups=[]; MEM.seasonStart=now;
   if(label) MEM.season=label;
@@ -2502,7 +2507,7 @@ window.resetSeasonScores=async function(){
   // signed-season model: season holds true net (can be negative); zero it for everyone.
   // Move the season window to now so deeds done earlier this season fall outside it —
   // otherwise removing an old deed later would subtract from a score that's already been rewound.
-  MEM.members.forEach(m=>{ m.season=0; delete m.spinUndo; });
+  MEM.members.forEach(m=>{ m.season=0; m.seasonSpins=0; delete m.spinUndo; });
   MEM.seasonStart=now;
   await saveData(); layoutGrove(); renderLedger(); closeSheet(); toast("Season scores rewound to the opening line.");
 };
@@ -2750,6 +2755,13 @@ window.awardPoints=async function(){
     try{ const s=loadRankSnap(); s[mm.name]=tierIndex(mm.points); saveRankSnap(s); }catch(e){}
     await saveData(); layoutGrove(); renderLedger(); toast('Award undone.');
   });
+};
+window.keeperResetWheelCap=async function(name){
+  if(!keeperUnlocked){ toast("Only the Keeper may lift the Eye's disfavour."); return; }
+  const m=MEM.members.find(x=>x.name===name); if(!m) return;
+  if(!confirm(`Lift the Eye's disfavour from ${name}?\n\nTheir season spin count (${m.seasonSpins||0}) resets to 0, so the wheel pays fairly again until they pass ${WHEEL_SEASON_CAP} spins once more.`)) return;
+  m.seasonSpins=0;
+  await saveData(); renderLedger(); try{ if(SOUL_OPEN===name) openSoul(name); }catch(e){} toast(`The Eye looks kindly on ${name} again.`);
 };
 window.removeDeed=async function(name,i){
   if(!keeperUnlocked){ toast("Only the Keeper may strike a deed."); return; }
@@ -3263,6 +3275,7 @@ window.undoLastSpin=async function(name){
   if((u.winMult||1)>1) m.winMult=u.winMult; else delete m.winMult;
   if((u.lossMult||1)>1) m.lossMult=u.lossMult; else delete m.lossMult;
   m.lastSpin=+(u.lastSpin)||0;
+  if('seasonSpins' in u) m.seasonSpins=+(u.seasonSpins)||0;   // unwind the season-cap counter too
   if('logs' in u) m.logs=+(u.logs)||0;   // restore even when pre-spin logs was 0/absent (a spin-earned log must be revoked)
   if(u.devotion) m.devotion=JSON.parse(JSON.stringify(u.devotion)); else delete m.devotion;
   delete m.spinUndo;
@@ -4748,7 +4761,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">A Keeper (🔥, passphrase-held) tends the grove — awarding Devotion, titles and badges, and running the seasons.</p>`}
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30dg · The wheel jackpot now pays +175 (was +250), reining in the wheel's biggest swings — a blessed jackpot drops from +750 to +525. Odds are unchanged.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30dh · The Eye tires of the greedy: past 50 spins in a season the wheel quietly turns against a spirit (every further spin a loss) until the Keeper lifts it from that spirit's ledger. The count resets each new season.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -4912,6 +4925,11 @@ const WHEEL=[
 // (convertedPts/ptsFinal/mult/lossMult) onto the outcome, and mutating the shared WHEEL constant
 // would leak a prior spin's verdict into every later spin that lands the same slice (local mode).
 function spinWheel(){ const tot=WHEEL.reduce((s,o)=>s+o.w,0); let r=Math.random()*tot; for(const o of WHEEL){ if(r<o.w)return {...o}; r-=o.w; } return {...WHEEL[0]}; }
+// Season cap: a spirit may spin freely up to WHEEL_SEASON_CAP times per season. Past that the Eye
+// quietly turns on the greedy — every further spin is forced to a weighted loss. This is HIDDEN
+// (the wheel looks normal and just lands badly); the Keeper can reset a spirit's count in the ledger.
+const WHEEL_SEASON_CAP=50;
+function wheelForceNeg(){ const negs=WHEEL.filter(o=>o.key==='m25'||o.key==='m50'||o.key==='m100'); const tot=negs.reduce((s,o)=>s+o.w,0); let r=Math.random()*tot; for(const o of negs){ if(r<o.w) return {...o}; r-=o.w; } return {...negs[0]}; }
 function chalById(id){ return (MEM.challenges||[]).find(c=>c.id===id); }
 // a challenge can be taken up by many spirits; older records used a single c.accepter
 function chalDoers(c){ if(!c) return []; if(Array.isArray(c.accepters)) return c.accepters; return c.accepter?[c.accepter]:[]; }
@@ -4976,7 +4994,7 @@ function applyAction(a){
   else if(a.t==='wager_tie'){ const w=wagerById(a.id); if(!w||(w.status!=='matched'&&w.status!=='disputed'))return; if(a.keeper){ const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); w.status='settled'; w.winner='tie'; return; } if(a.name!==w.proposer&&a.name!==w.taker)return; w.tie=w.tie||[]; if(!w.tie.includes(a.name))w.tie.push(a.name); if(w.tie.includes(w.proposer)&&w.tie.includes(w.taker)){ const p=memByName(w.proposer),tk=memByName(w.taker); if(p)adjPts(p,w.amount||0); if(tk)adjPts(tk,w.amount||0); w.status='settled'; w.winner='tie'; } }
   else if(a.t==='wheel_spin'){ const m=memByName(a.name); if(!m)return; if(now-(m.lastSpin||0)<2*3600)return; if((m.points||0)<15)return; const o=a.outcome||{};
     // snapshot pre-spin state so the Keeper can undo just this spin (mirrors grove_wheel's server-side snapshot)
-    m.spinUndo={ points:m.points, season:(m.season||0), winMult:m.winMult, lossMult:m.lossMult, lastSpin:(m.lastSpin||0), logs:(m.logs||0), devotion:(m.devotion?JSON.parse(JSON.stringify(m.devotion)):null), t:now };
+    m.spinUndo={ points:m.points, season:(m.season||0), winMult:m.winMult, lossMult:m.lossMult, lastSpin:(m.lastSpin||0), logs:(m.logs||0), seasonSpins:(m.seasonSpins||0), devotion:(m.devotion?JSON.parse(JSON.stringify(m.devotion)):null), t:now };
     adjPts(m,-15); m.lastSpin=now;
     if(o.special==='free'){ adjPts(m,15); m.lastSpin=0; }
     else if(o.special==='x2'||o.special==='x3'){
@@ -4999,6 +5017,7 @@ function applyAction(a){
     { const _staked=(o.special==='free')?0:15;
       const _verdict=(typeof o.convertedPts==='number')?o.convertedPts:((typeof o.ptsFinal==='number')?o.ptsFinal:((typeof o.pts==='number')?o.pts:0));
       m.devotion=m.devotion||{total:0,spins:0,verdict:0,staked:0}; m.devotion.spins=(m.devotion.spins||0)+1;
+      m.seasonSpins=(m.seasonSpins||0)+1;   // season cap counter (reset each season / by the Keeper)
       m.devotion.staked=(m.devotion.staked||0)+_staked; m.devotion.verdict=(m.devotion.verdict||0)+_verdict;
       m.devotion.total=(m.devotion.total||0)+(_verdict-_staked); } }
   else if(a.t==='group_new'){ const m=memByName(a.starter); if(!m)return; const amt=Math.max(1,Math.min(GROUP_CAP,a.stake|0)); if((m.points||0)<amt)return; if(a.side!=='A'&&a.side!=='B')return; adjPts(m,-amt); MEM.groups=MEM.groups||[]; const g={id:'g'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),starter:a.starter,title:a.title,stake:amt,sideA:[],sideB:[],status:'pending',created:now,lockedAt:null,claims:{},votes:{},winner:null}; (a.side==='A'?g.sideA:g.sideB).push(a.starter); MEM.groups.push(g); }
@@ -5702,7 +5721,7 @@ window.spinTheWheel=async function(){
         o=null;
       }
     } else {
-      o=spinWheel(); applyAction({t:'wheel_spin',name:VOTER,outcome:o}); if(typeof saveData==='function') await saveData();
+      o=spinWheel(); if((me.seasonSpins||0)>=WHEEL_SEASON_CAP) o=wheelForceNeg(); applyAction({t:'wheel_spin',name:VOTER,outcome:o}); if(typeof saveData==='function') await saveData();
     }
   }catch(e){ try{ if(typeof isNetErr==='function'&&isNetErr(e)){ toast('The Eye needs a connection to weigh you.'); } else { toast(keeperUnlocked?'The Eye did not answer — run the wheel update in Supabase.':'The Eye did not answer — your offering was not taken. Try again.'); } }catch(_){}; o=null; }
   if(o){

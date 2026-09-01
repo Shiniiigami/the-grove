@@ -1997,18 +1997,28 @@ function devotionDeedRow(m,keeper){
   const net = d.total||0;
   const val = `<b class="${net<0?'neg':''}">${net>0?'+':''}${net}</b>`;
   // the running net (offering + verdict) already tells the whole story — no bracketed breakdown
-  // Keeper-only: once a spirit passes the season spin cap the Eye secretly turns against them (every
-  // further spin forced to a loss). Ordinary spirits never see this line; the Keeper can lift it here.
-  const capNote = (keeper && (m.seasonSpins||0)>=WHEEL_SEASON_CAP)
-    ? `<div class="h" style="opacity:.9"><em style="color:var(--ember);font-size:11px">⚠ Eye's disfavour · ${m.seasonSpins} spins this season — the wheel is turning against them</em><button onclick="keeperResetWheelCap('${m.name.replace(/'/g,"\\'")}')" title="Reset ${esc(m.name)}'s season spin count — the wheel pays fairly again" style="background:none;border:1px solid rgba(232,168,143,.5);border-radius:6px;color:var(--ember);font-size:9px;font-family:'Silkscreen',monospace;cursor:pointer;margin-left:6px;padding:1px 5px;vertical-align:middle">reset</button></div>`
-    : '';
-  return `<div class="h"><em>🔮 Test of Devotion${cnt}</em>${val}${aggEditBtn(m,'devotion',keeper)}</div>${capNote}`;
+  return `<div class="h"><em>🔮 Test of Devotion${cnt}</em>${val}${aggEditBtn(m,'devotion',keeper)}</div>`;
+}
+// A spirit is under the Eye's disfavour (every wheel spin forced to a loss) when the Keeper has
+// PLACED it, or automatically once they pass the season spin cap. Hidden from ordinary spirits.
+function wheelDisfavoured(m){ return !!(m && (m.wheelCurse===true || (m.seasonSpins||0)>=WHEEL_SEASON_CAP)); }
+// Keeper-only ledger control to place / lift the disfavour on a spirit.
+function wheelDisfavourCtrl(m,keeper){
+  if(!keeper) return '';
+  const _nm=m.name.replace(/'/g,"\\'");
+  if(wheelDisfavoured(m)){
+    const why = m.wheelCurse===true ? ' · placed by the Keeper'
+              : ((m.seasonSpins||0)>=WHEEL_SEASON_CAP ? ` · ${m.seasonSpins} spins this season` : '');
+    return `<div class="h" style="opacity:.9"><em style="color:var(--ember);font-size:11px">⚠ Eye's disfavour${why} — the wheel turns against them</em><button onclick="keeperLiftDisfavour('${_nm}')" title="Lift it — the wheel pays ${esc(m.name)} fairly again" style="background:none;border:1px solid rgba(232,168,143,.55);border-radius:6px;color:var(--ember);font-size:9px;font-family:'Silkscreen',monospace;cursor:pointer;margin-left:6px;padding:1px 6px;vertical-align:middle">lift</button></div>`;
+  }
+  return `<div class="h" style="opacity:.55"><em style="font-size:11px;color:var(--sage)">🔮 The wheel favours them</em><button onclick="keeperPlaceDisfavour('${_nm}')" title="Turn the wheel against ${esc(m.name)} — every spin becomes a loss until lifted" style="background:none;border:1px solid rgba(150,150,170,.45);border-radius:6px;color:var(--sage);font-size:9px;font-family:'Silkscreen',monospace;cursor:pointer;margin-left:6px;padding:1px 6px;vertical-align:middle">place disfavour</button></div>`;
 }
 function deedLedgerHTML(m,keeper){
   const gs=histGroups(m).filter(g=>g.base!=='Rite of the Chalice' && g.base!=='Trial of the Chalice');
   const chal=chaliceDeedRow(m,keeper);
   const dev=devotionDeedRow(m,keeper);
-  if(!gs.length && !chal && !dev) return `<div class="h"><em>The Eye has yet to record their deeds.</em></div>`;
+  const dis=wheelDisfavourCtrl(m,keeper);   // keeper-only place/lift the Eye's disfavour
+  if(!gs.length && !chal && !dev) return `<div class="h"><em>The Eye has yet to record their deeds.</em></div>${dis}`;
   // greatest Devotion first, least last
   const rows=[];
   if(chal) rows.push({sum:(m.chalice&&m.chalice.total)||0, html:chal});
@@ -2025,8 +2035,8 @@ function deedLedgerHTML(m,keeper){
   rows.sort((a,b)=>b.sum-a.sum);
   const body=rows.map(r=>r.html).join('');
   // long ledgers scroll in place so the card stays compact, every deed still reachable
-  if(rows.length>10) return `<div class="ledscroll">${body}</div><div class="ledhint">↕ scroll · ${rows.length} deeds, greatest first</div>`;
-  return body;
+  if(rows.length>10) return `<div class="ledscroll">${body}</div><div class="ledhint">↕ scroll · ${rows.length} deeds, greatest first</div>${dis}`;
+  return body+dis;
 }
 let SOUL_OPEN=null;
 function openSoul(name){
@@ -2456,7 +2466,7 @@ window.confirmFreshSlate=async function(){
   const v=document.getElementById("fsPass").value;
   if(!(await verifyPass(v))){ document.getElementById("kerr").textContent="Wrong passphrase — nothing was changed."; return; }
   if(!confirm("Last warning: wipe ALL Devotion Points, titles, badges and history for everyone? This cannot be undone."))return;
-  MEM.members.forEach(m=>{ m.points=0; m.season=0; m.epithet=""; m.badges=[]; m.history=[]; m.offered=0; m.chalBudget=150; m.chalice={total:0,games:0,drained:0}; m.devotion={total:0,spins:0}; m.seasonSpins=0; delete m.spinUndo;
+  MEM.members.forEach(m=>{ m.points=0; m.season=0; m.epithet=""; m.badges=[]; m.history=[]; m.offered=0; m.chalBudget=150; m.chalice={total:0,games:0,drained:0}; m.devotion={total:0,spins:0}; m.seasonSpins=0; delete m.wheelCurse; delete m.spinUndo;
     if(m.sprite&&m.sprite.chibi&&m.sprite.chibi.top_style==='robes'){ const c=cloneChibi(m); c.top_style=(m._preTop||(c.sleeves===false?'tank':'tee')); delete m._preTop; m.sprite={chibi:c}; }
   });
   MEM.challenges=[]; MEM.wagers=[]; MEM.groups=[]; MEM.rites=[];
@@ -2485,7 +2495,7 @@ window.newSeason=async function(){
   MEM.seasonHistory.unshift({ label: MEM.season, ended: now, standings: [...MEM.members].sort((a,b)=>(seasonView(b)-seasonView(a))).map(m=>({name:m.name, score:seasonView(m), points:m.points})) });
   if(MEM.seasonHistory.length>24) MEM.seasonHistory.length=24;
   // fireLogs also resets — "Keeper of the Flame" belongs to the SEASON's top tender
-  MEM.members.forEach(m=>{m.season=0; m.chalBudget=150; m.fireLogs=0; m.seasonSpins=0; delete m.spinUndo;});
+  MEM.members.forEach(m=>{m.season=0; m.chalBudget=150; m.fireLogs=0; m.seasonSpins=0; delete m.wheelCurse; delete m.spinUndo;});
   MEM.challenges=[]; MEM.fire={level:0,goal:6,lastBlessed:0,stokers:[]};
   MEM.wagers=[]; MEM.groups=[]; MEM.seasonStart=now;
   if(label) MEM.season=label;
@@ -2507,7 +2517,7 @@ window.resetSeasonScores=async function(){
   // signed-season model: season holds true net (can be negative); zero it for everyone.
   // Move the season window to now so deeds done earlier this season fall outside it —
   // otherwise removing an old deed later would subtract from a score that's already been rewound.
-  MEM.members.forEach(m=>{ m.season=0; m.seasonSpins=0; delete m.spinUndo; });
+  MEM.members.forEach(m=>{ m.season=0; m.seasonSpins=0; delete m.wheelCurse; delete m.spinUndo; });
   MEM.seasonStart=now;
   await saveData(); layoutGrove(); renderLedger(); closeSheet(); toast("Season scores rewound to the opening line.");
 };
@@ -2756,11 +2766,18 @@ window.awardPoints=async function(){
     await saveData(); layoutGrove(); renderLedger(); toast('Award undone.');
   });
 };
-window.keeperResetWheelCap=async function(name){
+window.keeperPlaceDisfavour=async function(name){
+  if(!keeperUnlocked){ toast("Only the Keeper may set the Eye's disfavour."); return; }
+  const m=MEM.members.find(x=>x.name===name); if(!m) return;
+  if(!confirm(`Turn the Eye against ${name}?\n\nEvery wheel spin they make becomes a loss (hidden from them — the wheel just lands badly) until you lift it.`)) return;
+  m.wheelCurse=true;
+  await saveData(); renderLedger(); try{ if(SOUL_OPEN===name) openSoul(name); }catch(e){} toast(`The Eye turns from ${name}.`);
+};
+window.keeperLiftDisfavour=async function(name){
   if(!keeperUnlocked){ toast("Only the Keeper may lift the Eye's disfavour."); return; }
   const m=MEM.members.find(x=>x.name===name); if(!m) return;
-  if(!confirm(`Lift the Eye's disfavour from ${name}?\n\nTheir season spin count (${m.seasonSpins||0}) resets to 0, so the wheel pays fairly again until they pass ${WHEEL_SEASON_CAP} spins once more.`)) return;
-  m.seasonSpins=0;
+  if(!confirm(`Lift the Eye's disfavour from ${name}?\n\nThe wheel pays fairly again. Their season spin count (${m.seasonSpins||0}) resets to 0, so a fresh ${WHEEL_SEASON_CAP} spins are clear.`)) return;
+  delete m.wheelCurse; m.seasonSpins=0;
   await saveData(); renderLedger(); try{ if(SOUL_OPEN===name) openSoul(name); }catch(e){} toast(`The Eye looks kindly on ${name} again.`);
 };
 window.removeDeed=async function(name,i){
@@ -4761,7 +4778,7 @@ function renderRules(){
     <div class="ritehdr">The Keeper</div>
     <p class="rtext">A Keeper (🔥, passphrase-held) tends the grove — awarding Devotion, titles and badges, and running the seasons.</p>`}
     <p class="hint" style="margin:18px 0 4px;font-style:italic">"What the fire remembers, the Eye keeps."</p>
-    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30dh · The Eye tires of the greedy: past 50 spins in a season the wheel quietly turns against a spirit (every further spin a loss) until the Keeper lifts it from that spirit's ledger. The count resets each new season.</p>`;
+    <p class="hint" style="margin:8px 0 4px;font-size:10px;opacity:.5;font-family:'Silkscreen',monospace">build 2026-06-30di · The Eye's wheel disfavour: past 50 spins in a season the wheel quietly turns against a spirit (every further spin a loss), and the Keeper can now also place or lift it by hand from that spirit's ledger. Hidden from ordinary spirits; resets each new season.</p>`;
   try{ refreshPushStatus(); }catch(e){}
 }
 /* ===== Trials: Stoke the Fire + Challenge Board ===== */
@@ -5721,7 +5738,7 @@ window.spinTheWheel=async function(){
         o=null;
       }
     } else {
-      o=spinWheel(); if((me.seasonSpins||0)>=WHEEL_SEASON_CAP) o=wheelForceNeg(); applyAction({t:'wheel_spin',name:VOTER,outcome:o}); if(typeof saveData==='function') await saveData();
+      o=spinWheel(); if(wheelDisfavoured(me)) o=wheelForceNeg(); applyAction({t:'wheel_spin',name:VOTER,outcome:o}); if(typeof saveData==='function') await saveData();
     }
   }catch(e){ try{ if(typeof isNetErr==='function'&&isNetErr(e)){ toast('The Eye needs a connection to weigh you.'); } else { toast(keeperUnlocked?'The Eye did not answer — run the wheel update in Supabase.':'The Eye did not answer — your offering was not taken. Try again.'); } }catch(_){}; o=null; }
   if(o){
